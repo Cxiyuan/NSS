@@ -1,5 +1,5 @@
 # Subproject: probe
-name: 构建probe镜像
+name: Probe-构建镜像
 
 on:
   push:
