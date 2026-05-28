@@ -129,6 +129,7 @@ jobs:
           path: DeepPupils/probe/test/pcap/
 
       - name: 运行 Zeek 分析
+        timeout-minutes: 5
         run: |
           docker pull ${{ env.IMAGE_NAME }}:latest
           cd DeepPupils/probe/test/pcap
@@ -140,11 +141,13 @@ jobs:
           for pcap in *.pcap; do
             name=$(basename "$pcap" .pcap)
             echo "=== Processing $pcap ==="
-            timeout 60 docker run --rm \
-              -v $(pwd):/pcap \
+            timeout 120 docker run --rm \
+              -v $(pwd):/pcap:ro \
               -v $(pwd)/../zeek_output:/output \
               ${{ env.IMAGE_NAME }}:latest \
-              sh -c "mkdir -p /output && ls -la /pcap && zeek -r /pcap/$pcap -j" 2>&1 | head -1000 > "$(pwd)/../zeek_output/${name}.json" || echo "[]" > "$(pwd)/../zeek_output/${name}.json"
+              sh -c "mkdir -p /output && zeek -r /pcap/$pcap -j 2>/dev/null | jq -c '.[:100]' > /output/${name}.json" \
+              && echo "[OK] $pcap" \
+              || { echo "[WARN] timeout or error for $pcap, creating empty output"; echo "[]" > "$(pwd)/../zeek_output/${name}.json"; }
           done
           ls -la ../zeek_output/
 
