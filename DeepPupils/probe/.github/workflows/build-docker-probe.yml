@@ -3,7 +3,7 @@ name: Build Probe Docker Image
 on:
   push:
     paths:
-      - 'docker/**'
+      - 'DeepPupils/probe/docker/**'
       - '.github/workflows/build-docker-probe.yml'
 
   workflow_dispatch:
