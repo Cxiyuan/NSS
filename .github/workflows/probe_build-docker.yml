@@ -1,5 +1,5 @@
 # Subproject: probe
-name: Build Probe Docker Image
+name: 构建probe镜像
 
 on:
   push:
