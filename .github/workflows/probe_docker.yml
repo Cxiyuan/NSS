@@ -36,9 +36,6 @@ jobs:
       packages: write
       id-token: write
 
-    outputs:
-      image_tag: ${{ steps.meta.outputs.tags }}
-
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -73,7 +70,7 @@ jobs:
           cache-to: type=gha,mode=max
 
   # ============================================================
-  # [Job 2] 单元测试 — 生成流量 + Zeek 分析 + 字段断言 + pytest
+  # [Job 2] 单元测试 — 生成测试流量
   # ============================================================
   unit-test:
     name: 单元测试
@@ -92,7 +89,6 @@ jobs:
       - name: Install Scapy
         run: pip install scapy
 
-      # ---- 生成测试流量 ----
       - name: 生成测试流量
         run: |
           mkdir -p DeepPupils/probe/test/pcap
@@ -118,7 +114,7 @@ jobs:
           retention-days: 1
 
   # ============================================================
-  # [Job 3] Zeek 分析 — 使用刚构建的 probe 镜像分析流量
+  # [Job 3] Zeek 分析 — 使用 probe 镜像分析流量
   # ============================================================
   zeek-analysis:
     name: Zeek分析
@@ -132,31 +128,20 @@ jobs:
           name: http-pcaps
           path: DeepPupils/probe/test/pcap/
 
-      - name: 创建 Zeek 输出目录
-        run: mkdir -p $(pwd)/../zeek_output
-
       - name: 运行 Zeek 分析
         run: |
           docker pull ${{ env.IMAGE_NAME }}:latest
           cd DeepPupils/probe/test/pcap
           mkdir -p ../zeek_output
-          echo "=== PCAP files found: ===" && ls -la
-          echo "=== Testing zeek binary ==="
-          docker run --rm \
-            -v $(pwd):/pcap \
-            ${{ env.IMAGE_NAME }}:latest \
-            sh -c "which zeek && zeek --version" 2>&1 | head -5
-          echo "=== Running Zeek analysis ==="
           for pcap in *.pcap; do
             name=$(basename "$pcap" .pcap)
-            echo "Processing: $pcap -> $name"
             docker run --rm \
               -v $(pwd):/pcap \
               -v $(pwd)/../zeek_output:/output \
               ${{ env.IMAGE_NAME }}:latest \
-              zeek -r "/pcap/$pcap" -j 2>&1 | head -1000 > "/output/${name}.json" || echo "[]" > "/output/${name}.json"
+              zeek -r "/pcap/$pcap" -j > "/output/${name}.json" 2>&1 || echo "[]" > "/output/${name}.json"
           done
-          echo "=== Final output dir ===" && ls -la ../zeek_output/
+          ls -la ../zeek_output/
 
       - name: 上传 Zeek 输出
         uses: actions/upload-artifact@v4
@@ -183,18 +168,13 @@ jobs:
       - name: jq 字段存在性检查
         run: |
           set -e
-          echo "=== 字段存在性检查 ==="
           cd DeepPupils/probe/test/zeek_output
           for json in *.json; do
-            echo "检查: $json"
-            # 基础字段（任一记录有该字段即 PASS）
-            jq -e 'any(.[]; .http.host != null)' "$json" && echo "  [PASS] host" || { echo "  [FAIL] host"; exit 1; }
-            jq -e 'any(.[]; .http.uri != null)' "$json" && echo "  [PASS] uri" || { echo "  [FAIL] uri"; exit 1; }
-            jq -e 'any(.[]; .http.user_agent != null)' "$json" && echo "  [PASS] user_agent" || { echo "  [FAIL] user_agent"; exit 1; }
-            jq -e 'any(.[]; .http.status_code != null)' "$json" && echo "  [PASS] status_code" || { echo "  [FAIL] status_code"; exit 1; }
-            echo "---"
+            jq -e 'any(.[]; .http.host != null)' "$json" && echo "[PASS] $json host" || { echo "[FAIL] $json host"; exit 1; }
+            jq -e 'any(.[]; .http.uri != null)' "$json" && echo "[PASS] $json uri" || { echo "[FAIL] $json uri"; exit 1; }
+            jq -e 'any(.[]; .http.user_agent != null)' "$json" && echo "[PASS] $json user_agent" || { echo "[FAIL] $json user_agent"; exit 1; }
+            jq -e 'any(.[]; .http.status_code != null)' "$json" && echo "[PASS] $json status_code" || { echo "[FAIL] $json status_code"; exit 1; }
           done
-          echo "=== 全部字段存在性检查通过 ==="
 
   # ============================================================
   # [Job 5] pytest 精确值验证（可选失败不阻塞）
@@ -235,8 +215,5 @@ jobs:
     if: github.ref == 'refs/heads/main' && github.event_name == 'push'
 
     steps:
-      - name: Placeholder - 发布完成后处理
-        run: |
-          echo "发布 slot 已预留，等待实现"
-          echo "可在此处添加版本打 tag、CHANGELOG 生成等"
-          exit 0
+      - name: Placeholder
+        run: echo "发布 slot 已预留"
