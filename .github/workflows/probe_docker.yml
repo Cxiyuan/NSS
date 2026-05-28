@@ -135,20 +135,23 @@ jobs:
           cd DeepPupils/probe/test/pcap
           echo "=== pcap files ==="
           ls -la
-          echo "=== docker image info ==="
-          docker inspect ${{ env.IMAGE_NAME }}:latest
           mkdir -p ../zeek_output
+          # 并行处理所有 pcap 文件，每个超时 30 秒
           for pcap in *.pcap; do
             name=$(basename "$pcap" .pcap)
-            echo "=== Processing $pcap ==="
-            timeout 120 docker run --rm \
-              -v $(pwd):/pcap:ro \
-              -v $(pwd)/../zeek_output:/output \
-              ${{ env.IMAGE_NAME }}:latest \
-              sh -c "mkdir -p /output && zeek -r /pcap/$pcap -j 2>/dev/null | jq -c '.[:100]' > /output/${name}.json" \
-              && echo "[OK] $pcap" \
-              || { echo "[WARN] timeout or error for $pcap, creating empty output"; echo "[]" > "$(pwd)/../zeek_output/${name}.json"; }
+            (
+              echo "=== Processing $pcap ==="
+              timeout 30 docker run --rm \
+                -v $(pwd):/pcap:ro \
+                -v $(pwd)/../zeek_output:/output \
+                ${{ env.IMAGE_NAME }}:latest \
+                sh -c "mkdir -p /output && zeek -r /pcap/$pcap -j 2>/dev/null | jq -c '.[:100]' > /output/${name}.json" \
+                && echo "[OK] $pcap" \
+                || { echo "[WARN] timeout or error for $pcap"; echo "[]" > "$(pwd)/../zeek_output/${name}.json"; }
+            ) &
           done
+          wait
+          echo "=== All pcap processing complete ==="
           ls -la ../zeek_output/
 
       - name: 上传 Zeek 输出
