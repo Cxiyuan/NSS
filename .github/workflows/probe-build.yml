@@ -1,10 +1,11 @@
+# Subproject: probe
 name: Build Probe Docker Image
 
 on:
   push:
     paths:
       - 'DeepPupils/probe/docker/**'
-      - '.github/workflows/build-docker-probe.yml'
+      - '.github/workflows/probe-build.yml'
 
   workflow_dispatch:
 
@@ -41,7 +42,7 @@ jobs:
       - name: Build and push Docker image
         uses: docker/build-push-action@v5
         with:
-          context: ./docker
+          context: ./DeepPupils/probe/docker
           push: true
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
