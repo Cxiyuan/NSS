@@ -139,7 +139,7 @@ jobs:
               -v $(pwd):/pcap \
               -v $(pwd)/../zeek_output:/output \
               ${{ env.IMAGE_NAME }}:latest \
-              zeek -r "/pcap/$pcap" -j | head -1000 > "/output/${name}.json" 2>&1 || echo "[]" > "/output/${name}.json"
+              sh -c "mkdir -p /output && zeek -r /pcap/$pcap -j" 2>&1 | head -1000 > "$(pwd)/../zeek_output/${name}.json" || echo "[]" > "$(pwd)/../zeek_output/${name}.json"
           done
           ls -la ../zeek_output/
 
