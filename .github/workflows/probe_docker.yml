@@ -139,14 +139,27 @@ jobs:
         run: |
           docker pull ${{ env.IMAGE_NAME }}:latest
           cd DeepPupils/probe/test/pcap
+          echo "=== PCAP files found: ==="
+          ls -la
+          echo "=== Creating output dir ==="
+          mkdir -p ../zeek_output
+          echo "=== Output dir ==="
+          ls -la ../zeek_output/
+          echo "=== Testing zeek binary ==="
+          docker run --rm -v $(pwd):/pcap ${{ env.IMAGE_NAME }}:latest which zeek zeek --version 2>&1 || echo "zeek binary check failed"
+          echo "=== Running Zeek analysis ==="
           for pcap in *.pcap; do
             name=$(basename "$pcap" .pcap)
+            echo "Processing: $pcap -> $name"
             docker run --rm \
               -v $(pwd):/pcap \
               -v $(pwd)/../zeek_output:/output \
               ${{ env.IMAGE_NAME }}:latest \
-              zeek -r "/pcap/$pcap" -j > "../zeek_output/${name}.json" 2>&1 || echo "[]" > "../zeek_output/${name}.json"
+              zeek -r "/pcap/$pcap" -j 2>&1 | tee "/tmp/zeek_raw_${name}.log" > "/output/${name}.json" || { echo "Zeek failed for $pcap, output empty JSON"; echo "[]" > "/output/${name}.json"; }
+            echo "Exit code: $?"
+            ls -la ../zeek_output/
           done
+          echo "=== Final output dir ==="
           ls -la $(pwd)/../zeek_output/
 
       - name: 上传 Zeek 输出
