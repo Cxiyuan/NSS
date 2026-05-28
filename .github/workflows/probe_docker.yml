@@ -133,13 +133,12 @@ jobs:
           path: DeepPupils/probe/test/pcap/
 
       - name: 创建 Zeek 输出目录
-        run: mkdir -p DeepPupils/probe/test/zeek_output
+        run: mkdir -p ${{ github.workspace }}/DeepPupils/probe/test/zeek_output
 
       - name: 运行 Zeek 分析
         run: |
+          docker pull ${{ env.IMAGE_NAME }}:latest
           cd DeepPupils/probe/test/pcap
-          # 等待 probe 镜像构建完成并拉取
-          docker pull ${{ env.IMAGE_NAME }}:latest || true
           for pcap in *.pcap; do
             name=$(basename "$pcap" .pcap)
             docker run --rm \
