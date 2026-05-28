@@ -19,6 +19,7 @@ COPY extend/ /opt/probe/extend/
 ENV PATH="/opt/probe/bin:${PATH}"
 
 # 注册扩展脚本到 Zeek 加载（追加到 site/local.zeek）
-RUN echo "@load /opt/probe/extend/http-extend" >> /opt/zeek/share/zeek/site/local.zeek
+RUN mkdir -p /opt/zeek/share/zeek/site && \
+    echo "@load /opt/probe/extend/http-extend" >> /opt/zeek/share/zeek/site/local.zeek
 
 CMD ["zeek"]

@@ -63,26 +63,27 @@ jobs:
         uses: actions/download-artifact@v4
         with:
           name: http-pcaps
+          path: pcap
 
       - name: 运行 Zeek 分析
         run: |
-          mkdir -p DeepPupils/probe/test/zeek_output
-          cd DeepPupils/probe/test/pcap
-          for pcap in *.pcap; do
+          PCAP_DIR=$(pwd)
+          mkdir -p zeek_output
+          for pcap in pcap/*.pcap; do
             name=$(basename "$pcap" .pcap)
             docker run --rm \
               -v $(pwd):/pcap \
-              -v ${{ github.workspace }}/DeepPupils/probe/test/zeek_output:/output \
+              -v $(pwd)/zeek_output:/output \
               ghcr.io/cxiyuan/probe:latest \
               zeek -r "/pcap/$pcap" -j > "/output/${name}.json" 2>&1 || echo "[]" > "/output/${name}.json"
           done
-          ls -la ${{ github.workspace }}/DeepPupils/probe/test/zeek_output/
+          ls -la zeek_output/
 
       - name: Upload zeek output
         uses: actions/upload-artifact@v4
         with:
           name: zeek-output
-          path: DeepPupils/probe/test/zeek_output/
+          path: zeek_output/
           retention-days: 1
 
   field-assertion:
@@ -94,13 +95,13 @@ jobs:
         uses: actions/download-artifact@v4
         with:
           name: zeek-output
+          path: zeek_output
 
       - name: jq 字段存在性检查
         run: |
           set -e
           echo "=== 字段存在性检查 ==="
-          cd DeepPupils/probe/test/zeek_output
-          for json in *.json; do
+          for json in zeek_output/*.json; do
             echo "检查: $json"
             # 基础字段存在性检查（任一记录有该字段即 PASS）
             jq -e 'any(.[]; .http.host != null)' "$json" && echo "  [PASS] host" || { echo "  [FAIL] host"; exit 1; }
@@ -121,6 +122,7 @@ jobs:
         uses: actions/download-artifact@v4
         with:
           name: zeek-output
+          path: zeek_output
 
       - name: Set up Python
         uses: actions/setup-python@v5
@@ -132,13 +134,12 @@ jobs:
 
       - name: Run pytest
         run: |
-          cd DeepPupils/probe/test
-          python3 -m pytest test_http.py -v --tb=short || echo "pytest 有失败用例"
+          python3 -m pytest DeepPupils/probe/test/test_http.py -v --tb=short || echo "pytest 有失败用例"
 
       - name: Upload pytest report
         if: always()
         uses: actions/upload-artifact@v4
         with:
           name: pytest-report
-          path: DeepPupils/probe/test/pytest_report/
+          path: pytest_report/
           retention-days: 1
