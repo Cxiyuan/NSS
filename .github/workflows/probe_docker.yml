@@ -50,7 +50,7 @@ jobs:
         id: meta
         uses: docker/metadata-action@v5
         with:
-          images: ghcr.io/${{ github.repository }}/probe
+          images: ghcr.io/cxiyuan/probe
           tags: |
             latest
             ${{ github.sha }}
