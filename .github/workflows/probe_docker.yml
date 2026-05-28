@@ -133,7 +133,7 @@ jobs:
           path: DeepPupils/probe/test/pcap/
 
       - name: 创建 Zeek 输出目录
-        run: mkdir -p ${{ github.workspace }}/DeepPupils/probe/test/zeek_output
+        run: mkdir -p $(pwd)/../zeek_output
 
       - name: 运行 Zeek 分析
         run: |
@@ -143,11 +143,11 @@ jobs:
             name=$(basename "$pcap" .pcap)
             docker run --rm \
               -v $(pwd):/pcap \
-              -v ${{ github.workspace }}/DeepPupils/probe/test/zeek_output:/output \
+              -v $(pwd)/../zeek_output:/output \
               ${{ env.IMAGE_NAME }}:latest \
-              zeek -r "/pcap/$pcap" -j > "/output/${name}.json" 2>&1 || echo "[]" > "/output/${name}.json"
+              zeek -r "/pcap/$pcap" -j > "../zeek_output/${name}.json" 2>&1 || echo "[]" > "../zeek_output/${name}.json"
           done
-          ls -la ${{ github.workspace }}/DeepPupils/probe/test/zeek_output/
+          ls -la $(pwd)/../zeek_output/
 
       - name: 上传 Zeek 输出
         uses: actions/upload-artifact@v4
