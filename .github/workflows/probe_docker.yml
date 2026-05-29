@@ -129,7 +129,7 @@ jobs:
           path: DeepPupils/probe/test/pcap/
 
       - name: 运行 Zeek 分析
-        timeout-minutes: 5
+        timeout-minutes: 3
         run: |
           docker pull ${{ env.IMAGE_NAME }}:latest
           cd DeepPupils/probe/test/pcap
@@ -137,21 +137,22 @@ jobs:
           ls -la
           echo "=== test zeek version ==="
           docker run --rm ${{ env.IMAGE_NAME }}:latest zeek --version
+          echo "=== test zeek can read pcap (5s timeout) ==="
+          timeout 5 docker run --rm \
+            -v $(pwd):/pcap:ro \
+            ${{ env.IMAGE_NAME }}:latest \
+            zeek -r /pcap/http_auth.pcap -j 2>&1 | head -3 || echo "[TIMEOUT or ERROR]"
+          echo "=== done testing ==="
+          echo "=== processing all pcap files ==="
           mkdir -p ../zeek_output
-          # 跳过超大 pcap 和可能问题的 pcap，只处理最小的 3 个
-          # http_auth: 1440B, http_cookies: 1779B, http_proxy: 1399B
-          for pcap in http_auth.pcap http_cookies.pcap http_proxy.pcap; do
-            if [ ! -f "$pcap" ]; then
-              echo "[SKIP] $pcap not found"
-              continue
-            fi
+          for pcap in *.pcap; do
             name=$(basename "$pcap" .pcap)
             echo "=== Processing $pcap ==="
-            timeout 15 docker run --rm \
+            timeout 10 docker run --rm \
               -v $(pwd):/pcap:ro \
               -v $(pwd)/../zeek_output:/output \
               ${{ env.IMAGE_NAME }}:latest \
-              sh -c "mkdir -p /output && zeek -b -r /pcap/$pcap -j 2>/dev/null | jq -c '.[:5]' > /output/${name}.json" \
+              sh -c "mkdir -p /output && zeek -b -r /pcap/$pcap -j 2>/dev/null | jq -c '.[:10]' > /output/${name}.json" \
               && echo "[OK] $pcap" \
               || { echo "[WARN] timeout or error for $pcap"; echo "[]" > "$(pwd)/../zeek_output/${name}.json"; }
           done
