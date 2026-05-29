@@ -146,10 +146,19 @@ jobs:
 
           # DEBUG: dump all http_header names to identify missing headers
           echo "=== DEBUG: dump all http_header events for http_auth.pcap ==="
+          cat > /tmp/debug_headers.zeek << 'ZEEKEOF'
+@load base/protocols/http/main
+event http_header(c: connection, is_orig: bool, name: string, value: string)
+{
+    if (is_orig)
+        print fmt("ORIG header: %s", name);
+}
+ZEEKEOF
           docker run --rm \
             -v "$(pwd):/pcap:ro" \
+            -v /tmp/debug_headers.zeek:/tmp/debug_headers.zeek:ro \
             ${{ env.IMAGE_NAME }}:${{ github.sha }} \
-            sh -c "printf 'event http_header(c, is_orig, name, value) { if (is_orig) print fmt(\"ORIG header: %%s\", name); }' > /tmp/debug_headers.zeek && zeek -r /pcap/http_auth.pcap /tmp/debug_headers.zeek" 2>&1
+            zeek -r /pcap/http_auth.pcap /tmp/debug_headers.zeek 2>&1
 
           # 在 docker 之前创建输出目录，避免 root 权限问题
           mkdir -p ../zeek_output
