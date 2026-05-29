@@ -58,14 +58,17 @@ const server = createServer(app);
 
 const { broadcast: wsBroadcast } = createWSServer(server);
 
-server.listen(PORT, async () => {
+server.listen(PORT, () => {
   console.log(`Server running at http://localhost:${PORT}`);
-  try {
-    await launchBrowser();
+  // Launch browser in background with timeout — don't block server startup
+  Promise.race([
+    launchBrowser(),
+    new Promise((_, reject) => setTimeout(() => reject(new Error('browser launch timeout')), 15000)),
+  ]).then(() => {
     console.log('Browser launched');
-  } catch (err) {
+  }).catch(err => {
     console.warn('Browser launch failed (Puppeteer may not be available):', err.message);
-  }
+  });
 });
 
 process.on('SIGTERM', () => {

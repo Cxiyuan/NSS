@@ -17,8 +17,9 @@ COPY server/ ./server/
 COPY --from=client-builder /app/client/dist ./client/dist
 
 RUN apk add --no-cache chromium nss freetype harfbuzz ca-certificates ttf-freefont \
-    && echo "PUPPETEER_EXECUTABLE_PATH=/usr/bin/chromium-browser" > .env
+    && mkdir -p /app/data
 
+ENV PUPPETEER_EXECUTABLE_PATH=/usr/bin/chromium-browser
 EXPOSE 3000
 ENV PORT=3000
 CMD ["node", "server/index.js"]

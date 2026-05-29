@@ -2,7 +2,8 @@ import { describe, it, before, after } from 'node:test';
 import assert from 'node:assert';
 import Database from 'better-sqlite3';
 import { initDB } from './schema.js';
-import { unlinkSync } from 'node:fs';
+import { existsSync, mkdirSync, unlinkSync } from 'node:fs';
+import { dirname } from 'node:path';
 
 const TEST_DB = './data/test.db';
 
@@ -10,6 +11,8 @@ describe('schema', () => {
   let db;
 
   before(() => {
+    const dir = dirname(TEST_DB);
+    if (!existsSync(dir)) mkdirSync(dir, { recursive: true });
     try { unlinkSync(TEST_DB); } catch {}
     db = new Database(TEST_DB);
   });

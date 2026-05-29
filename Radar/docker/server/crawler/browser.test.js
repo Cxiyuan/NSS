@@ -3,7 +3,10 @@ import assert from 'node:assert';
 import { launchBrowser, fetchWithBrowser, closeBrowser } from './browser.js';
 
 describe('browser', () => {
-  before(async () => {
+  before(async function () {
+    if (!process.env.PUPPETEER_EXECUTABLE_PATH || !process.env.CI) {
+      this.skip();
+    }
     await launchBrowser();
   });
 
@@ -11,7 +14,7 @@ describe('browser', () => {
     await closeBrowser();
   });
 
-  it('renders a page and returns full HTML', async () => {
+  it('renders a page and returns full HTML', async function () {
     const html = await fetchWithBrowser('https://example.com');
     assert.ok(html.includes('</html>'));
   });
