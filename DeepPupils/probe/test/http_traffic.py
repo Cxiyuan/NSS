@@ -761,6 +761,45 @@ def generate_boundary_mixed_encoding_pcap(output_file, session_count=1):
     print(f"[+] boundary_mixed_encoding: {output_file} ({len(packets)} packets)")
 
 
+def generate_multicast_pcap(output_file, session_count=1):
+    """生成混合单播 HTTP + 组播流量的 PCAP，用于验证 drop_multicast.zeek
+
+    PCAP 结构：
+    - 2 个正常单播 HTTP 会话 → 应出现在 conn.log / http.log
+    - N 个组播 UDP 包 (224.0.0.x) → 应被 BPF 过滤，不出现在 conn.log
+    """
+    packets = []
+    client_ip = random_ip()
+    server_ip = random_ip()
+    sport = random_port()
+    dport = 80
+
+    # 单播 HTTP 会话（应被 Zeek 正常处理）
+    for i in range(2):
+        method = "GET" if i == 0 else "POST"
+        headers = list(REQUEST_HEADERS)
+        body = "q=multicast_filter_test" if method == "POST" else None
+        http_req = build_http_request(method, "/api/multicast-test", headers, body)
+        resp_body = random.choice(RESPONSE_BODIES)
+        packets.extend(build_full_flow(client_ip, server_ip, sport + i, dport,
+                                       http_req, resp_body, 200, "OK"))
+
+    # 组播 UDP 包（应被 drop_multicast.zeek 过滤）
+    multicast_targets = [
+        ("224.0.0.1", 1234),         # All Hosts
+        ("224.0.0.251", 5353),       # mDNS
+        ("239.255.255.250", 1900),   # SSDP
+    ]
+    for mcast_ip, mcast_port in multicast_targets:
+        pkt = (IP(src=client_ip, dst=mcast_ip) /
+               UDP(sport=random_port(), dport=mcast_port) /
+               Raw(load=b"multicast probe"))
+        packets.append(pkt)
+
+    wrpcap(output_file, packets)
+    print(f"[+] multicast: {output_file} ({len(packets)} packets)")
+
+
 def generate_pcap(scenario="auth", output_file="http_auth.pcap", session_count=3):
     """统一入口"""
     scenarios = {
@@ -775,6 +814,7 @@ def generate_pcap(scenario="auth", output_file="http_auth.pcap", session_count=3
         "boundary_large_body": generate_boundary_large_body_pcap,
         "boundary_special_char": generate_boundary_special_char_pcap,
         "boundary_mixed_encoding": generate_boundary_mixed_encoding_pcap,
+        "multicast": generate_multicast_pcap,
     }
     scenarios[scenario](output_file, session_count)
 
@@ -830,7 +870,7 @@ if __name__ == "__main__":
     parser.add_argument("-s", "--scenario", type=str, default="auth",
                         choices=["auth", "proxy", "cookies", "body", "headers", "methods", "status",
                                  "boundary_large_header", "boundary_large_body", "boundary_special_char",
-                                 "boundary_mixed_encoding"],
+                                 "boundary_mixed_encoding", "multicast"],
                         help="测试场景")
     parser.add_argument("-o", "--output", type=str, default="output.pcap")
     parser.add_argument("-c", "--count", type=int, default=3)

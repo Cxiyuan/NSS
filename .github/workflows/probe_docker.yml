@@ -107,6 +107,7 @@ jobs:
           python3 http_traffic.py -s boundary_large_body -o pcap/http_boundary_large_body.pcap -c 1
           python3 http_traffic.py -s boundary_special_char -o pcap/http_boundary_special_char.pcap -c 1
           python3 http_traffic.py -s boundary_mixed_encoding -o pcap/http_boundary_mixed_encoding.pcap -c 1
+          python3 http_traffic.py -s multicast -o pcap/http_multicast.pcap -c 1
           ls -la pcap/
 
       - name: 上传流量文件
@@ -162,6 +163,11 @@ jobs:
             ls -la "$tmpdir/"
 
             python3 ../convert_zeek_logs.py "${tmpdir}/http.log" "../zeek_output/${name}.json"
+
+            # 组播过滤验收：验证 conn.log 中无组播目标 IP
+            if [ "$name" = "http_multicast" ]; then
+              python3 ../verify_multicast.py "${tmpdir}/conn.log"
+            fi
 
             rm -rf "$tmpdir"
           done

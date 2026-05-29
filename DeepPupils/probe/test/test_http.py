@@ -218,3 +218,18 @@ class TestBoundary:
         ]
         for scenario in boundary_scenarios:
             assert scenario in zeek_results, f"Scenario {scenario} has no output, Zeek may have crashed or file is missing"
+
+
+class TestMulticast:
+    """drop_multicast.zeek verification."""
+
+    def test_multicast_unicast_present(self, zeek_results):
+        """单播 HTTP 流量应被正常处理，产出 http_multicast.json。"""
+        assert "http_multicast" in zeek_results, (
+            "http_multicast.json missing — unicast traffic should be processed"
+        )
+        records = zeek_results["http_multicast"]
+        http_records = [r for r in records if r.get("kind") == "http"]
+        assert len(http_records) >= 2, (
+            f"Expected >=2 unicast HTTP records, got {len(http_records)}"
+        )
