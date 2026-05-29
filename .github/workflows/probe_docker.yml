@@ -142,11 +142,24 @@ jobs:
           echo "=== test zeek -b -N (base only) ==="
           timeout 15 docker run --rm ${{ env.IMAGE_NAME }}:latest zeek -b -N 2>&1 > /tmp/zeek_bN.txt; echo "zeek -b -N exit code: $?"; cat /tmp/zeek_bN.txt | wc -l; head -20 /tmp/zeek_bN.txt || echo "[FAIL] zeek -b -N"
           echo "=== test zeek processing pcap (file output, no pipe) ==="
+          echo "--- test 1: zeek without -j (creates log files) ---"
           timeout 10 docker run --rm \
             -v $(pwd):/pcap:ro \
             -v $(pwd)/../zeek_output:/output \
             ${{ env.IMAGE_NAME }}:latest \
-            sh -c "mkdir -p /output && zeek -r /pcap/http_auth.pcap -j > /output/test.json 2>/dev/null; echo DONE; wc -l /output/test.json; head -5 /output/test.json" || echo "[FAIL]"
+            sh -c "mkdir -p /output && cd /output && zeek -r /pcap/http_auth.pcap 2>&1; echo DONE1; ls -la /output/" || echo "[FAIL test1]"
+          echo "--- test 2: zeek with --use-json (alternative to -j) ---"
+          timeout 10 docker run --rm \
+            -v $(pwd):/pcap:ro \
+            -v $(pwd)/../zeek_output:/output \
+            ${{ env.IMAGE_NAME }}:latest \
+            sh -c "mkdir -p /output && cd /output && zeek --use-json -r /pcap/http_auth.pcap 2>&1; echo DONE2" || echo "[FAIL test2]"
+          echo "--- test 3: zeek -j with internal timeout ---"
+          timeout 10 docker run --rm \
+            -v $(pwd):/pcap:ro \
+            -v $(pwd)/../zeek_output:/output \
+            ${{ env.IMAGE_NAME }}:latest \
+            sh -c "mkdir -p /output && timeout 5 zeek -r /pcap/http_auth.pcap -j > /output/test3.json 2>&1; echo DONE3; ls -la /output/test3.json 2>/dev/null || echo 'no output file'" || echo "[FAIL test3]"
           echo "=== All diagnostic tests done ==="
           echo "=== All diagnostic tests done ==="
           mkdir -p ../zeek_output
