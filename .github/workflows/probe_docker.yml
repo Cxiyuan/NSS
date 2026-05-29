@@ -141,23 +141,12 @@ jobs:
           timeout 15 docker run --rm ${{ env.IMAGE_NAME }}:latest zeek -N 2>&1 > /tmp/zeek_N.txt; echo "zeek -N exit code: $?"; cat /tmp/zeek_N.txt | wc -l; head -20 /tmp/zeek_N.txt || echo "[FAIL] zeek -N"
           echo "=== test zeek -b -N (base only) ==="
           timeout 15 docker run --rm ${{ env.IMAGE_NAME }}:latest zeek -b -N 2>&1 > /tmp/zeek_bN.txt; echo "zeek -b -N exit code: $?"; cat /tmp/zeek_bN.txt | wc -l; head -20 /tmp/zeek_bN.txt || echo "[FAIL] zeek -b -N"
-          echo "=== test zeek processing small pcap ==="
-          # 测试 zeek 读取 pcap 的行为
-          echo "--- test zeek -r only (no base, no scripts) ---"
+          echo "=== test zeek processing pcap (file output, no pipe) ==="
           timeout 10 docker run --rm \
             -v $(pwd):/pcap:ro \
+            -v $(pwd)/../zeek_output:/output \
             ${{ env.IMAGE_NAME }}:latest \
-            sh -c "zeek -r /pcap/http_auth.pcap 2>&1 | head -5" || echo "zeek -r only failed"
-          echo "--- test zeek -b -r with base misc only ---"
-          timeout 10 docker run --rm \
-            -v $(pwd):/pcap:ro \
-            ${{ env.IMAGE_NAME }}:latest \
-            sh -c "zeek -b -r /pcap/http_auth.pcap base/misc 2>&1 | head -5" || echo "zeek with base/misc failed"
-          echo "--- test zeek with -C (ignore checksums) ---"
-          timeout 10 docker run --rm \
-            -v $(pwd):/pcap:ro \
-            ${{ env.IMAGE_NAME }}:latest \
-            sh -c "zeek -C -b -r /pcap/http_auth.pcap -j 2>&1 | head -5" || echo "zeek -C failed"
+            sh -c "mkdir -p /output && zeek -r /pcap/http_auth.pcap -j > /output/test.json 2>/dev/null; echo DONE; wc -l /output/test.json; head -5 /output/test.json" || echo "[FAIL]"
           echo "=== All diagnostic tests done ==="
           echo "=== All diagnostic tests done ==="
           mkdir -p ../zeek_output
