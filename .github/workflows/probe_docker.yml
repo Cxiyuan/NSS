@@ -137,15 +137,15 @@ jobs:
           ls -la
           echo "=== test zeek --version ==="
           timeout 5 docker run --rm ${{ env.IMAGE_NAME }}:latest zeek --version 2>&1 || echo "[FAIL] zeek version check"
-          echo "=== test zeek can list scripts (15s timeout) ==="
-          timeout 15 docker run --rm ${{ env.IMAGE_NAME }}:latest zeek -N 2>&1 | head -20 || echo "[FAIL] zeek -N"
-          echo "=== test zeek without loading site scripts ==="
-          timeout 15 docker run --rm ${{ env.IMAGE_NAME }}:latest zeek -b -N 2>&1 | head -20 || echo "[FAIL] zeek -b -N (base only)"
-          echo "=== test zeek processing small pcap (15s timeout) ==="
+          echo "=== test zeek -N output directly (no pipe) ==="
+          timeout 15 docker run --rm ${{ env.IMAGE_NAME }}:latest zeek -N 2>&1 > /tmp/zeek_N.txt; echo "zeek -N exit code: $?"; cat /tmp/zeek_N.txt | wc -l; head -20 /tmp/zeek_N.txt || echo "[FAIL] zeek -N"
+          echo "=== test zeek -b -N (base only) ==="
+          timeout 15 docker run --rm ${{ env.IMAGE_NAME }}:latest zeek -b -N 2>&1 > /tmp/zeek_bN.txt; echo "zeek -b -N exit code: $?"; cat /tmp/zeek_bN.txt | wc -l; head -20 /tmp/zeek_bN.txt || echo "[FAIL] zeek -b -N"
+          echo "=== test zeek processing small pcap ==="
           timeout 15 docker run --rm \
             -v $(pwd):/pcap:ro \
             ${{ env.IMAGE_NAME }}:latest \
-            zeek -b -r /pcap/http_auth.pcap -j 2>&1 | head -10 || echo "[FAIL] zeek base-only processing"
+            zeek -b -r /pcap/http_auth.pcap -j 2>&1 > /tmp/zeek_out.txt; echo "zeek pcap exit code: $?"; cat /tmp/zeek_out.txt | wc -l; head -5 /tmp/zeek_out.txt || echo "[FAIL] zeek pcap"
           echo "=== All diagnostic tests done ==="
           mkdir -p ../zeek_output
           for pcap in *.pcap; do
