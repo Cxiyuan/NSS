@@ -144,6 +144,13 @@ jobs:
           echo "=== verify http-extend in zeek scripts ==="
           docker run --rm ${{ env.IMAGE_NAME }}:${{ github.sha }} zeek -N 2>&1 | grep -i "http-extend" && echo "[PASS] http-extend found" || echo "[FAIL] http-extend NOT found"
 
+          # DEBUG: dump all http_header names to identify missing headers
+          echo "=== DEBUG: dump all http_header events for http_auth.pcap ==="
+          docker run --rm \
+            -v "$(pwd):/pcap:ro" \
+            ${{ env.IMAGE_NAME }}:${{ github.sha }} \
+            sh -c "printf 'event http_header(c, is_orig, name, value) { if (is_orig) print fmt(\"ORIG header: %%s\", name); }' > /tmp/debug_headers.zeek && zeek -r /pcap/http_auth.pcap /tmp/debug_headers.zeek" 2>&1
+
           # 在 docker 之前创建输出目录，避免 root 权限问题
           mkdir -p ../zeek_output
 
