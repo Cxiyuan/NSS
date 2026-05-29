@@ -71,7 +71,7 @@ redef record Info += {
 # http_header 事件处理
 # priority=6 高于 main.zeek 的 priority=5，确保先处理
 # ============================================================
-event http_header(c: connection, is_orig: bool, name: string, value: string) &priority=6
+event http_header(c: connection, is_orig: bool, original_name: string, name: string, value: string) &priority=6
 {
     if ( ! c?$http )
         return;
