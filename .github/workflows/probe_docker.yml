@@ -142,10 +142,10 @@ jobs:
           echo "=== test zeek -b -N (base only) ==="
           timeout 15 docker run --rm ${{ env.IMAGE_NAME }}:latest zeek -b -N 2>&1 > /tmp/zeek_bN.txt; echo "zeek -b -N exit code: $?"; cat /tmp/zeek_bN.txt | wc -l; head -20 /tmp/zeek_bN.txt || echo "[FAIL] zeek -b -N"
           echo "=== test zeek processing small pcap ==="
-          timeout 15 docker run --rm \
+          timeout 10 docker run --rm \
             -v $(pwd):/pcap:ro \
             ${{ env.IMAGE_NAME }}:latest \
-            zeek -b -r /pcap/http_auth.pcap -j 2>&1 > /tmp/zeek_out.txt; echo "zeek pcap exit code: $?"; cat /tmp/zeek_out.txt | wc -l; head -5 /tmp/zeek_out.txt || echo "[FAIL] zeek pcap"
+            sh -c "echo 'starting zeek'; zeek -b -r /pcap/http_auth.pcap 2>&1 | head -1 | cat; echo 'done'" || echo "zeek command failed or timeout"
           echo "=== All diagnostic tests done ==="
           mkdir -p ../zeek_output
           for pcap in *.pcap; do
