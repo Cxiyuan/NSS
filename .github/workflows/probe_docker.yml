@@ -56,8 +56,8 @@ jobs:
         with:
           images: ${{ env.IMAGE_NAME }}
           tags: |
-            latest
-            ${{ github.sha }}
+            type=sha
+            type=raw,value=latest,enable=${{ github.event_name == 'push' && github.ref == 'refs/heads/main' }}
 
       - name: Build and push Docker image
         uses: docker/build-push-action@v5
@@ -134,14 +134,14 @@ jobs:
       - name: 运行 Zeek 分析
         timeout-minutes: 5
         run: |
-          docker pull ${{ env.IMAGE_NAME }}:latest
+          docker pull ${{ env.IMAGE_NAME }}:${{ github.sha }}
           cd DeepPupils/probe/test/pcap
           echo "=== pcap files ==="
           ls -la
 
           # 验证 http-extend 扩展是否在镜像中注册成功
           echo "=== verify http-extend in zeek scripts ==="
-          docker run --rm ${{ env.IMAGE_NAME }}:latest zeek -N 2>&1 | grep -i "http-extend" && echo "[PASS] http-extend found" || echo "[FAIL] http-extend NOT found"
+          docker run --rm ${{ env.IMAGE_NAME }}:${{ github.sha }} zeek -N 2>&1 | grep -i "http-extend" && echo "[PASS] http-extend found" || echo "[FAIL] http-extend NOT found"
 
           # 在 docker 之前创建输出目录，避免 root 权限问题
           mkdir -p ../zeek_output
@@ -156,7 +156,7 @@ jobs:
             docker run --rm \
               -v "$(pwd):/pcap:ro" \
               -v "$(pwd)/${tmpdir}:/output" \
-              ${{ env.IMAGE_NAME }}:latest \
+              ${{ env.IMAGE_NAME }}:${{ github.sha }} \
               sh -c "cd /output && zeek -r /pcap/${pcap} /opt/probe/extend/http-extend"
 
             echo "--- generated log files ---"
@@ -169,6 +169,7 @@ jobs:
 
           echo "=== Zeek output ==="
           ls -la ../zeek_output/
+          shopt -s nullglob
           for json in ../zeek_output/*.json; do
             count=$(wc -l < "$json" | tr -d ' ')
             echo "$(basename $json): ${count} records"
@@ -199,6 +200,7 @@ jobs:
       - name: jq 标准字段检查
         run: |
           cd DeepPupils/probe/test/zeek_output
+          shopt -s nullglob
           for json in *.json; do
             if [ ! -s "$json" ]; then
               echo "[SKIP] $json is empty, skipping validation"
@@ -213,40 +215,33 @@ jobs:
       - name: jq 自定义扩展字段检查
         run: |
           cd DeepPupils/probe/test/zeek_output
+          shopt -s nullglob
           echo "=== Verify http-extend fields exist (column presence) ==="
-          ALL_PASS=true
           for json in *.json; do
             if [ ! -s "$json" ]; then
               continue
             fi
-            # 检查扩展字段列是否存在（证明 http-extend.zeek 已加载）
-            for field in authorizations cookies xff accept accept_language accept_encoding \
-                         content_type server_header keep_alive_header x_requested_with; do
-              if jq -s -e "any(.[]; .http | has(\"$field\"))" "$json" 2>/dev/null; then
-                echo "[PASS] $json -> http.$field column present"
-                break  # 找到一个即证明扩展已加载
-              fi
-            done
-            if ! jq -s -e "any(.[]; .http | has(\"authorizations\")) and any(.[]; .http | has(\"cookies\")) and any(.[]; .http | has(\"xff\"))" "$json" 2>/dev/null; then
-              echo "[WARN] $json: some extension columns missing"
-            fi
+            # 核心扩展字段列必须全部存在（证明 http-extend.zeek 已加载）
+            jq -s -e "any(.[]; .http | has(\"authorizations\")) and any(.[]; .http | has(\"cookies\")) and any(.[]; .http | has(\"xff\"))" "$json" \
+              && echo "[PASS] $json: extension columns present" \
+              || { echo "[FAIL] $json: extension columns missing — http-extend may not be loaded"; exit 1; }
           done
 
           echo "=== Verify extension field values in scenario files ==="
-          # http_auth.json 应该有 Authorization 头
+          # http_auth.json 必须有 Authorization 头
           jq -s -e 'any(.[]; .http.authorizations != null and .http.authorizations != "")' http_auth.json \
             && echo "[PASS] http_auth.json: authorizations has value" \
-            || echo "[WARN] http_auth.json: authorizations is empty"
+            || { echo "[FAIL] http_auth.json: authorizations is empty"; exit 1; }
 
-          # http_cookies.json 应该有 Cookie 头
+          # http_cookies.json 必须有 Cookie 头
           jq -s -e 'any(.[]; .http.cookies != null and .http.cookies != "")' http_cookies.json \
             && echo "[PASS] http_cookies.json: cookies has value" \
-            || echo "[WARN] http_cookies.json: cookies is empty"
+            || { echo "[FAIL] http_cookies.json: cookies is empty"; exit 1; }
 
-          # http_proxy.json 应该有 X-Forwarded-For
+          # http_proxy.json 必须有 X-Forwarded-For
           jq -s -e 'any(.[]; .http.xff != null and .http.xff != "")' http_proxy.json \
             && echo "[PASS] http_proxy.json: xff has value" \
-            || echo "[WARN] http_proxy.json: xff is empty"
+            || { echo "[FAIL] http_proxy.json: xff is empty"; exit 1; }
 
   # ============================================================
   # [Job 5] pytest 精确值验证（可选失败不阻塞）
