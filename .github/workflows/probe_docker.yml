@@ -146,14 +146,7 @@ jobs:
 
           # DEBUG: dump all http_header names to identify missing headers
           echo "=== DEBUG: dump all http_header events for http_auth.pcap ==="
-          cat > /tmp/debug_headers.zeek << 'ZEEKEOF'
-@load base/protocols/http/main
-event http_header(c: connection, is_orig: bool, name: string, value: string)
-{
-    if (is_orig)
-        print fmt("ORIG header: %s", name);
-}
-ZEEKEOF
+          printf '@load base/protocols/http/main\nevent http_header(c: connection, is_orig: bool, name: string, value: string)\n{\n    if (is_orig)\n        print fmt("ORIG header: %%s", name);\n}\n' > /tmp/debug_headers.zeek
           docker run --rm \
             -v "$(pwd):/pcap:ro" \
             -v /tmp/debug_headers.zeek:/tmp/debug_headers.zeek:ro \
