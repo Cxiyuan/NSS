@@ -8,8 +8,8 @@ export function normalizeUrl(url) {
       u.port = '';
     }
     let result = u.toString();
-    if (result.endsWith('/') && !u.pathname.endsWith('/')) {
-      result = result.replace(/\/$/, '');
+    if (result.endsWith('/') && u.pathname === '/') {
+      result = result.slice(0, -1);
     }
     return result;
   } catch {
