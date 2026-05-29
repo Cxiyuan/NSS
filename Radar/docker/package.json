@@ -1,0 +1,25 @@
+{
+  "name": "web-crawler",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev:server": "node --watch server/index.js",
+    "dev:client": "cd client && npx vite --port 5173",
+    "dev": "node --watch server/index.js & cd client && npx vite --port 5173",
+    "build:client": "cd client && npx vite build",
+    "start": "node server/index.js",
+    "test": "node --test server/**/*.test.js",
+    "test:client": "cd client && npx vitest run"
+  },
+  "dependencies": {
+    "better-sqlite3": "^11.0.0",
+    "cheerio": "^1.0.0",
+    "express": "^4.21.0",
+    "pdfmake": "^0.2.10",
+    "puppeteer": "^23.0.0",
+    "uuid": "^10.0.0",
+    "ws": "^8.18.0"
+  },
+  "devDependencies": {}
+}
