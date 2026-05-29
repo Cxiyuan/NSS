@@ -142,23 +142,6 @@ jobs:
           echo "=== pcap files ==="
           ls -la
 
-          # 验证 http-extend 扩展是否在镜像中注册成功
-          echo "=== verify http-extend in zeek scripts ==="
-          docker run --rm ${{ env.IMAGE_NAME }}:${{ github.sha }} zeek -N 2>&1 | grep -i "http-extend" && echo "[PASS] http-extend found" || echo "[FAIL] http-extend NOT found"
-
-          # VERIFY: check actual http-extend.zeek in image has 5-param signature
-          echo "=== verify http-extend.zeek event signature ==="
-          docker run --rm ${{ env.IMAGE_NAME }}:${{ github.sha }} grep "event http_header" /opt/probe/extend/http-extend.zeek
-
-          # DEBUG: dump AUTHORIZATION header with 5-param handler to see ALL values
-          echo "=== DEBUG: dump AUTHORIZATION header event (5-param handler) ==="
-          printf '@load base/protocols/http/main\nevent http_header(c: connection, is_orig: bool, original_name: string, name: string, value: string)\n{\n    if (is_orig && name == "AUTHORIZATION")\n        print fmt("AUTH original_name=%%s name=%%s value=%%s", original_name, name, value);\n}\n' > /tmp/debug_auth2.zeek
-          docker run --rm \
-            -v "$(pwd):/pcap:ro" \
-            -v /tmp/debug_auth2.zeek:/tmp/debug_auth2.zeek:ro \
-            ${{ env.IMAGE_NAME }}:${{ github.sha }} \
-            zeek -r /pcap/http_auth.pcap /tmp/debug_auth2.zeek 2>&1
-
           # 在 docker 之前创建输出目录，避免 root 权限问题
           mkdir -p ../zeek_output
 
@@ -177,10 +160,6 @@ jobs:
 
             echo "--- generated log files ---"
             ls -la "$tmpdir/"
-
-            # DEBUG: dump raw http.log authorizations field value
-            echo "--- raw http.log header/authorizations ---"
-            grep -E "^#fields|AUTHORIZATION|Basic" "${tmpdir}/http.log" || true
 
             python3 ../convert_zeek_logs.py "${tmpdir}/http.log" "../zeek_output/${name}.json"
 
