@@ -107,9 +107,12 @@ def random_port():
 def build_http_request(method, path, headers, body=None):
     """构造 HTTP 请求行和头部"""
     request_lines = [f"{method} {path} HTTP/1.1"]
+    has_cl = False
     for k, v in headers:
         request_lines.append(f"{k}: {v}")
-    if body:
+        if k.lower() == "content-length":
+            has_cl = True
+    if body and not has_cl:
         request_lines.append(f"Content-Length: {len(body)}")
     request_lines.append("")
     if body:
@@ -120,10 +123,13 @@ def build_http_request(method, path, headers, body=None):
 def build_http_response(status_code, status_msg, headers, body=None):
     """构造 HTTP 响应行和头部"""
     response_lines = [f"HTTP/1.1 {status_code} {status_msg}"]
+    has_cl = False
     for k, v in headers:
         if v is not None:
             response_lines.append(f"{k}: {v}")
-    if body:
+            if k.lower() == "content-length":
+                has_cl = True
+    if body and not has_cl:
         response_lines.append(f"Content-Length: {len(body)}")
     response_lines.append("")
     if body:
@@ -154,7 +160,8 @@ def send_packet(packet):
     send(packet)
 
 
-def build_full_flow(client_ip, server_ip, sport, dport, http_req, http_resp_body, status_code=200, status_msg="OK"):
+def build_full_flow(client_ip, server_ip, sport, dport, http_req, http_resp_body,
+                    status_code=200, status_msg="OK", resp_extra_headers=None):
     """构造完整 TCP 会话包列表（SYN -> HTTP请求 -> HTTP响应 -> FIN）"""
     packets = []
     seq = random.randint(1000, 99999999)
@@ -174,6 +181,8 @@ def build_full_flow(client_ip, server_ip, sport, dport, http_req, http_resp_body
     headers_for_resp = list(RESPONSE_HEADERS)
     date_str = datetime.utcnow().strftime("%a, %d %b %Y %H:%M:%S GMT")
     headers_for_resp[1] = ("Date", date_str)
+    if resp_extra_headers:
+        headers_for_resp.extend(resp_extra_headers)
     http_resp = build_http_response(status_code, status_msg, headers_for_resp, http_resp_body)
     packets.append(IP(src=server_ip, dst=client_ip) / TCP(sport=dport, dport=sport, flags='PA', seq=server_seq, ack=client_seq) / Raw(load=http_resp))
     server_seq += len(http_resp)
@@ -288,7 +297,7 @@ def craft_http_session_pcap(session_count=1, output_file="http_traffic.pcap"):
     dport = 80
 
     for i in range(session_count):
-        flow = HTTPFlow(src_ip=client_ip, dst_ip=server_ip, sport=sport, dport=dport)
+        session_sport = sport + i
 
         # 切换方法
         method = random.choice(HTTP_METHODS)
@@ -312,40 +321,41 @@ def craft_http_session_pcap(session_count=1, output_file="http_traffic.pcap"):
         status_msg_map = {200: "OK", 201: "Created", 204: "No Content", 400: "Bad Request", 401: "Unauthorized", 403: "Forbidden", 404: "Not Found", 500: "Internal Server Error"}
         status_msg = status_msg_map.get(status_code, "OK")
 
+        flow = HTTPFlow(src_ip=client_ip, dst_ip=server_ip, sport=session_sport, dport=dport)
         http_req = flow.build_request(method, path, body=body, auth_header=auth_header, xff=xff)
         http_resp = flow.build_response(status_code=status_code, status_msg=status_msg, body=response_body)
 
         # TCP 三次握手包
         seq = random.randint(1000, 99999999)
-        syn = IP(src=client_ip, dst=server_ip) / TCP(sport=sport, dport=dport, flags='S', seq=seq)
+        syn = IP(src=client_ip, dst=server_ip) / TCP(sport=session_sport, dport=dport, flags='S', seq=seq)
         packets.append(syn)
 
-        syn_ack = IP(src=server_ip, dst=client_ip) / TCP(sport=dport, dport=sport, flags='SA', seq=random.randint(1000, 99999999), ack=seq + 1)
+        syn_ack = IP(src=server_ip, dst=client_ip) / TCP(sport=dport, dport=session_sport, flags='SA', seq=random.randint(1000, 99999999), ack=seq + 1)
         packets.append(syn_ack)
 
-        ack = IP(src=client_ip, dst=server_ip) / TCP(sport=sport, dport=dport, flags='A', seq=seq + 1, ack=syn_ack.seq + 1)
+        ack = IP(src=client_ip, dst=server_ip) / TCP(sport=session_sport, dport=dport, flags='A', seq=seq + 1, ack=syn_ack.seq + 1)
         packets.append(ack)
 
         # HTTP 请求包
         client_seq = seq + 1
-        http_req_pkt = IP(src=client_ip, dst=server_ip) / TCP(sport=sport, dport=dport, flags='PA', seq=client_seq, ack=syn_ack.seq + 1) / Raw(load=http_req)
+        http_req_pkt = IP(src=client_ip, dst=server_ip) / TCP(sport=session_sport, dport=dport, flags='PA', seq=client_seq, ack=syn_ack.seq + 1) / Raw(load=http_req)
         packets.append(http_req_pkt)
         client_seq += len(http_req)
 
         # HTTP 响应包
         server_seq = syn_ack.seq + 1
-        http_resp_pkt = IP(src=server_ip, dst=client_ip) / TCP(sport=dport, dport=sport, flags='PA', seq=server_seq, ack=client_seq) / Raw(load=http_resp)
+        http_resp_pkt = IP(src=server_ip, dst=client_ip) / TCP(sport=dport, dport=session_sport, flags='PA', seq=server_seq, ack=client_seq) / Raw(load=http_resp)
         packets.append(http_resp_pkt)
         server_seq += len(http_resp)
 
         # TCP FIN 握手
-        fin1 = IP(src=client_ip, dst=server_ip) / TCP(sport=sport, dport=dport, flags='FA', seq=client_seq, ack=server_seq)
+        fin1 = IP(src=client_ip, dst=server_ip) / TCP(sport=session_sport, dport=dport, flags='FA', seq=client_seq, ack=server_seq)
         packets.append(fin1)
 
-        fin_ack = IP(src=server_ip, dst=client_ip) / TCP(sport=dport, dport=sport, flags='FA', seq=server_seq, ack=client_seq + 1)
+        fin_ack = IP(src=server_ip, dst=client_ip) / TCP(sport=dport, dport=session_sport, flags='FA', seq=server_seq, ack=client_seq + 1)
         packets.append(fin_ack)
 
-        fin2 = IP(src=client_ip, dst=server_ip) / TCP(sport=sport, dport=dport, flags='A', seq=client_seq + 1, ack=server_seq + 1)
+        fin2 = IP(src=client_ip, dst=server_ip) / TCP(sport=session_sport, dport=dport, flags='A', seq=client_seq + 1, ack=server_seq + 1)
         packets.append(fin2)
 
         print(f"  [会话 {i+1}] {method} {path} -> {status_code}")
@@ -432,24 +442,15 @@ def generate_cookies_pcap(output_file, session_count=3):
         req_headers.append(("Cookie", "sessionid=abc123; user_id=1001; csrf_token=xyz789"))
 
         # 响应头含 Set-Cookie
-        resp_headers = list(RESPONSE_HEADERS)
         set_cookie = "sessionid=abc123; Path=/; HttpOnly; Secure; SameSite=Strict"
-        resp_headers.append(("Set-Cookie", set_cookie))
+        resp_extra_headers = [("Set-Cookie", set_cookie)]
 
         http_req = build_http_request(method, "/api/cookies", req_headers)
         resp_body = random.choice(RESPONSE_BODIES)
 
-        # 使用自定义响应头
-        headers_for_resp = list(RESPONSE_HEADERS)
-        date_str = datetime.utcnow().strftime("%a, %d %b %Y %H:%M:%S GMT")
-        headers_for_resp[1] = ("Date", date_str)
-        headers_for_resp.append(("Set-Cookie", set_cookie))
-
-        http_resp = build_http_response(200, "OK", headers_for_resp, resp_body)
-        flow_packets = build_full_flow(client_ip, server_ip, sport + i, dport, http_req, resp_body, 200, "OK")
-        # 替换响应包
-        flow_packets[-3] = IP(src=server_ip, dst=client_ip) / TCP(sport=dport, dport=sport + i, flags='PA', seq=random.randint(1000, 99999999), ack=random.randint(1000, 99999999)) / Raw(load=http_resp)
-        packets.extend(flow_packets)
+        packets.extend(build_full_flow(client_ip, server_ip, sport + i, dport,
+                                       http_req, resp_body, 200, "OK",
+                                       resp_extra_headers=resp_extra_headers))
 
     wrpcap(output_file, packets)
     print(f"[+] cookies: {output_file} ({len(packets)} packets)")
@@ -509,12 +510,10 @@ def generate_headers_pcap(output_file, session_count=3):
         body = "username=admin&password=admin123" if method == "POST" else None
         http_req = build_http_request(method, "/api/headers", req_headers, body)
 
-        # 响应头固定包含
-        resp_headers = [
+        # 响应头固定包含（排除 Date，由 build_full_flow 自动填充）
+        resp_extra_headers = [
             ("Server", "Apache/2.4.41"),
-            ("Date", datetime.utcnow().strftime("%a, %d %b %Y %H:%M:%S GMT")),
             ("Content-Type", "application/json; charset=UTF-8"),
-            ("Content-Length", None),
             ("Connection", "keep-alive"),
             ("Keep-Alive", "timeout=5, max=1000"),
             ("Cache-Control", "no-cache, no-store, must-revalidate"),
@@ -523,11 +522,9 @@ def generate_headers_pcap(output_file, session_count=3):
         ]
 
         resp_body = random.choice(RESPONSE_BODIES)
-        http_resp = build_http_response(200, "OK", resp_headers, resp_body)
-        flow_packets = build_full_flow(client_ip, server_ip, sport + i, dport, http_req, resp_body, 200, "OK")
-        # 替换响应包
-        flow_packets[-3] = IP(src=server_ip, dst=client_ip) / TCP(sport=dport, dport=sport + i, flags='PA', seq=random.randint(1000, 99999999), ack=random.randint(1000, 99999999)) / Raw(load=http_resp)
-        packets.extend(flow_packets)
+        packets.extend(build_full_flow(client_ip, server_ip, sport + i, dport,
+                                       http_req, resp_body, 200, "OK",
+                                       resp_extra_headers=resp_extra_headers))
 
     wrpcap(output_file, packets)
     print(f"[+] headers: {output_file} ({len(packets)} packets)")

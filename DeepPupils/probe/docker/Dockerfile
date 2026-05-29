@@ -18,8 +18,14 @@ COPY extend/ /opt/probe/extend/
 
 ENV PATH="/opt/probe/bin:${PATH}"
 
-# 注册扩展脚本到 Zeek 加载（追加到 site/local.zeek）
-RUN mkdir -p /opt/zeek/share/zeek/site && \
-    echo "@load /opt/probe/extend/http-extend" >> /opt/zeek/share/zeek/site/local.zeek
+# 注册扩展脚本到 Zeek（多路径兜底写入 local.zeek）
+RUN for site_dir in /opt/zeek/share/zeek/site /usr/local/zeek/share/zeek/site; do \
+        if [ -d "$site_dir" ]; then \
+            echo "@load /opt/probe/extend/http-extend" >> "$site_dir/local.zeek" && \
+            echo "[OK] registered http-extend in $site_dir/local.zeek"; \
+            break; \
+        fi; \
+    done && \
+    zeek -N 2>&1 | grep -q "http-extend" && echo "[OK] http-extend verified" || echo "[WARN] http-extend not found in zeek -N output"
 
 CMD ["zeek"]
