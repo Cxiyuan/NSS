@@ -142,12 +142,11 @@ jobs:
           echo "=== test zeek -b -N (base only) ==="
           timeout 15 docker run --rm ${{ env.IMAGE_NAME }}:latest zeek -b -N 2>&1 > /tmp/zeek_bN.txt; echo "zeek -b -N exit code: $?"; cat /tmp/zeek_bN.txt | wc -l; head -20 /tmp/zeek_bN.txt || echo "[FAIL] zeek -b -N"
           echo "=== test zeek processing small pcap ==="
-          # 使用 zeek -j 输出 JSON，使用 --no-default-cross-correlate 禁用跨连接关联
-          # -U zeek 强制 zeek 在处理完事件后退出
+          # 使用 zeek -j 输出 JSON，使用 -U zeek 强制 zeek 在处理完事件后退出
           timeout 30 docker run --rm \
             -v $(pwd):/pcap:ro \
             ${{ env.IMAGE_NAME }}:latest \
-            sh -c "file /pcap/http_auth.pcap && wc -c /pcap/http_auth.pcap && tcpdump -r /pcap/http_auth.pcap -c 3 2>&1; echo '--- running zeek ---'; zeek -b -r /pcap/http_auth.pcap -j --no-default-cross-correlate -U zeek 2>&1 | head -20; echo 'zeek done with exit code: ' \$?" || echo "zeek command failed or timeout"
+            sh -c "wc -c /pcap/http_auth.pcap && tcpdump -r /pcap/http_auth.pcap -c 3 2>&1; echo '--- running zeek ---'; zeek -b -r /pcap/http_auth.pcap -j -U zeek 2>&1 | head -20; echo 'zeek done with exit code: ' \$?" || echo "zeek command failed or timeout"
           echo "=== All diagnostic tests done ==="
           mkdir -p ../zeek_output
           for pcap in *.pcap; do
