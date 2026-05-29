@@ -69,6 +69,8 @@ jobs:
           labels: ${{ steps.meta.outputs.labels }}
           cache-from: type=gha
           cache-to: type=gha,mode=max
+          build-args: |
+            CACHE_BUST=${{ github.run_id }}
 
   # ============================================================
   # [Job 2] 单元测试 — 生成测试流量

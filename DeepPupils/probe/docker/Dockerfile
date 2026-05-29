@@ -4,6 +4,9 @@ LABEL maintainer="probe"
 LABEL version="v1.0"
 LABEL description="Probe network monitoring tool based on Zeek"
 
+ARG CACHE_BUST=0
+RUN echo "cache_bust=${CACHE_BUST}"
+
 RUN apt-get update && apt-get install -y --no-install-recommends \
     curl \
     jq \
