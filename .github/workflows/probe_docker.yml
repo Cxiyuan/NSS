@@ -158,7 +158,7 @@ jobs:
               -v "$(pwd):/pcap:ro" \
               -v "$(pwd)/${tmpdir}:/output" \
               ${{ env.IMAGE_NAME }}:${{ github.sha }} \
-              sh -c "cd /output && zeek -r /pcap/${pcap} /opt/probe/extend/http-extend"
+              sh -c "cd /output && zeek -r /pcap/${pcap} /opt/probe/extend/http-extend.zeek"
 
             echo "--- generated log files ---"
             ls -la "$tmpdir/"
