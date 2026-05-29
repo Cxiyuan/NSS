@@ -142,19 +142,22 @@ jobs:
           echo "=== test zeek -b -N (base only) ==="
           timeout 15 docker run --rm ${{ env.IMAGE_NAME }}:latest zeek -b -N 2>&1 > /tmp/zeek_bN.txt; echo "zeek -b -N exit code: $?"; cat /tmp/zeek_bN.txt | wc -l; head -20 /tmp/zeek_bN.txt || echo "[FAIL] zeek -b -N"
           echo "=== test zeek processing small pcap ==="
-          # 测试 zeek 的 help 信息
-          echo "--- test zeek --help | head ---"
-          timeout 5 docker run --rm ${{ env.IMAGE_NAME }}:latest zeek --help 2>&1 | head -30
-          echo "--- test zeek -b -r pcap -j -O (once mode) ---"
+          # 测试 zeek 读取 pcap 的行为
+          echo "--- test zeek -r only (no base, no scripts) ---"
           timeout 10 docker run --rm \
             -v $(pwd):/pcap:ro \
             ${{ env.IMAGE_NAME }}:latest \
-            sh -c "zeek -b -r /pcap/http_auth.pcap -j -O once 2>&1 | head -5" || echo "zeek -O once failed"
-          echo "--- test zeek with base/init-only and readmode ---"
+            sh -c "zeek -r /pcap/http_auth.pcap 2>&1 | head -5" || echo "zeek -r only failed"
+          echo "--- test zeek -b -r with base misc only ---"
           timeout 10 docker run --rm \
             -v $(pwd):/pcap:ro \
             ${{ env.IMAGE_NAME }}:latest \
-            sh -c "zeek -b -r /pcap/http_auth.pcap -j --use-json 2>&1 | head -5" || echo "zeek --use-json failed"
+            sh -c "zeek -b -r /pcap/http_auth.pcap base/misc 2>&1 | head -5" || echo "zeek with base/misc failed"
+          echo "--- test zeek with -C (ignore checksums) ---"
+          timeout 10 docker run --rm \
+            -v $(pwd):/pcap:ro \
+            ${{ env.IMAGE_NAME }}:latest \
+            sh -c "zeek -C -b -r /pcap/http_auth.pcap -j 2>&1 | head -5" || echo "zeek -C failed"
           echo "=== All diagnostic tests done ==="
           echo "=== All diagnostic tests done ==="
           mkdir -p ../zeek_output
