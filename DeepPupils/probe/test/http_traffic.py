@@ -15,7 +15,7 @@ import struct
 import time
 from datetime import datetime
 
-from scapy.all import IP, TCP, Raw, send, wrpcap, conf
+from scapy.all import IP, TCP, UDP, Raw, send, wrpcap, conf
 
 conf.verb = 0  # 静默 Scapy 输出
 
