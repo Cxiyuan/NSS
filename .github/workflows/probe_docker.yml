@@ -146,11 +146,12 @@ jobs:
             fi
             name=$(basename "$pcap" .pcap)
             echo "=== Processing $pcap ==="
+            # 使用 -b base-only 跳过自定义扩展脚本，只做基础解析
             timeout 20 docker run --rm \
               -v $(pwd):/pcap:ro \
               -v $(pwd)/../zeek_output:/output \
               ${{ env.IMAGE_NAME }}:latest \
-              sh -c "mkdir -p /output && zeek -r /pcap/$pcap -j 2>/dev/null | jq -c '.[:10]' > /output/${name}.json" \
+              sh -c "mkdir -p /output && zeek -b -r /pcap/$pcap -j 2>/dev/null | jq -c '.[:10]' > /output/${name}.json" \
               && echo "[OK] $pcap" \
               || { echo "[WARN] timeout or error for $pcap"; echo "[]" > "$(pwd)/../zeek_output/${name}.json"; }
           done
