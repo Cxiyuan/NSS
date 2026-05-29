@@ -387,7 +387,10 @@ def generate_auth_pcap(output_file, session_count=3):
         auth_val, auth_type = auth_types[i % len(auth_types)]
 
         headers = list(REQUEST_HEADERS)
-        headers.append(("Authorization", auth_val))
+        if auth_type == "Proxy-Authorization":
+            headers.append(("Proxy-Authorization", auth_val))
+        else:
+            headers.append(("Authorization", auth_val))
 
         body = "username=admin&password=admin123" if method == "POST" else None
         http_req = build_http_request(method, "/api/" + ("login" if method == "POST" else "users"), headers, body)
