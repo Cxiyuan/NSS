@@ -131,17 +131,26 @@ jobs:
       - name: 运行 Zeek 分析
         timeout-minutes: 3
         run: |
+          docker pull ${{ env.IMAGE_NAME }}:latest
           cd DeepPupils/probe/test/pcap
           echo "=== pcap files ==="
           ls -la
+          echo "=== test zeek --version ==="
+          timeout 5 docker run --rm ${{ env.IMAGE_NAME }}:latest zeek --version 2>&1 || echo "[FAIL] zeek version check"
+          echo "=== test zeek can list scripts ==="
+          timeout 5 docker run --rm ${{ env.IMAGE_NAME }}:latest zeek -N 2>&1 | head -5 || echo "[FAIL] zeek -N"
+          echo "=== test zeek processing small pcap (5s timeout) ==="
+          timeout 5 docker run --rm \
+            -v $(pwd):/pcap:ro \
+            ${{ env.IMAGE_NAME }}:latest \
+            zeek -r /pcap/http_auth.pcap -j 2>&1 | head -3 || echo "[FAIL] zeek processing or timeout"
+          echo "=== All diagnostic tests done ==="
           mkdir -p ../zeek_output
-          # 为所有 pcap 创建空输出，跳过 zeek 分析（待排查卡死问题）
           for pcap in *.pcap; do
             name=$(basename "$pcap" .pcap)
             echo "[]" > "../zeek_output/${name}.json"
-            echo "[SKIP] $pcap - created empty output"
+            echo "[SKIP] $pcap - created empty output (diagnostic mode)"
           done
-          echo "=== All pcap processing complete ==="
           ls -la ../zeek_output/
 
       - name: 上传 Zeek 输出
