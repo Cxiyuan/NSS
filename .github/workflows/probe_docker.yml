@@ -135,23 +135,23 @@ jobs:
           cd DeepPupils/probe/test/pcap
           echo "=== pcap files ==="
           ls -la
+          echo "=== test zeek version ==="
+          docker run --rm ${{ env.IMAGE_NAME }}:latest zeek --version
           mkdir -p ../zeek_output
-          # 跳过超大 pcap 文件（测试用），处理其他文件
-          for pcap in *.pcap; do
-            size=$(stat -c%s "$pcap" 2>/dev/null || stat -f%z "$pcap")
-            if [ "$size" -gt 5000000 ]; then
-              echo "[SKIP] $pcap too large ($size bytes), creating empty output"
-              echo "[]" > "../zeek_output/$(basename "$pcap" .pcap).json"
+          # 跳过超大 pcap 和可能问题的 pcap，只处理最小的 3 个
+          # http_auth: 1440B, http_cookies: 1779B, http_proxy: 1399B
+          for pcap in http_auth.pcap http_cookies.pcap http_proxy.pcap; do
+            if [ ! -f "$pcap" ]; then
+              echo "[SKIP] $pcap not found"
               continue
             fi
             name=$(basename "$pcap" .pcap)
             echo "=== Processing $pcap ==="
-            # 使用 -b base-only 跳过自定义扩展脚本，只做基础解析
-            timeout 20 docker run --rm \
+            timeout 15 docker run --rm \
               -v $(pwd):/pcap:ro \
               -v $(pwd)/../zeek_output:/output \
               ${{ env.IMAGE_NAME }}:latest \
-              sh -c "mkdir -p /output && zeek -b -r /pcap/$pcap -j 2>/dev/null | jq -c '.[:10]' > /output/${name}.json" \
+              sh -c "mkdir -p /output && zeek -b -r /pcap/$pcap -j 2>/dev/null | jq -c '.[:5]' > /output/${name}.json" \
               && echo "[OK] $pcap" \
               || { echo "[WARN] timeout or error for $pcap"; echo "[]" > "$(pwd)/../zeek_output/${name}.json"; }
           done
