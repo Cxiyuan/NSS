@@ -29,20 +29,21 @@ def zeek_results():
 
 @pytest.fixture(scope="session")
 def http_records(zeek_results):
-    """Get all HTTP records, annotated by scenario."""
+    """Get all HTTP records (http sub-object), annotated by scenario."""
     all_records = []
     for scenario, records in zeek_results.items():
         for record in records:
-            if record.get("kind") == "http":
-                record["_scenario"] = scenario
-                all_records.append(record)
+            if record.get("kind") == "http" and "http" in record:
+                http_obj = record["http"]
+                http_obj["_scenario"] = scenario
+                all_records.append(http_obj)
     return all_records
 
 
 @pytest.fixture(scope="session")
 def get_by_scenario(zeek_results):
-    """Get records by scenario name."""
+    """Get http sub-objects by scenario name."""
     def _get(scenario_name):
         records = zeek_results.get(scenario_name, [])
-        return [r for r in records if r.get("kind") == "http"]
+        return [r["http"] for r in records if r.get("kind") == "http" and "http" in r]
     return _get

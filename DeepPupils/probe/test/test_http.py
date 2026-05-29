@@ -76,27 +76,27 @@ class TestCookies:
 
     def test_cookie_httponly(self, http_records):
         """Verify Set-Cookie HttpOnly attribute."""
-        cookie_records = [r for r in http_records if r.get("cookies")]
-        assert len(cookie_records) > 0, "No cookie records found"
+        set_cookie_records = [r for r in http_records if r.get("set_cookie")]
+        assert len(set_cookie_records) > 0, "No Set-Cookie records found"
         httponly_found = False
-        for r in cookie_records:
-            cookies_val = str(r.get("cookies", ""))
-            if "HttpOnly" in cookies_val or "httpOnly" in cookies_val:
+        for r in set_cookie_records:
+            val = str(r.get("set_cookie", ""))
+            if "HttpOnly" in val or "httpOnly" in val:
                 httponly_found = True
                 break
         assert httponly_found, "HttpOnly attribute not found in Set-Cookie"
 
     def test_cookie_samesite(self, http_records):
-        """Verify SameSite attribute."""
-        cookie_records = [r for r in http_records if r.get("cookies")]
-        assert len(cookie_records) > 0, "No cookie records found"
+        """Verify SameSite attribute in Set-Cookie."""
+        set_cookie_records = [r for r in http_records if r.get("set_cookie")]
+        assert len(set_cookie_records) > 0, "No Set-Cookie records found"
         samesite_found = False
-        for r in cookie_records:
-            cookies_val = str(r.get("cookies", ""))
-            if "SameSite" in cookies_val or "samesite" in cookies_val:
+        for r in set_cookie_records:
+            val = str(r.get("set_cookie", ""))
+            if "SameSite" in val or "samesite" in val:
                 samesite_found = True
                 break
-        assert samesite_found, "SameSite attribute not found"
+        assert samesite_found, "SameSite attribute not found in Set-Cookie"
 
 
 class TestBody:

@@ -27,6 +27,8 @@ redef record Info += {
     # ---- Cookie ----
     ## 完整 Cookie 请求头原始值
     cookies:               string    &log &optional;
+    ## Set-Cookie 响应头原始值（含 HttpOnly/Secure/SameSite 属性）
+    set_cookie:            string    &log &optional;
 
     # ---- 标准请求头 ----
     ## Accept 头
@@ -157,7 +159,14 @@ event http_header(c: connection, is_orig: bool, original_name: string, name: str
     # ============================================================
     else
     {
-        if ( name == "SERVER" )
+        if ( name == "SET-COOKIE" )
+        {
+            if ( ! c$http?$set_cookie || |c$http$set_cookie| == 0 )
+                c$http$set_cookie = value;
+            else
+                c$http$set_cookie = fmt("%s; %s", c$http$set_cookie, value);
+        }
+        else if ( name == "SERVER" )
         {
             c$http$server_header = value;
         }
