@@ -178,6 +178,10 @@ jobs:
             echo "--- generated log files ---"
             ls -la "$tmpdir/"
 
+            # DEBUG: dump raw http.log authorizations field value
+            echo "--- raw http.log header/authorizations ---"
+            grep -E "^#fields|AUTHORIZATION|Basic" "${tmpdir}/http.log" || true
+
             python3 ../convert_zeek_logs.py "${tmpdir}/http.log" "../zeek_output/${name}.json"
 
             rm -rf "$tmpdir"
