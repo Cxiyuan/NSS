@@ -122,6 +122,9 @@ jobs:
     needs: unit-test
 
     steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
       - name: 下载流量文件
         uses: actions/download-artifact@v4
         with:
@@ -129,46 +132,43 @@ jobs:
           path: DeepPupils/probe/test/pcap/
 
       - name: 运行 Zeek 分析
-        timeout-minutes: 3
+        timeout-minutes: 5
         run: |
           docker pull ${{ env.IMAGE_NAME }}:latest
           cd DeepPupils/probe/test/pcap
           echo "=== pcap files ==="
           ls -la
-          echo "=== test zeek --version ==="
-          timeout 5 docker run --rm ${{ env.IMAGE_NAME }}:latest zeek --version 2>&1 || echo "[FAIL] zeek version check"
-          echo "=== test zeek -N output directly (no pipe) ==="
-          timeout 15 docker run --rm ${{ env.IMAGE_NAME }}:latest zeek -N 2>&1 > /tmp/zeek_N.txt; echo "zeek -N exit code: $?"; cat /tmp/zeek_N.txt | wc -l; head -20 /tmp/zeek_N.txt || echo "[FAIL] zeek -N"
-          echo "=== test zeek -b -N (base only) ==="
-          timeout 15 docker run --rm ${{ env.IMAGE_NAME }}:latest zeek -b -N 2>&1 > /tmp/zeek_bN.txt; echo "zeek -b -N exit code: $?"; cat /tmp/zeek_bN.txt | wc -l; head -20 /tmp/zeek_bN.txt || echo "[FAIL] zeek -b -N"
-          echo "=== test zeek processing pcap (file output, no pipe) ==="
-          echo "--- test 1: zeek without -j (creates log files) ---"
-          timeout 10 docker run --rm \
-            -v $(pwd):/pcap:ro \
-            -v $(pwd)/../zeek_output:/output \
-            ${{ env.IMAGE_NAME }}:latest \
-            sh -c "mkdir -p /output && cd /output && zeek -r /pcap/http_auth.pcap 2>&1; echo DONE1; ls -la /output/" || echo "[FAIL test1]"
-          echo "--- test 2: zeek with --use-json (alternative to -j) ---"
-          timeout 10 docker run --rm \
-            -v $(pwd):/pcap:ro \
-            -v $(pwd)/../zeek_output:/output \
-            ${{ env.IMAGE_NAME }}:latest \
-            sh -c "mkdir -p /output && cd /output && zeek --use-json -r /pcap/http_auth.pcap 2>&1; echo DONE2" || echo "[FAIL test2]"
-          echo "--- test 3: zeek -j with internal timeout ---"
-          timeout 10 docker run --rm \
-            -v $(pwd):/pcap:ro \
-            -v $(pwd)/../zeek_output:/output \
-            ${{ env.IMAGE_NAME }}:latest \
-            sh -c "mkdir -p /output && timeout 5 zeek -r /pcap/http_auth.pcap -j > /output/test3.json 2>&1; echo DONE3; ls -la /output/test3.json 2>/dev/null || echo 'no output file'" || echo "[FAIL test3]"
-          echo "=== All diagnostic tests done ==="
-          echo "=== All diagnostic tests done ==="
+
+          # 在 docker 之前创建输出目录，避免 root 权限问题
           mkdir -p ../zeek_output
+
           for pcap in *.pcap; do
             name=$(basename "$pcap" .pcap)
-            echo "[]" > "../zeek_output/${name}.json"
-            echo "[SKIP] $pcap - created empty output (diagnostic mode)"
+            echo "=== Processing $pcap ==="
+            tmpdir="../zeek_output/tmp_${name}"
+            rm -rf "$tmpdir"
+            mkdir -p "$tmpdir"
+
+            docker run --rm \
+              -v "$(pwd):/pcap:ro" \
+              -v "$(pwd)/${tmpdir}:/output" \
+              ${{ env.IMAGE_NAME }}:latest \
+              sh -c "cd /output && zeek -r /pcap/${pcap}"
+
+            echo "--- generated log files ---"
+            ls -la "$tmpdir/"
+
+            python3 ../convert_zeek_logs.py "${tmpdir}/http.log" "../zeek_output/${name}.json"
+
+            rm -rf "$tmpdir"
           done
+
+          echo "=== Zeek output ==="
           ls -la ../zeek_output/
+          for json in ../zeek_output/*.json; do
+            count=$(wc -l < "$json" | tr -d ' ')
+            echo "$(basename $json): ${count} records"
+          done
 
       - name: 上传 Zeek 输出
         uses: actions/upload-artifact@v4
@@ -196,15 +196,14 @@ jobs:
         run: |
           cd DeepPupils/probe/test/zeek_output
           for json in *.json; do
-            # 跳过空数组文件（暂时跳过 zeek 分析的情况）
-            if [ "$(cat "$json")" = "[]" ]; then
+            if [ ! -s "$json" ]; then
               echo "[SKIP] $json is empty, skipping validation"
               continue
             fi
-            jq -e 'any(.[]; .http.host != null)' "$json" && echo "[PASS] $json host" || { echo "[FAIL] $json host"; exit 1; }
-            jq -e 'any(.[]; .http.uri != null)' "$json" && echo "[PASS] $json uri" || { echo "[FAIL] $json uri"; exit 1; }
-            jq -e 'any(.[]; .http.user_agent != null)' "$json" && echo "[PASS] $json user_agent" || { echo "[FAIL] $json user_agent"; exit 1; }
-            jq -e 'any(.[]; .http.status_code != null)' "$json" && echo "[PASS] $json status_code" || { echo "[FAIL] $json status_code"; exit 1; }
+            jq -s -e 'any(.[]; .http.host != null)' "$json" && echo "[PASS] $json host" || { echo "[FAIL] $json host"; exit 1; }
+            jq -s -e 'any(.[]; .http.uri != null)' "$json" && echo "[PASS] $json uri" || { echo "[FAIL] $json uri"; exit 1; }
+            jq -s -e 'any(.[]; .http.user_agent != null)' "$json" && echo "[PASS] $json user_agent" || { echo "[FAIL] $json user_agent"; exit 1; }
+            jq -s -e 'any(.[]; .http.status_code != null)' "$json" && echo "[PASS] $json status_code" || { echo "[FAIL] $json status_code"; exit 1; }
           done
 
   # ============================================================
@@ -217,6 +216,9 @@ jobs:
     continue-on-error: true
 
     steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
       - name: 下载 Zeek 输出
         uses: actions/download-artifact@v4
         with:
