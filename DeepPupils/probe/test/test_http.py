@@ -28,15 +28,11 @@ class TestAuth:
 
     def test_auth_proxy(self, http_records):
         """Verify Proxy-Authorization exists."""
-        auth_records = [r for r in http_records if r.get("authorizations")]
-        assert len(auth_records) > 0, "No Authorization records found"
-        proxy_auth_found = False
-        for r in auth_records:
-            auth_val = str(r.get("authorizations", ""))
-            if "Proxy" in auth_val:
-                proxy_auth_found = True
-                break
-        assert proxy_auth_found, "Proxy-Authorization not found"
+        proxy_records = [r for r in http_records if r.get("proxy_authorization")]
+        assert len(proxy_records) > 0, "No Proxy-Authorization records found"
+        for r in proxy_records:
+            val = str(r.get("proxy_authorization", ""))
+            assert val != "", "Proxy-Authorization value is empty"
 
 
 class TestProxy:
@@ -104,11 +100,11 @@ class TestBody:
 
     def test_body_json(self, http_records):
         """Verify JSON body parses correctly."""
-        json_body_records = [r for r in http_records if r.get("body")]
+        json_body_records = [r for r in http_records if r.get("request_body")]
         assert len(json_body_records) > 0, "No body records found"
         json_found = False
         for r in json_body_records:
-            body_val = str(r.get("body", ""))
+            body_val = str(r.get("request_body", ""))
             if "username" in body_val and "password" in body_val:
                 json_found = True
                 break
@@ -116,11 +112,11 @@ class TestBody:
 
     def test_body_form(self, http_records):
         """Verify form-urlencoded body parses correctly."""
-        json_body_records = [r for r in http_records if r.get("body")]
+        json_body_records = [r for r in http_records if r.get("request_body")]
         assert len(json_body_records) > 0, "No body records found"
         form_found = False
         for r in json_body_records:
-            body_val = str(r.get("body", ""))
+            body_val = str(r.get("request_body", ""))
             if "username=admin" in body_val and "password=admin" in body_val:
                 form_found = True
                 break
@@ -128,11 +124,11 @@ class TestBody:
 
     def test_body_multipart(self, http_records):
         """Verify multipart body parses correctly."""
-        json_body_records = [r for r in http_records if r.get("body")]
+        json_body_records = [r for r in http_records if r.get("request_body")]
         assert len(json_body_records) > 0, "No body records found"
         multipart_found = False
         for r in json_body_records:
-            body_val = str(r.get("body", ""))
+            body_val = str(r.get("request_body", ""))
             if "bound" in body_val and "Content-Disposition" in body_val:
                 multipart_found = True
                 break
@@ -140,11 +136,11 @@ class TestBody:
 
     def test_body_xml(self, http_records):
         """Verify XML body parses correctly."""
-        json_body_records = [r for r in http_records if r.get("body")]
+        json_body_records = [r for r in http_records if r.get("request_body")]
         assert len(json_body_records) > 0, "No body records found"
         xml_found = False
         for r in json_body_records:
-            body_val = str(r.get("body", ""))
+            body_val = str(r.get("request_body", ""))
             if "soap:Envelope" in body_val or "xml" in body_val.lower():
                 xml_found = True
                 break

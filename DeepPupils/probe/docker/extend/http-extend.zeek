@@ -30,6 +30,12 @@ redef record Info += {
     ## Set-Cookie 响应头原始值（含 HttpOnly/Secure/SameSite 属性）
     set_cookie:            string    &log &optional;
 
+    # ---- Body ----
+    ## 请求体内容（最大 10KB）
+    request_body:          string    &log &optional;
+    ## 响应体内容（最大 10KB）
+    response_body:         string    &log &optional;
+
     # ---- 标准请求头 ----
     ## Accept 头
     accept:                string    &log &optional;
@@ -202,5 +208,29 @@ event http_header(c: connection, is_orig: bool, original_name: string, name: str
         {
             c$http$cache_control = value;
         }
+    }
+}
+
+# ============================================================
+# http_entity_data 事件处理 — 采集请求/响应体（最大 10KB）
+# ============================================================
+event http_entity_data(c: connection, is_orig: bool, length: count, data: string)
+{
+    if ( ! c?$http )
+        return;
+
+    if ( is_orig )
+    {
+        if ( ! c$http?$request_body )
+            c$http$request_body = data;
+        else if ( |c$http$request_body| < 10240 )
+            c$http$request_body = c$http$request_body + data;
+    }
+    else
+    {
+        if ( ! c$http?$response_body )
+            c$http$response_body = data;
+        else if ( |c$http$response_body| < 10240 )
+            c$http$response_body = c$http$response_body + data;
     }
 }
