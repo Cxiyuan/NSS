@@ -25,6 +25,7 @@ ENV PATH="/opt/probe/bin:${PATH}"
 RUN for site_dir in /opt/zeek/share/zeek/site /usr/local/zeek/share/zeek/site; do \
         if [ -d "$site_dir" ]; then \
             echo "@load /opt/probe/extend/http-extend.zeek" >> "$site_dir/local.zeek" && \
+            echo "@load /opt/probe/extend/http-files.zeek" >> "$site_dir/local.zeek" && \
             echo "@load /opt/probe/extend/drop_multicast.zeek" >> "$site_dir/local.zeek" && \
             echo "[OK] registered http-extend in $site_dir/local.zeek"; \
             break; \

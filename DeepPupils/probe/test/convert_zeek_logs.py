@@ -1,11 +1,11 @@
 #!/usr/bin/env python3
-"""Convert zeek http.log (TSV) to JSON array for CI assertions."""
+"""Convert zeek TSV log to NDJSON for CI assertions."""
 import json
 import sys
 import os
 
 
-def convert_http_log(log_path, output_path):
+def convert_log(log_path, output_path, kind="http"):
     if not os.path.exists(log_path):
         open(output_path, 'w').close()
         return 0
@@ -22,8 +22,11 @@ def convert_http_log(log_path, output_path):
         open(output_path, 'w').close()
         return 0
 
-    numeric_fields = {'status_code', 'trans_depth', 'request_body_len',
-                      'response_body_len', 'content_length'}
+    numeric_fields = {
+        'status_code', 'trans_depth', 'request_body_len',
+        'response_body_len', 'content_length',
+        'total_bytes', 'seen_bytes',
+    }
 
     records = []
     for line in lines:
@@ -47,11 +50,11 @@ def convert_http_log(log_path, output_path):
             else:
                 flat[key] = val
 
-        flat['kind'] = 'http'
+        flat['kind'] = kind
 
-        http_obj = {k: v for k, v in flat.items()
-                    if k not in ('ts', 'uid', 'kind')}
-        flat['http'] = http_obj
+        sub_obj = {k: v for k, v in flat.items()
+                   if k not in ('ts', 'uid', 'kind')}
+        flat[kind] = sub_obj
 
         records.append(flat)
 
@@ -63,8 +66,9 @@ def convert_http_log(log_path, output_path):
 
 
 if __name__ == '__main__':
-    if len(sys.argv) != 3:
-        print(f"Usage: {sys.argv[0]} <http.log> <output.json>", file=sys.stderr)
+    if len(sys.argv) < 3:
+        print(f"Usage: {sys.argv[0]} <log> <output.json> [kind]", file=sys.stderr)
         sys.exit(1)
-    count = convert_http_log(sys.argv[1], sys.argv[2])
+    kind = sys.argv[3] if len(sys.argv) > 3 else "http"
+    count = convert_log(sys.argv[1], sys.argv[2], kind)
     print(f"Converted {count} records")

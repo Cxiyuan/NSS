@@ -803,6 +803,42 @@ def generate_multicast_pcap(output_file, session_count=1):
     print(f"[+] multicast: {output_file} ({len(packets)} packets)")
 
 
+def generate_http_files_pcap(output_file, session_count=1):
+    """生成含文件下载的 HTTP 流量，用于验证 http-files.zeek
+
+    响应含 Content-Type / Content-Disposition / Content-Length，
+    Zeek Files 框架自动创建 fa_file 记录。
+    """
+    packets = []
+    client_ip = random_ip()
+    server_ip = random_ip()
+    sport = random_port()
+    dport = 80
+
+    file_scenarios = [
+        ("application/pdf", "report.pdf", b"%PDF-1.4\n1 0 obj\n<< /Type /Catalog >>\nendobj\nxref\n"),
+        ("image/png", "photo.png",
+         b"\x89PNG\r\n\x1a\n\x00\x00\x00\rIHDR\x00\x00\x00\x01\x00\x00\x00\x01\x08\x02\x00\x00\x00\x90wS\xde"),
+        ("text/html", "page.html", b"<html><head><title>Test</title></head><body><p>Hello</p></body></html>"),
+    ]
+
+    for i, (mime, filename, body) in enumerate(file_scenarios):
+        headers = list(REQUEST_HEADERS)
+        http_req = build_http_request("GET", f"/download/{filename}", headers)
+
+        resp_extra = [
+            ("Content-Type", mime),
+            ("Content-Disposition", f'attachment; filename="{filename}"'),
+        ]
+        resp_body = body.decode("latin-1")
+        packets.extend(build_full_flow(client_ip, server_ip, sport + i, dport,
+                                       http_req, resp_body, 200, "OK",
+                                       resp_extra_headers=resp_extra))
+
+    wrpcap(output_file, packets)
+    print(f"[+] http_files: {output_file} ({len(packets)} packets)")
+
+
 def generate_pcap(scenario="auth", output_file="http_auth.pcap", session_count=3):
     """统一入口"""
     scenarios = {
@@ -818,6 +854,7 @@ def generate_pcap(scenario="auth", output_file="http_auth.pcap", session_count=3
         "boundary_special_char": generate_boundary_special_char_pcap,
         "boundary_mixed_encoding": generate_boundary_mixed_encoding_pcap,
         "multicast": generate_multicast_pcap,
+        "http_files": generate_http_files_pcap,
     }
     scenarios[scenario](output_file, session_count)
 
@@ -873,7 +910,7 @@ if __name__ == "__main__":
     parser.add_argument("-s", "--scenario", type=str, default="auth",
                         choices=["auth", "proxy", "cookies", "body", "headers", "methods", "status",
                                  "boundary_large_header", "boundary_large_body", "boundary_special_char",
-                                 "boundary_mixed_encoding", "multicast"],
+                                 "boundary_mixed_encoding", "multicast", "http_files"],
                         help="测试场景")
     parser.add_argument("-o", "--output", type=str, default="output.pcap")
     parser.add_argument("-c", "--count", type=int, default=3)
