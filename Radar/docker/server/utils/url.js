@@ -39,7 +39,13 @@ export function isSameDomain(urlA, urlB) {
 
 export function resolveUrl(href, baseUrl) {
   try {
-    return new URL(href, baseUrl).toString();
+    const url = new URL(href, baseUrl);
+    let result = url.toString();
+    // Strip trailing slash when pathname is root-only
+    if (result.endsWith('/') && url.pathname === '/') {
+      result = result.slice(0, -1);
+    }
+    return result;
   } catch {
     return null;
   }
