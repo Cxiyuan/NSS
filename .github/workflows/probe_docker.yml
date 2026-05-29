@@ -142,22 +142,22 @@ jobs:
           echo "=== test zeek -b -N (base only) ==="
           timeout 15 docker run --rm ${{ env.IMAGE_NAME }}:latest zeek -b -N 2>&1 > /tmp/zeek_bN.txt; echo "zeek -b -N exit code: $?"; cat /tmp/zeek_bN.txt | wc -l; head -20 /tmp/zeek_bN.txt || echo "[FAIL] zeek -b -N"
           echo "=== test zeek processing small pcap ==="
-          # 测试不同 zeek 选项
-          echo "--- test without -j ---"
+          # 测试不同的 zeek 选项来找出卡住原因
+          echo "--- test with -j and stdout + exit mode ---"
           timeout 10 docker run --rm \
             -v $(pwd):/pcap:ro \
             ${{ env.IMAGE_NAME }}:latest \
-            sh -c "wc -c /pcap/http_auth.pcap && zeek -b -r /pcap/http_auth.pcap 2>&1 | head -5" || echo "zeek without -j failed"
-          echo "--- test with -j and script writer ---"
+            sh -c "zeek -b -r /pcap/http_auth.pcap -j --no-default-logger 2>&1 | head -5" || echo "zeek with -j --no-default-logger failed"
+          echo "--- test with -j and output dir ---"
           timeout 10 docker run --rm \
             -v $(pwd):/pcap:ro \
             ${{ env.IMAGE_NAME }}:latest \
-            sh -c "zeek -b -r /pcap/http_auth.pcap -j -p 2>&1 | head -10" || echo "zeek with -j -p failed"
-          echo "--- test with stdin redirect ---"
+            sh -c "mkdir -p /tmp/zeek_output && zeek -b -r /pcap/http_auth.pcap -j -w /tmp/zeek_output 2>&1 | head -5; ls /tmp/zeek_output/" || echo "zeek with -j -w failed"
+          echo "--- test without -j just print lines ---"
           timeout 10 docker run --rm \
             -v $(pwd):/pcap:ro \
             ${{ env.IMAGE_NAME }}:latest \
-            sh -c "zeek -b -r /pcap/http_auth.pcap -j < /dev/null 2>&1 | head -10" || echo "zeek with stdin redirect failed"
+            sh -c "zeek -b -r /pcap/http_auth.pcap 2>&1 | head -5" || echo "zeek without -j failed"
           echo "=== All diagnostic tests done ==="
           echo "=== All diagnostic tests done ==="
           mkdir -p ../zeek_output
