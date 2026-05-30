@@ -9,19 +9,19 @@ export default function App() {
   return (
     <div className="app">
       <header className="app__header">
-        <h1>Web Crawler</h1>
+        <h1>雷达</h1>
         <nav className="app__nav">
           <button
             className={`app__tab ${tab === 'url' ? 'app__tab--active' : ''}`}
             onClick={() => setTab('url')}
           >
-            URL Crawl
+            URL 爬取
           </button>
           <button
             className={`app__tab ${tab === 'keyword' ? 'app__tab--active' : ''}`}
             onClick={() => setTab('keyword')}
           >
-            Keyword Search
+            关键词搜索
           </button>
         </nav>
       </header>

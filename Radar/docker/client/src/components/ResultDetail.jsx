@@ -5,7 +5,7 @@ export default function ResultDetail({ result, onClose }) {
     <div className="result-detail-overlay" onClick={onClose}>
       <div className="result-detail" onClick={e => e.stopPropagation()}>
         <div className="result-detail__header">
-          <h3>Link Detail</h3>
+          <h3>链接详情</h3>
           <button onClick={onClose} className="result-detail__close">&times;</button>
         </div>
 
@@ -13,25 +13,25 @@ export default function ResultDetail({ result, onClose }) {
           <dt>URL</dt>
           <dd><a href={result.url} target="_blank" rel="noreferrer">{result.url}</a></dd>
 
-          <dt>Found On</dt>
+          <dt>来源页面</dt>
           <dd>{result.found_on}</dd>
 
-          <dt>Link Type</dt>
+          <dt>链接类型</dt>
           <dd>{result.link_type}</dd>
 
-          <dt>Depth</dt>
+          <dt>深度</dt>
           <dd>{result.depth}</dd>
 
           {result.page_title && (
             <>
-              <dt>Page Title</dt>
+              <dt>页面标题</dt>
               <dd>{result.page_title}</dd>
             </>
           )}
 
           {result.snippet && (
             <>
-              <dt>Snippet</dt>
+              <dt>摘要</dt>
               <dd className="result-detail__snippet">{result.snippet}</dd>
             </>
           )}

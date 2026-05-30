@@ -7,9 +7,9 @@ export default function ResultTable({ results, total, page, limit, onPageChange 
 
   const columns = [
     { key: 'url', label: 'URL', render: r => <a href={r.url} target="_blank" rel="noreferrer" className="result-table__link">{truncate(r.url, 60)}</a> },
-    { key: 'found_on', label: 'Found On', render: r => truncate(r.found_on, 40) },
-    { key: 'link_type', label: 'Type', render: r => <span className={`link-type link-type--${r.link_type}`}>{r.link_type}</span> },
-    { key: 'depth', label: 'Depth', render: r => r.depth },
+    { key: 'found_on', label: '来源页面', render: r => truncate(r.found_on, 40) },
+    { key: 'link_type', label: '类型', render: r => <span className={`link-type link-type--${r.link_type}`}>{r.link_type}</span> },
+    { key: 'depth', label: '深度', render: r => r.depth },
   ];
 
   const handleRowClick = useCallback((r) => {
@@ -27,7 +27,7 @@ export default function ResultTable({ results, total, page, limit, onPageChange 
           </thead>
           <tbody>
             {results.length === 0 ? (
-              <tr><td colSpan={columns.length} className="result-table__empty">No results yet</td></tr>
+              <tr><td colSpan={columns.length} className="result-table__empty">暂无结果</td></tr>
             ) : (
               results.map(r => (
                 <tr key={r.id} onClick={() => handleRowClick(r)} className="result-table__row">
@@ -45,9 +45,9 @@ export default function ResultTable({ results, total, page, limit, onPageChange 
 
       {totalPages > 1 && (
         <div className="result-table__pagination">
-          <button disabled={page <= 1} onClick={() => onPageChange(page - 1)}>Previous</button>
-          <span>Page {page} of {totalPages}</span>
-          <button disabled={page >= totalPages} onClick={() => onPageChange(page + 1)}>Next</button>
+          <button disabled={page <= 1} onClick={() => onPageChange(page - 1)}>上一页</button>
+          <span>第 {page} / {totalPages} 页</span>
+          <button disabled={page >= totalPages} onClick={() => onPageChange(page + 1)}>下一页</button>
         </div>
       )}
 

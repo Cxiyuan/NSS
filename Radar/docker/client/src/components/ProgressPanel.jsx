@@ -3,12 +3,12 @@ export default function ProgressPanel({ status, stats }) {
 
   const pct = total > 0 ? Math.round((crawled / total) * 100) : 0;
   const statusLabel = {
-    pending: 'Pending',
-    running: 'Running',
-    paused: 'Paused',
-    completed: 'Completed',
-    error: 'Error',
-    cancelled: 'Cancelled',
+    pending: '等待中',
+    running: '运行中',
+    paused: '已暂停',
+    completed: '已完成',
+    error: '错误',
+    cancelled: '已取消',
   }[status] || status;
 
   const indicatorClass = {
@@ -32,10 +32,10 @@ export default function ProgressPanel({ status, stats }) {
       </div>
 
       <div className="progress-panel__stats">
-        <Stat label="Crawled" value={`${crawled} / ${total}`} />
-        <Stat label="External Links" value={external} />
-        <Stat label="Depth" value={depth} />
-        <Stat label="Progress" value={`${pct}%`} />
+        <Stat label="已爬取" value={`${crawled} / ${total}`} />
+        <Stat label="外部链接" value={external} />
+        <Stat label="深度" value={depth} />
+        <Stat label="进度" value={`${pct}%`} />
       </div>
     </div>
   );

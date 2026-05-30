@@ -91,18 +91,18 @@ export default function KeywordSearchPage() {
   return (
     <div className="page">
       <div className="page__main">
-        <h2>Keyword Search & Crawl</h2>
+        <h2>关键词搜索与爬取</h2>
         <TaskForm type="keyword_search" onSubmit={handleSubmit} disabled={status === 'running'} />
 
         {taskId && (
           <>
             <div className="page__controls">
               <ProgressPanel status={status} stats={stats} />
-              {status === 'running' && <button onClick={handlePause} className="btn">Pause</button>}
-              {status === 'paused' && <button onClick={handleResume} className="btn btn--primary">Resume</button>}
-              {(status === 'running' || status === 'paused') && <button onClick={handleCancel} className="btn btn--danger">Cancel</button>}
+              {status === 'running' && <button onClick={handlePause} className="btn">暂停</button>}
+              {status === 'paused' && <button onClick={handleResume} className="btn btn--primary">恢复</button>}
+              {(status === 'running' || status === 'paused') && <button onClick={handleCancel} className="btn btn--danger">取消</button>}
               {status === 'completed' && (
-                <button onClick={handleExportPDF} className="btn btn--primary">Export PDF</button>
+                <button onClick={handleExportPDF} className="btn btn--primary">导出 PDF</button>
               )}
             </div>
 
@@ -117,7 +117,7 @@ export default function KeywordSearchPage() {
               </div>
             )}
 
-            <h3>Results ({resultsTotal})</h3>
+            <h3>爬取结果 ({resultsTotal})</h3>
             <ResultTable
               results={results}
               total={resultsTotal}

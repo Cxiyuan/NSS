@@ -29,7 +29,7 @@ export default function TaskForm({ type, onSubmit, disabled }) {
     <form onSubmit={handleSubmit} className="task-form">
       {type === 'url_crawl' ? (
         <div className="task-form__field">
-          <label htmlFor="tf-url">Target URL</label>
+          <label htmlFor="tf-url">目标 URL</label>
           <input
             id="tf-url"
             type="url"
@@ -42,26 +42,26 @@ export default function TaskForm({ type, onSubmit, disabled }) {
       ) : (
         <>
           <div className="task-form__field">
-            <label htmlFor="tf-keywords">Keywords</label>
+            <label htmlFor="tf-keywords">关键词</label>
             <input
               id="tf-keywords"
               type="text"
               value={keywords}
               onChange={e => setKeywords(e.target.value)}
-              placeholder="Enter keywords to search"
+              placeholder="输入搜索关键词"
               required
             />
           </div>
           <div className="task-form__row">
             <div className="task-form__field">
-              <label htmlFor="tf-engine">Search Engine</label>
+              <label htmlFor="tf-engine">搜索引擎</label>
               <select id="tf-engine" value={searchEngine} onChange={e => setSearchEngine(e.target.value)}>
                 <option value="google">Google</option>
                 <option value="bing">Bing</option>
               </select>
             </div>
             <div className="task-form__field">
-              <label htmlFor="tf-apikey">API Key</label>
+              <label htmlFor="tf-apikey">API 密钥</label>
               <input
                 id="tf-apikey"
                 type="password"
@@ -76,22 +76,22 @@ export default function TaskForm({ type, onSubmit, disabled }) {
 
       <div className="task-form__row">
         <div className="task-form__field">
-          <label htmlFor="tf-depth">Depth</label>
+          <label htmlFor="tf-depth">爬取深度</label>
           <input id="tf-depth" type="number" min={1} max={10} value={depth} onChange={e => setDepth(e.target.value)} />
         </div>
         <div className="task-form__field">
-          <label htmlFor="tf-concurrency">Concurrency</label>
+          <label htmlFor="tf-concurrency">并发数</label>
           <input id="tf-concurrency" type="number" min={1} max={20} value={concurrency} onChange={e => setConcurrency(e.target.value)} />
         </div>
       </div>
 
       <div className="task-form__field">
-        <label>Filter Conditions</label>
+        <label>过滤条件</label>
         <FilterInput filters={filters} onChange={setFilters} />
       </div>
 
       <button type="submit" className="task-form__submit" disabled={disabled}>
-        {type === 'url_crawl' ? 'Start Crawling' : 'Start Search & Crawl'}
+        {type === 'url_crawl' ? '开始爬取' : '开始搜索并爬取'}
       </button>
     </form>
   );

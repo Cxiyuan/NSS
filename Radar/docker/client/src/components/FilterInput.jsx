@@ -34,7 +34,7 @@ export default function FilterInput({ filters = [], onChange }) {
           className="filter-input__field"
         />
         <button type="button" onClick={addFilter} className="filter-input__add-btn">
-          + Add Filter
+          + 添加过滤
         </button>
       </div>
 
@@ -47,7 +47,7 @@ export default function FilterInput({ filters = [], onChange }) {
                 type="button"
                 onClick={() => removeFilter(f)}
                 className="filter-input__tag-remove"
-                aria-label={`Remove filter ${f}`}
+                aria-label={`移除过滤 ${f}`}
               >
                 &times;
               </button>
