@@ -30,4 +30,10 @@ export function initDB(db) {
     CREATE INDEX IF NOT EXISTS idx_results_task ON results(task_id);
     CREATE INDEX IF NOT EXISTS idx_results_external ON results(task_id, is_external);
   `);
+
+  // Migration: add status_code column if missing (older databases)
+  const cols = db.pragma('table_info(results)').map(c => c.name);
+  if (!cols.includes('status_code')) {
+    db.exec('ALTER TABLE results ADD COLUMN status_code INTEGER DEFAULT 0');
+  }
 }
