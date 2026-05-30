@@ -41,6 +41,7 @@ RUN for site_dir in /opt/zeek/share/zeek/site /usr/local/zeek/share/zeek/site; d
 RUN apt-get update && apt-get install -y --no-install-recommends \
     g++ \
     make \
+    cmake \
     pkgconf \
     librdkafka-dev \
     && git clone https://github.com/SeisoLLC/zeek-kafka.git /tmp/zeek-kafka \
@@ -51,7 +52,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     && make install \
     && ldconfig \
     && rm -rf /tmp/zeek-kafka \
-    && apt-get purge -y g++ make pkgconf librdkafka-dev \
+    && apt-get purge -y g++ make cmake pkgconf librdkafka-dev \
     && apt-get autoremove --purge -y \
     && rm -rf /var/lib/apt/lists/* \
     && zeek -N Seiso::Kafka \
