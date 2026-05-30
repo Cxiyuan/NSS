@@ -98,12 +98,13 @@ def generate_html_report(findings: list, output: str = 'weak_password_report.htm
         badge = {'CRITICAL': '#dc3545', 'HIGH': '#fd7e14',
                  'MEDIUM': '#ffc107', 'LOW': '#20c997', 'INFO': '#6c757d'}.get(level, '#6c757d')
         pwd = f.get('password', '')
+        bg = f'background:{badge};color:#fff;padding:2px 8px;border-radius:4px'
         rows.append(f'''<tr>
 <td>{f.get("user", f.get("username", "N/A"))}</td>
 <td>{f.get("target", "N/A")}</td>
 <td>{f.get("protocol", "N/A")}</td>
 <td>{pwd[:3]}{"*"*max(0,len(pwd)-3)}</td>
-<td><span style="background:{badge};color:#fff;padding:2px 8px;border-radius:4px">{level}</span></td>
+<td><span style="{bg}">{level}</span></td>
 <td>{f["score"]}</td>
 <td>{suggested_action(f["score"], f.get("privilege","regular_user"))}</td>
 </tr>''')
