@@ -30,13 +30,20 @@ async function run(taskConfig) {
     if (parentPort) parentPort.postMessage({ type, taskId, ...data });
   }
 
+  // enqueue returns true if the URL was accepted (not filtered, not visited)
+  // Filter only applies to external domains — same-domain links are always accepted
   function enqueue(u, currentDepth, foundOn, skipFilter = false) {
     const normalized = normalizeUrl(u);
-    if (!normalized) return;
-    if (visited.has(normalized)) return;
-    if (!skipFilter && filter.isFiltered(normalized)) return;
+    if (!normalized) return false;
+    if (visited.has(normalized)) return false;
+    // Only filter external domains, never filter the target site itself
+    if (!skipFilter && !isSameDomain(normalized, url) && filter.isFiltered(normalized)) {
+      post('log', { level: 'info', message: `Filtered: ${normalized}` });
+      return false;
+    }
     visited.add(normalized);
     queue.push({ url: normalized, depth: currentDepth, foundOn: foundOn || '' });
+    return true;
   }
 
   if (type === 'keyword_search') {
@@ -71,7 +78,6 @@ async function run(taskConfig) {
       batch.push(queue.shift());
     }
 
-    // Random delay between batches
     await antiDetect.delay();
 
     const results = await Promise.allSettled(batch.map(async ({ url: crawlUrl, depth: currentDepth, foundOn }) => {
@@ -80,12 +86,9 @@ async function run(taskConfig) {
       let html, title;
       let usedBrowser = false;
       try {
-        // Random per-request delay for anti-detection
         await antiDetect.delay();
-
         const result = await fetchAndParse(crawlUrl, foundOn);
         if (result.error) {
-          // Non-2xx response — try Puppeteer fallback
           post('log', { level: 'warn', message: `${result.error}, trying browser render...` });
           if (antiDetect.config.browserFallback) {
             try {
@@ -137,6 +140,7 @@ async function run(taskConfig) {
           : !isSameDomain(link.url, url);
 
         if (isExt) {
+          // External links: always record, never enqueue
           newResults.push({
             url: link.url,
             foundOn: crawlUrl,
@@ -144,19 +148,29 @@ async function run(taskConfig) {
             depth: currentDepth + 1,
             isExternal: true,
           });
+          post('result', {
+            result: {
+              url: link.url,
+              foundOn: crawlUrl,
+              linkType: link.linkType,
+              depth: currentDepth + 1,
+              pageTitle: title,
+            },
+          });
         } else if (currentDepth < (depth || 3)) {
-          enqueue(link.url, currentDepth + 1, crawlUrl);
+          // Same-domain link: only enqueue and post if it passes filter
+          if (enqueue(link.url, currentDepth + 1, crawlUrl)) {
+            post('result', {
+              result: {
+                url: link.url,
+                foundOn: crawlUrl,
+                linkType: link.linkType,
+                depth: currentDepth + 1,
+                pageTitle: title,
+              },
+            });
+          }
         }
-
-        post('result', {
-          result: {
-            url: link.url,
-            foundOn: crawlUrl,
-            linkType: link.linkType,
-            depth: currentDepth + 1,
-            pageTitle: title,
-          },
-        });
       }
 
       if (type === 'keyword_search' && keywords) {
