@@ -173,9 +173,9 @@ jobs:
 
             python3 ../convert_zeek_logs.py "${tmpdir}/http.log" "../zeek_output/${name}.json"
 
-            # http_files 场景额外转换 http_files.log
+            # http_files 场景额外转换 files.log (Zeek Files 框架)
             if [ "$name" = "http_http_files" ]; then
-              python3 ../convert_zeek_logs.py "${tmpdir}/http_files.log" "../zeek_output/${name}_files.json" http_files
+              python3 ../convert_zeek_logs.py "${tmpdir}/files.log" "../zeek_output/${name}_files.json" files
             fi
 
             # 组播过滤验收：验证 conn.log 中无组播目标 IP
@@ -264,7 +264,7 @@ jobs:
             && echo "[PASS] http_proxy.json: xff has value" \
             || { echo "[FAIL] http_proxy.json: xff is empty"; exit 1; }
 
-      - name: jq http_files 字段检查
+      - name: jq files.log 字段检查
         run: |
           cd DeepPupils/probe/test/zeek_output
           files_json="http_http_files_files.json"
@@ -272,13 +272,14 @@ jobs:
             echo "[FAIL] $files_json missing or empty"
             exit 1
           fi
-          jq -s -e 'any(.[]; .http_files.fuid != null and .http_files.fuid != "")' "$files_json" \
+          # Zeek 内置 files.log: fuid / mime_type / total_bytes / seen_bytes
+          jq -s -e 'any(.[]; .files.fuid != null and .files.fuid != "")' "$files_json" \
             && echo "[PASS] $files_json: fuid present" \
             || { echo "[FAIL] $files_json: fuid missing"; exit 1; }
-          jq -s -e 'any(.[]; .http_files.mime_type != null and .http_files.mime_type != "")' "$files_json" \
+          jq -s -e 'any(.[]; .files.mime_type != null and .files.mime_type != "")' "$files_json" \
             && echo "[PASS] $files_json: mime_type present" \
             || { echo "[FAIL] $files_json: mime_type missing"; exit 1; }
-          jq -s -e 'any(.[]; .http_files.total_bytes > 0)' "$files_json" \
+          jq -s -e 'any(.[]; .files.total_bytes > 0)' "$files_json" \
             && echo "[PASS] $files_json: total_bytes > 0" \
             || { echo "[FAIL] $files_json: total_bytes missing or zero"; exit 1; }
 
