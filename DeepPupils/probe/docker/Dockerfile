@@ -21,15 +21,19 @@ COPY extend/ /opt/probe/extend/
 
 ENV PATH="/opt/probe/bin:${PATH}"
 
-# 注册扩展脚本到 Zeek（多路径兜底写入 local.zeek）
+# 在 local.zeek 中注册扩展脚本（兜底机制）
+# 主加载入口：zeek-run.sh 通过命令行参数加载扩展脚本
+# 兜  底：local.zeek 中的 @load 在 zeek -r 离线分析等场景生效
 RUN for site_dir in /opt/zeek/share/zeek/site /usr/local/zeek/share/zeek/site; do \
         if [ -d "$site_dir" ]; then \
             echo "@load /opt/probe/extend/http-extend.zeek" >> "$site_dir/local.zeek" && \
+            echo "# drop_multicast.zeek: PacketFilter::exclude() 兜底（主过滤由 zeek-run.sh 的 -f BPF 完成）" >> "$site_dir/local.zeek" && \
             echo "@load /opt/probe/extend/drop_multicast.zeek" >> "$site_dir/local.zeek" && \
-            echo "[OK] registered http-extend in $site_dir/local.zeek"; \
+            echo "[OK] registered scripts in $site_dir/local.zeek"; \
             break; \
         fi; \
-    done && \
-    zeek -N 2>&1 | grep -q "http-extend" && echo "[OK] http-extend verified" || echo "[WARN] http-extend not found in zeek -N output"
+    done
 
-CMD ["zeek"]
+# zeek-run.sh 是统一的启动入口，自动组装 BPF 过滤规则 + 加载扩展脚本
+# 也可直接传参：docker run ... probe-image eth0
+CMD ["/opt/probe/extend/zeek-run.sh"]

@@ -1,0 +1,6 @@
+# drop_multicast.bpf — 组播/多播流量过滤规则
+# 被 zeek-run.sh 自动读取并组装到 zeek -f 参数中
+#
+# 过滤 IPv4 组播 (224.0.0.0/4) 和 IPv6 组播 (ff00::/8)
+# 同时排除 src 和 dst 方向（组播响应包的源IP也是组播地址）
+not net 224.0.0.0/4 and not net ff00::/8

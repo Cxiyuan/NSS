@@ -11,8 +11,8 @@ services:
     volumes:
       - /root/DeepPupils/logs:/output
     working_dir: /output
+    # zeek-run.sh 自动加载 extend/filters/*.bpf 中的 BPF 规则
+    # 以及 extend/*.zeek 中的 Zeek 扩展脚本
     command: >
-      zeek -i ens192
-      -f "not net 224.0.0.0/4"
-      /opt/probe/extend/http-extend.zeek
+      /opt/probe/extend/zeek-run.sh ens192
     restart: unless-stopped
