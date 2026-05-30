@@ -23,7 +23,13 @@ export default function KeywordSearchPage() {
     }
     if (data.type === 'status') setStatus(data.status);
     if (data.type === 'result') {
-      setResults(r => [data.result, ...r].slice(0, 200));
+      // Normalize camelCase from worker (foundOn, linkType) to snake_case expected by ResultTable
+      const result = {
+        ...data.result,
+        found_on: data.result.foundOn ?? data.result.found_on,
+        link_type: data.result.linkType ?? data.result.link_type,
+      };
+      setResults(r => [result, ...r].slice(0, 200));
       setStats(s => ({ ...s, total: s.total + 1 }));
     }
     if (data.type === 'log') {
