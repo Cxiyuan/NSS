@@ -34,29 +34,16 @@ RUN for site_dir in /opt/zeek/share/zeek/site /usr/local/zeek/share/zeek/site; d
         fi; \
     done
 
-# ============================================================
-# 编译并安装 zeek-kafka 插件
-# 注意：Debian 13 (trixie) 中 pkg-config 包已改名为 pkgconf
-# ============================================================
-RUN apt-get update && apt-get install -y --no-install-recommends \
-    g++ \
-    make \
-    cmake \
-    pkgconf \
-    librdkafka-dev \
-    && git clone https://github.com/SeisoLLC/zeek-kafka.git /tmp/zeek-kafka \
-    && cd /tmp/zeek-kafka \
-    && git checkout v1.2.0 \
-    && ./configure --with-librdkafka=/usr \
-    && make \
-    && make install \
-    && ldconfig \
-    && rm -rf /tmp/zeek-kafka \
-    && apt-get purge -y g++ make cmake pkgconf librdkafka-dev \
-    && apt-get autoremove --purge -y \
-    && rm -rf /var/lib/apt/lists/* \
-    && zeek -N Seiso::Kafka \
-    && echo "[OK] zeek-kafka plugin installed"
+# 复制预编译的 zeek-kafka 插件（由 CI workflow 在 runner 上编译后放入 context）
+# 如果存在则安装，否则跳过（本地构建无 kafka 插件）
+RUN if [ -d /opt/probe/zeek-kafka-output ]; then \
+        cp -r /opt/probe/zeek-kafka-output/* /usr/local/zeek/ && \
+        ldconfig && \
+        zeek -N Seiso::Kafka && \
+        echo "[OK] zeek-kafka plugin installed"; \
+    else \
+        echo "[INFO] zeek-kafka plugin not pre-built, skipping"; \
+    fi
 
 # run.sh 是统一的启动入口，自动组装 BPF 过滤规则 + 加载扩展脚本
 # 用法：
