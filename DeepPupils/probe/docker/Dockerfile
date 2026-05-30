@@ -51,7 +51,6 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     && zeek -N Seiso::Kafka \
     && echo "[OK] zeek-kafka plugin installed" \
     && apt-get purge -y g++ make cmake pkgconf \
-    && apt-get autoremove --purge -y \
     && rm -rf /var/lib/apt/lists/* \
     || echo "[WARN] zeek-kafka build failed (non-critical)"
 
