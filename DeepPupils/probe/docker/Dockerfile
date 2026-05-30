@@ -34,16 +34,33 @@ RUN for site_dir in /opt/zeek/share/zeek/site /usr/local/zeek/share/zeek/site; d
         fi; \
     done
 
-# 复制预编译的 zeek-kafka 插件（由 CI workflow 在 runner 上编译后放入 context）
-# 如果存在则安装，否则跳过（本地构建无 kafka 插件）
-RUN if [ -d /opt/probe/zeek-kafka-output ]; then \
-        cp -r /opt/probe/zeek-kafka-output/* /usr/local/zeek/ && \
-        ldconfig && \
-        zeek -N Seiso::Kafka && \
-        echo "[OK] zeek-kafka plugin installed"; \
-    else \
-        echo "[INFO] zeek-kafka plugin not pre-built, skipping"; \
-    fi
+# ============================================================
+# 编译并安装 zeek-kafka 插件（构建失败不阻塞镜像构建）
+# 需要：librdkafka-dev g++ make cmake pkgconf (Debian 13)
+# ============================================================
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    g++ \
+    make \
+    cmake \
+    pkgconf \
+    librdkafka-dev \
+    && echo "[build] deps installed" \
+    && git clone https://github.com/SeisoLLC/zeek-kafka.git /tmp/zeek-kafka \
+    && cd /tmp/zeek-kafka \
+    && git checkout v1.2.0 \
+    && ./configure --with-librdkafka=/usr 2>&1 | tail -5 \
+    && echo "[build] configured" \
+    && (cd build && make -j$(nproc)) 2>&1 | tail -10 \
+    && echo "[build] compiled" \
+    && (cd build && make install) 2>&1 | tail -5 \
+    && echo "[build] installed" \
+    && ldconfig \
+    && zeek -N Seiso::Kafka \
+    && echo "[build] zeek-kafka plugin installed successfully" \
+    || echo "[build] zeek-kafka plugin build skipped/failed (non-critical)" \
+    && apt-get purge -y g++ make cmake pkgconf \
+    && apt-get autoremove --purge -y \
+    && rm -rf /var/lib/apt/lists/*
 
 # run.sh 是统一的启动入口，自动组装 BPF 过滤规则 + 加载扩展脚本
 # 用法：

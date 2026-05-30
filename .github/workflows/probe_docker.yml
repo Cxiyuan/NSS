@@ -60,49 +60,6 @@ jobs:
             type=raw,value=${{ github.sha }}
             type=raw,value=latest,enable=${{ (github.event_name == 'push' || github.event_name == 'workflow_dispatch') && github.ref == 'refs/heads/main' }}
 
-      - name: Build zeek-kafka plugin
-        run: |
-          set -ex
-          # 安装编译依赖 + Zeek（需要 zeek-config 检测路径）
-          sudo apt-get update
-          sudo apt-get install -y --no-install-recommends \
-            curl \
-            gnupg \
-            lsb-release \
-            librdkafka-dev \
-            g++ \
-            make \
-            cmake \
-            pkg-config
-
-          # 安装 Zeek（官方仓库）
-          curl -fsSL https://download.zeek.org/zeek/Ubuntu_24.04/Release.key \
-            | sudo gpg --yes --dearmor -o /etc/apt/keyrings/zeek.gpg
-          echo "deb [signed-by=/etc/apt/keyrings/zeek.gpg] https://download.zeek.org/zeek/Ubuntu_24.04/ /" \
-            | sudo tee /etc/apt/sources.list.d/zeek.list
-          sudo apt-get update
-          sudo apt-get install -y zeek
-
-          # 编译 zeek-kafka 插件
-          export PATH="/opt/zeek/bin:${PATH}"
-          git clone https://github.com/SeisoLLC/zeek-kafka.git /tmp/zeek-kafka
-          cd /tmp/zeek-kafka
-          git checkout v1.2.0
-          ./configure --with-librdkafka=/usr --install-root=/tmp/kafka-install
-          make
-          make install
-
-          # 查看产物结构
-          echo "=== Plugin install output ==="
-          find /tmp/kafka-install -type f | sort
-
-          # 复制到 Docker build context
-          mkdir -p ${{ github.workspace }}/DeepPupils/probe/docker/zeek-kafka-output
-          cp -r /tmp/kafka-install/* ${{ github.workspace }}/DeepPupils/probe/docker/zeek-kafka-output/ 2>/dev/null || true
-
-          echo "=== In context ==="
-          find ${{ github.workspace }}/DeepPupils/probe/docker/zeek-kafka-output -type f | sort
-
       - name: Build and push Docker image
         uses: docker/build-push-action@v5
         with:
