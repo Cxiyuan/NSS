@@ -14,7 +14,7 @@ logger = logging.getLogger('ntlm_lookup')
 
 def ntlm_hash(password: str) -> str:
     """NTLM hash via pycryptodome (兼容 OpenSSL 3.0+/Python 3.11)."""
-    from Cryptodome.Hash import MD4
+    from Crypto.Hash import MD4
     return MD4.new(password.encode('utf-16le')).hexdigest().upper()
 
 
