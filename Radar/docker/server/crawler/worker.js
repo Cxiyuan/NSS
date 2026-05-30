@@ -170,14 +170,20 @@ async function run(taskConfig) {
         const bodyText = html.replace(/<[^>]+>/g, ' ').toLowerCase();
         const matches = kwds.filter(k => bodyText.includes(k.toLowerCase()));
         if (matches.length > 0) {
-          newResults.push({
-            url: crawlUrl,
-            foundOn,
-            linkType: 'keyword_match',
-            depth: currentDepth,
-            isExternal: true,
-            snippet: bodyText.substring(0, 300),
-          });
+          // Apply filter to keyword_match results too
+          if (filter.isFiltered(crawlUrl)) {
+            filteredCount++;
+            post('log', { level: 'info', message: `Filtered keyword_match: ${crawlUrl}` });
+          } else {
+            newResults.push({
+              url: crawlUrl,
+              foundOn,
+              linkType: 'keyword_match',
+              depth: currentDepth,
+              isExternal: true,
+              snippet: bodyText.substring(0, 300),
+            });
+          }
         }
       }
 

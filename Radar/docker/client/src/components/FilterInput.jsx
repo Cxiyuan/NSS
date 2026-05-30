@@ -63,6 +63,14 @@ export default function FilterInput({ filters = [], onChange }) {
 
       {error && <div className="filter-input__error">{error}</div>}
 
+      <div className="filter-input__help">
+        {Object.entries(PATTERN_HELP).map(([key, desc]) => (
+          <span key={key} className="filter-input__help-item">
+            <code>{key}</code> {desc}
+          </span>
+        ))}
+      </div>
+
       {filters.length > 0 && (
         <div className="filter-input__tags">
           {filters.map(f => (
