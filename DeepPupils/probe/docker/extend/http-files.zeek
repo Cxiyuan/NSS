@@ -27,10 +27,16 @@ event zeek_init() &priority=5
 
 event file_state_remove(f: fa_file)
 {
-    if ( f$source != "HTTP" )
+    # Debug: log all file_state_remove calls to verify handler fires
+    local src = f?$source ? f$source : "(unset)";
+    local n_conns = |f$conns|;
+    local f_mime = (f?$info && f$info?$mime_type) ? f$info$mime_type : "(none)";
+    print fmt("http-files: source=%s fuid=%s conns=%d mime=%s", src, f$id, n_conns, f_mime);
+
+    if ( src != "HTTP" )
         return;
 
-    if ( |f$conns| == 0 )
+    if ( n_conns == 0 )
         return;
 
     for ( [cid], c in f$conns )
