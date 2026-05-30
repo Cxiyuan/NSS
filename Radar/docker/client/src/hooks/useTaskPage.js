@@ -20,6 +20,8 @@ export function useTaskPage({ showExternalCount = true, pdfPrefix = 'crawl-resul
   const [resultsTotal, setResultsTotal] = useState(0);
   const [page, setPage] = useState(1);
   const [logs, setLogs] = useState([]);
+  const [taskConfig, setTaskConfig] = useState(null);
+  const [startTime, setStartTime] = useState(null);
   const taskIdRef = useRef(null);
   const pageRef = useRef(1);
 
@@ -51,6 +53,8 @@ export function useTaskPage({ showExternalCount = true, pdfPrefix = 'crawl-resul
         if (cancelled) return;
         setStatus(task.status);
         if (task.stats) setStats(s => ({ ...s, ...task.stats }));
+        if (task.config) setTaskConfig(task.config);
+        setStartTime(task.created_at);
         taskIdRef.current = taskId;
         pageRef.current = 1;
         loadResults(taskId, 1);
@@ -110,6 +114,8 @@ export function useTaskPage({ showExternalCount = true, pdfPrefix = 'crawl-resul
     setLogs([]);
     setPage(1);
     pageRef.current = 1;
+    setStartTime(new Date().toISOString());
+    setTaskConfig(config);
     try {
       const task = await api.createTask(config);
       setTaskId(task.id);
@@ -165,6 +171,7 @@ export function useTaskPage({ showExternalCount = true, pdfPrefix = 'crawl-resul
   return {
     taskId, status, stats,
     liveResults, results, resultsTotal, page, logs,
+    taskConfig, startTime,
     handleSubmit, loadResults, handlePageChange,
     handleExportPDF, handleSelectTask,
     handlePause, handleResume, handleCancel,

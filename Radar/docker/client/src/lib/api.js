@@ -32,6 +32,10 @@ export const api = {
   cancelTask: (id) => request(`/tasks/${id}/cancel`, { method: 'POST' }),
   deleteTask: (id) => request(`/tasks/${id}`, { method: 'DELETE' }),
 
+  getTopDomains: (id, limit = 5) => request(`/tasks/${id}/stats/top-domains?limit=${limit}`),
+
+  getTopUrls: (id, limit = 5) => request(`/tasks/${id}/stats/top-urls?limit=${limit}`),
+
   getConfig: () => request('/config'),
 
   updateConfig: (data) => request('/config', { method: 'PUT', body: JSON.stringify(data) }),

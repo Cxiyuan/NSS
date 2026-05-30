@@ -1,12 +1,16 @@
+import { useState } from 'react';
 import TaskForm from '../components/TaskForm';
 import ProgressPanel from '../components/ProgressPanel';
 import LiveResultStream from '../components/LiveResultStream';
+import TaskInfoPanel from '../components/TaskInfoPanel';
+import DashboardPanel from '../components/DashboardPanel';
 import ResultTable from '../components/ResultTable';
 import TaskHistory from '../components/TaskHistory';
 import { useTaskPage } from '../hooks/useTaskPage';
 
 export default function UrlCrawlPage() {
   const ctx = useTaskPage({ showExternalCount: true, pdfPrefix: 'crawl-results' });
+  const [showDashboard, setShowDashboard] = useState(false);
 
   return (
     <div className="page">
@@ -16,6 +20,8 @@ export default function UrlCrawlPage() {
 
         {ctx.taskId && (
           <>
+            <TaskInfoPanel taskConfig={ctx.taskConfig} startTime={ctx.startTime} />
+
             <div className="page__controls">
               <ProgressPanel status={ctx.status} stats={ctx.stats} />
               {ctx.status === 'running' && <button onClick={ctx.handlePause} className="btn">暂停</button>}
@@ -25,6 +31,16 @@ export default function UrlCrawlPage() {
                 <button onClick={ctx.handleExportPDF} className="btn btn--primary">导出 PDF</button>
               )}
             </div>
+
+            <button
+              className="btn"
+              style={{ marginBottom: 12 }}
+              onClick={() => setShowDashboard(s => !s)}
+            >
+              {showDashboard ? '收起仪表盘' : '外链统计仪表盘'}
+            </button>
+
+            {showDashboard && <DashboardPanel taskId={ctx.taskId} />}
 
             {ctx.logs.length > 0 && (
               <div className="crawl-logs">

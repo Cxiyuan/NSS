@@ -88,5 +88,37 @@ export function createQueries(db) {
       ).get(taskId);
       return { external: external.count, total: total.count };
     },
+
+    topExternalUrls(taskId, limit = 5) {
+      const rows = db.prepare(`
+        SELECT url, COUNT(*) AS count
+        FROM results
+        WHERE task_id = ? AND is_external = 1
+        GROUP BY url
+        ORDER BY count DESC
+        LIMIT ?
+      `).all(taskId, limit);
+      return rows;
+    },
+
+    topExternalDomains(taskId, limit = 5) {
+      // Extract hostname from URL (strip protocol and path) and count external links per domain
+      const rows = db.prepare(`
+        SELECT
+          SUBSTR(SUBSTR(url, INSTR(url, '://') + 3), 1,
+            CASE WHEN INSTR(SUBSTR(url, INSTR(url, '://') + 3), '/') > 0
+              THEN INSTR(SUBSTR(url, INSTR(url, '://') + 3), '/') - 1
+              ELSE LENGTH(SUBSTR(url, INSTR(url, '://') + 3))
+            END
+          ) AS domain,
+          COUNT(*) AS count
+        FROM results
+        WHERE task_id = ? AND is_external = 1
+        GROUP BY domain
+        ORDER BY count DESC
+        LIMIT ?
+      `).all(taskId, limit);
+      return rows;
+    },
   };
 }
