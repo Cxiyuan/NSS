@@ -27,6 +27,14 @@ const db = new Database(DB_PATH);
 initDB(db);
 const queries = createQueries(db);
 
+// Recover zombie tasks: on restart, mark any running/paused tasks as error
+// since their workers no longer exist
+const zombieTasks = db.prepare("SELECT id, status FROM tasks WHERE status IN ('running','paused')").all();
+for (const t of zombieTasks) {
+  console.warn(`Recovering zombie task ${t.id} (${t.status} → error)`);
+  queries.updateTaskStatus(t.id, 'error');
+}
+
 const pool = new WorkerPool(5, (taskId, msg) => {
   if (msg.type === 'result' && msg.result) {
     queries.insertResult(taskId, msg.result);

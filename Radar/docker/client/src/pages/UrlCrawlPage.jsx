@@ -1,133 +1,34 @@
-import { useState, useCallback, useRef } from 'react';
 import TaskForm from '../components/TaskForm';
 import ProgressPanel from '../components/ProgressPanel';
+import LiveResultStream from '../components/LiveResultStream';
 import ResultTable from '../components/ResultTable';
 import TaskHistory from '../components/TaskHistory';
-import { api } from '../lib/api';
-import { useWebSocket } from '../hooks/useWebSocket';
-import { useTaskPolling } from '../hooks/useTaskPolling';
+import { useTaskPage } from '../hooks/useTaskPage';
 
 export default function UrlCrawlPage() {
-  const [taskId, setTaskId] = useState(null);
-  const [status, setStatus] = useState('idle');
-  const [stats, setStats] = useState({ crawled: 0, total: 0, external: 0, depth: 0, filtered: 0 });
-  const [results, setResults] = useState([]);
-  const [resultsTotal, setResultsTotal] = useState(0);
-  const [page, setPage] = useState(1);
-  const [logs, setLogs] = useState([]);
-  const taskIdRef = useRef(null);
-
-  const onWSMessage = useCallback((data) => {
-    if (data.type === 'progress') {
-      setStats(s => ({ ...s, crawled: data.crawled, total: data.total, depth: data.depth, filtered: data.filtered ?? s.filtered }));
-    }
-    if (data.type === 'status') {
-      setStatus(data.status);
-    }
-    if (data.type === 'result') {
-      // Normalize camelCase from worker (foundOn, linkType) to snake_case expected by ResultTable (found_on, link_type)
-      const result = {
-        ...data.result,
-        found_on: data.result.foundOn ?? data.result.found_on,
-        link_type: data.result.linkType ?? data.result.link_type,
-      };
-      setResults(r => [result, ...r].slice(0, 200));
-      setStats(s => ({ ...s, total: s.total + 1, external: s.external + (data.result.isExternal ? 1 : 0) }));
-    }
-    if (data.type === 'log') {
-      setLogs(l => [...l.slice(-49), data]);
-    }
-  }, []);
-
-  useWebSocket(taskId, onWSMessage);
-  useTaskPolling(taskId, (task) => {
-    if (task.status !== status) setStatus(task.status);
-  });
-
-  async function handleSubmit(config) {
-    setResults([]);
-    setStats({ crawled: 0, total: 0, external: 0, depth: 0 });
-    setLogs([]);
-    setPage(1);
-    try {
-      const task = await api.createTask(config);
-      setTaskId(task.id);
-      setStatus('running');
-      taskIdRef.current = task.id;
-      loadResults(task.id, 1);
-    } catch (err) {
-      console.error(err);
-    }
-  }
-
-  async function loadResults(tid, p) {
-    try {
-      const data = await api.getResults(tid, { page: p, limit: 50 });
-      setResults(data.results || []);
-      setResultsTotal(data.total || 0);
-    } catch {}
-  }
-
-  function handlePageChange(p) {
-    setPage(p);
-    loadResults(taskIdRef.current, p);
-  }
-
-  async function handleExportPDF() {
-    if (!taskId) return;
-    const res = await fetch(`/api/tasks/${taskId}/export/pdf`);
-    const blob = await res.blob();
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = `crawl-results-${taskId}.pdf`;
-    a.click();
-    URL.revokeObjectURL(url);
-  }
-
-  function handleSelectTask(task) {
-    setTaskId(task.id);
-    setStatus(task.status);
-    taskIdRef.current = task.id;
-    loadResults(task.id, 1);
-  }
-
-  async function handlePause() {
-    await api.pauseTask(taskId);
-    setStatus('paused');
-  }
-
-  async function handleResume() {
-    await api.resumeTask(taskId);
-    setStatus('running');
-  }
-
-  async function handleCancel() {
-    await api.cancelTask(taskId);
-    setStatus('cancelled');
-  }
+  const ctx = useTaskPage({ showExternalCount: true, pdfPrefix: 'crawl-results' });
 
   return (
     <div className="page">
       <div className="page__main">
         <h2>网站外链探测</h2>
-        <TaskForm type="url_crawl" onSubmit={handleSubmit} disabled={status === 'running'} />
+        <TaskForm type="url_crawl" onSubmit={ctx.handleSubmit} disabled={ctx.status === 'running'} />
 
-        {taskId && (
+        {ctx.taskId && (
           <>
             <div className="page__controls">
-              <ProgressPanel status={status} stats={stats} />
-              {status === 'running' && <button onClick={handlePause} className="btn">暂停</button>}
-              {status === 'paused' && <button onClick={handleResume} className="btn btn--primary">恢复</button>}
-              {(status === 'running' || status === 'paused') && <button onClick={handleCancel} className="btn btn--danger">取消</button>}
-              {status === 'completed' && (
-                <button onClick={handleExportPDF} className="btn btn--primary">导出 PDF</button>
+              <ProgressPanel status={ctx.status} stats={ctx.stats} />
+              {ctx.status === 'running' && <button onClick={ctx.handlePause} className="btn">暂停</button>}
+              {ctx.status === 'paused' && <button onClick={ctx.handleResume} className="btn btn--primary">恢复</button>}
+              {(ctx.status === 'running' || ctx.status === 'paused') && <button onClick={ctx.handleCancel} className="btn btn--danger">取消</button>}
+              {ctx.status === 'completed' && (
+                <button onClick={ctx.handleExportPDF} className="btn btn--primary">导出 PDF</button>
               )}
             </div>
 
-            {logs.length > 0 && (
+            {ctx.logs.length > 0 && (
               <div className="crawl-logs">
-                {logs.map((l, i) => (
+                {ctx.logs.map((l, i) => (
                   <div key={i} className={`crawl-logs__entry crawl-logs__entry--${l.level}`}>
                     <span className="crawl-logs__level">{l.level}</span>
                     <span className="crawl-logs__msg">{l.message}</span>
@@ -136,20 +37,22 @@ export default function UrlCrawlPage() {
               </div>
             )}
 
-            <h3>探测结果 ({resultsTotal})</h3>
+            <LiveResultStream results={ctx.liveResults} />
+
+            <h3>探测结果 ({ctx.resultsTotal})</h3>
             <ResultTable
-              results={results}
-              total={resultsTotal}
-              page={page}
+              results={ctx.results}
+              total={ctx.resultsTotal}
+              page={ctx.page}
               limit={50}
-              onPageChange={handlePageChange}
+              onPageChange={ctx.handlePageChange}
             />
           </>
         )}
       </div>
 
       <aside className="page__sidebar">
-        <TaskHistory onSelect={handleSelectTask} />
+        <TaskHistory onSelect={ctx.handleSelectTask} />
       </aside>
     </div>
   );

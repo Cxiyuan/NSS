@@ -1,9 +1,17 @@
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useRef, useEffect } from 'react';
 import ResultDetail from './ResultDetail';
 
 export default function ResultTable({ results, total, page, limit, onPageChange }) {
   const [selected, setSelected] = useState(null);
+  const wrapperRef = useRef(null);
   const totalPages = Math.ceil(total / limit);
+
+  // Auto-scroll to table top on page change
+  useEffect(() => {
+    if (wrapperRef.current) {
+      wrapperRef.current.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+    }
+  }, [page]);
 
   const columns = [
     { key: 'url', label: 'URL', render: r => <a href={r.url} target="_blank" rel="noreferrer" className="result-table__link">{truncate(r.url, 60)}</a> },
@@ -18,7 +26,7 @@ export default function ResultTable({ results, total, page, limit, onPageChange 
 
   return (
     <>
-      <div className="result-table-wrapper">
+      <div className="result-table-wrapper" ref={wrapperRef}>
         <table className="result-table">
           <thead>
             <tr>

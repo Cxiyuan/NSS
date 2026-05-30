@@ -1,11 +1,5 @@
 import { useState } from 'react';
 
-const PATTERN_HELP = {
-  'qq.com': '精确匹配域名 qq.com',
-  '*.qq.com': '匹配所有 qq.com 子域名',
-  '*gov.cn': '匹配以 gov.cn 结尾的域名',
-};
-
 // Valid patterns: exact domain, *.subdomain, *suffix
 const VALID_PATTERN = /^(\*\.)?[a-zA-Z0-9][a-zA-Z0-9.-]*\.[a-zA-Z]{2,}$|^\*[a-zA-Z0-9][a-zA-Z0-9.-]*\.[a-zA-Z]{2,}$/;
 
@@ -62,14 +56,6 @@ export default function FilterInput({ filters = [], onChange }) {
       </div>
 
       {error && <div className="filter-input__error">{error}</div>}
-
-      <div className="filter-input__help">
-        {Object.entries(PATTERN_HELP).map(([key, desc]) => (
-          <span key={key} className="filter-input__help-item">
-            <code>{key}</code> {desc}
-          </span>
-        ))}
-      </div>
 
       {filters.length > 0 && (
         <div className="filter-input__tags">

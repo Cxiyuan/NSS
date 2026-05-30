@@ -3,9 +3,21 @@ import { api } from '../lib/api';
 
 export default function TaskHistory({ onSelect, onDelete }) {
   const [tasks, setTasks] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
 
   useEffect(() => {
-    api.listTasks(50, 0).then(setTasks).catch(console.error);
+    setLoading(true);
+    setError(null);
+    api.listTasks(50, 0)
+      .then((data) => {
+        setTasks(data || []);
+        setLoading(false);
+      })
+      .catch((err) => {
+        setError(err.message || '加载失败');
+        setLoading(false);
+      });
   }, []);
 
   function handleDelete(id) {
@@ -26,7 +38,11 @@ export default function TaskHistory({ onSelect, onDelete }) {
   return (
     <div className="task-history">
       <h3>历史任务</h3>
-      {tasks.length === 0 ? (
+      {loading ? (
+        <p className="task-history__empty">加载中...</p>
+      ) : error ? (
+        <p className="task-history__empty" style={{ color: 'var(--color-error)' }}>{error}</p>
+      ) : tasks.length === 0 ? (
         <p className="task-history__empty">暂无任务</p>
       ) : (
         <ul className="task-history__list">
