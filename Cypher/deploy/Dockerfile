@@ -1,85 +1,63 @@
 # =============================================================================
-# Cypher — 弱口令检测系统
-# Multi-stage Docker build
-#
-# Stage 1: builder  — 编译 John the Ripper Jumbo 带 AVX512
-# Stage 2: runtime  — Python + John + Hydra + Ncrack + 工具脚本
+# Cypher — 弱口令检测系统 (AVX512)
+# Multi-stage: builder (John Jumbo) → runtime (Python + John)
 # =============================================================================
 
-# ─── Stage 1: Builder ─────────────────────────────────────────
+# ─── Stage 1: Builder (compile John the Ripper) ──────────────
 FROM ubuntu:22.04 AS builder
 
 LABEL stage="john-builder"
-LABEL description="John the Ripper Jumbo with AVX512 — build stage"
 
 ENV DEBIAN_FRONTEND=noninteractive
 ENV TZ=UTC
 
 RUN apt-get update && apt-get install -y --no-install-recommends \
-    build-essential git curl ca-certificates \
-    libssl-dev libgmp-dev libmpfr-dev libmpc-dev zlib1g-dev \
-    libbz2-dev libpcap-dev libkrb5-dev libnss3-dev \
+    build-essential git ca-certificates \
+    libssl-dev libgmp-dev zlib1g-dev \
+    libbz2-dev libpcap-dev \
     && rm -rf /var/lib/apt/lists/*
 
 ARG JOHN_VERSION=bleeding-jumbo
-ARG JOHN_REPO=https://github.com/openwall/john.git
 ARG MAKE_FLAGS=-j$(nproc)
-# SIMD flags: 默认 auto-detect (CI runner 通常无 AVX512)
-# 在 AVX512 自托管 runner 上可传 --build-arg SIMD_FLAGS=--enable-simd=AVX512
+# CI runner 无 AVX512 -> auto-detect; 自托管 AVX512 传 --build-arg SIMD_FLAGS=--enable-simd=AVX512
 ARG SIMD_FLAGS=--enable-simd
 
 WORKDIR /build
-RUN git clone --depth=1 --branch=${JOHN_VERSION} ${JOHN_REPO} john 2>&1 \
-    && ls -la /build/john/
+RUN git clone --depth=1 --branch=${JOHN_VERSION} https://github.com/openwall/john.git john
 
 WORKDIR /build/john/src
-RUN ls -la && echo '--- src contents above ---'
-RUN ./configure ${SIMD_FLAGS} --disable-opencl \
-    CFLAGS="-O3" 2>&1 | tee /tmp/configure.log
+RUN ./configure ${SIMD_FLAGS} --disable-opencl CFLAGS="-O3"
+RUN make ${MAKE_FLAGS} && make install
 
-# Debug: verify files exist before make
-RUN ls -la /build/john/src/ 2>&1 | head -20
-
-RUN make -j$(nproc) 2>&1 | tee /tmp/make.log \
-    && cp ../run/john /usr/local/bin/john \
-    || (tail -100 /tmp/make.log; echo 'MAKE FAILED'; exit 1)
-
-RUN john --list=build-info 2>&1 | head -30
-
-# ─── Stage 2: Runtime ─────────────────────────────────────────
+# ─── Stage 2: Runtime ────────────────────────────────────────
 FROM ubuntu:22.04 AS runtime
 
 LABEL description="Cypher — Weak Password Detection System"
-LABEL version="1.0.0"
 
 ENV DEBIAN_FRONTEND=noninteractive
 ENV PIP_NO_CACHE_DIR=1
 ENV PYTHONUNBUFFERED=1
 
 RUN apt-get update && apt-get install -y --no-install-recommends \
-    python3 python3-pip python3-venv \
-    libssl3 libgmp10 libpcap0.8 libbz2-1.0 \
-    hydra ncrack curl ca-certificates \
-    procps lshw tzdata \
+    python3 python3-pip \
+    hydra ncrack \
     && rm -rf /var/lib/apt/lists/*
 
+# John 二进制 + 运行时文件
 COPY --from=builder /usr/local/bin/john /usr/local/bin/john
-COPY --from=builder /build/john/run/john.conf /etc/john/john.conf
-COPY --from=builder /build/john/run/rules/*.rule /etc/john/rules/
+COPY --from=builder /build/john/run/john.conf /usr/local/etc/john/john.conf
 
+# Python 依赖
+COPY Cypher/requirements.txt /tmp/requirements.txt
+RUN pip install --no-cache-dir -r /tmp/requirements.txt
+
+# Cypher 源码
 WORKDIR /opt/cypher
-
-COPY Cypher/requirements.txt .
-RUN pip install --no-cache-dir -r requirements.txt
-
 COPY Cypher/src/ ./src/
-COPY Cypher/pcfg/ ./pcfg/
 COPY Cypher/tests/ ./tests/
 
-RUN python3 --version \
-    && john --version \
-    && hydra -h 2>&1 | head -3 \
-    && ncrack -h 2>&1 | head -3
+# 验证
+RUN john --version && python3 --version
 
 ENTRYPOINT ["python3"]
 CMD ["-m", "src.john_wrapper", "--help"]
