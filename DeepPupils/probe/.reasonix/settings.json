@@ -1,0 +1,27 @@
+{
+  "hooks": {
+    "PreToolUse": [
+      {
+        "command": "/Users/yogkx/Desktop/NSS/DeepPupils/probe/.reasonix/hooks/block-builds.sh",
+        "match": "^run_command$",
+        "description": "禁止本地编译、docker构建/拉取、前端构建",
+        "timeout": 5000,
+        "cwd": "/Users/yogkx/Desktop/NSS/DeepPupils/probe"
+      },
+      {
+        "command": "/Users/yogkx/Desktop/NSS/DeepPupils/probe/.reasonix/hooks/block-zeek-edit.sh",
+        "match": "^(edit_file|write_file|delete_file|delete_directory|run_command)$",
+        "description": "禁止修改 zeek-8.2.0/ 目录",
+        "timeout": 5000,
+        "cwd": "/Users/yogkx/Desktop/NSS/DeepPupils/probe"
+      },
+      {
+        "command": "/Users/yogkx/Desktop/NSS/DeepPupils/probe/.reasonix/hooks/block-gitignore.sh",
+        "match": "^(edit_file|write_file)$",
+        "description": "禁止修改 .gitignore 文件",
+        "timeout": 5000,
+        "cwd": "/Users/yogkx/Desktop/NSS/DeepPupils/probe"
+      }
+    ]
+  }
+}

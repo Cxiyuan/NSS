@@ -35,13 +35,13 @@ RUN for site_dir in /opt/zeek/share/zeek/site /usr/local/zeek/share/zeek/site; d
     done
 
 # ============================================================
-# 构建 zeek-kafka 插件
-# 安装编译工具链 + librdkafka-dev → 编译安装插件 → 清理编译依赖
+# 编译并安装 zeek-kafka 插件
+# 注意：Debian 13 (trixie) 中 pkg-config 包已改名为 pkgconf
 # ============================================================
 RUN apt-get update && apt-get install -y --no-install-recommends \
     g++ \
     make \
-    pkg-config \
+    pkgconf \
     librdkafka-dev \
     && git clone https://github.com/SeisoLLC/zeek-kafka.git /tmp/zeek-kafka \
     && cd /tmp/zeek-kafka \
@@ -51,7 +51,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     && make install \
     && ldconfig \
     && rm -rf /tmp/zeek-kafka \
-    && apt-get purge -y g++ make pkg-config librdkafka-dev \
+    && apt-get purge -y g++ make pkgconf librdkafka-dev \
     && apt-get autoremove --purge -y \
     && rm -rf /var/lib/apt/lists/* \
     && zeek -N Seiso::Kafka \

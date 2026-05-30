@@ -1,0 +1,767 @@
+https://raw.githubusercontent.com/esengine/DeepSeek-Reasonix/main/src/config.ts
+
+/** Library reads only DEEPSEEK_API_KEY from env; the CLI bridges config.json → env var. */
+
+import { randomBytes } from "node:crypto";
+import { closeSync, fstatSync, mkdirSync, openSync, readFileSync } from "node:fs";
+import { homedir } from "node:os";
+import { dirname, isAbsolute, join, resolve } from "node:path";
+import { z } from "zod";
+import { type ThemeName, isThemeName, resolveThemeName } from "./cli/ui/theme/tokens.js";
+import { atomicWriteSync } from "./core/atomic-write.js";
+import type { LanguageCode } from "./i18n/types.js";
+import {
+  type IndexUserConfig,
+  type ResolvedIndexConfig,
+  resolveIndexConfig,
+} from "./index/config.js";
+import { type McpServerSpec, parseMcpSpec } from "./mcp/spec.js";
+import { normalizeQQAllowlist, normalizeQQOpenId } from "./qq/access.js";
+import { normalizeTelegramAllowlist, normalizeTelegramUserId } from "./telegram/access.js";
+import {
+  type NormalizedToolRateLimitConfig,
+  type ToolRateLimitConfig,
+  normalizeToolRateLimitConfig,
+} from "./tools/rate-limit.js";
+import { normalizeWeixinAllowlist, normalizeWeixinUserId } from "./weixin/access.js";
+import { loadWeixinAccount, saveWeixinAccount } from "./weixin/account.js";
+
+/** Single trust dial: review queues edits + gates shell; auto applies + gates shell; yolo skips both gates; plan blocks every non-readonly tool (write_file / edit_file / multi_edit / run_command) at dispatch. */
+export type EditMode = "review" | "auto" | "yolo" | "plan";
+export type DesktopCloseBehavior = "closeToTray" | "closeToQuit";
+
+export const DEFAULT_MODEL = "deepseek-v4-flash";
+
+/** Models the official api.deepseek.com endpoint currently accepts. v3-era
+ *  `deepseek-chat`/`deepseek-reasoner` are gone — sending them produces a 400. */
+export const SUPPORTED_OFFICIAL_MODELS: readonly string[] = [
+  "deepseek-v4-flash",
+  "deepseek-v4-pro",
+];
+
+export type ReasoningEffort = "low" | "medium" | "high" | "max";
+
+export const REASONING_EFFORT_VALUES: readonly ReasoningEffort[] = ["low", "medium", "high", "max"];
+
+export function isReasoningEffort(value: unknown): value is ReasoningEffort {
+  return value === "low" || value === "medium" || value === "high" || value === "max";
+}
+
+export type EngineeringLifecycleMode = "off" | "strict";
+export type HistoryScrollMode = "auto" | "native" | "app";
+export type DiffDisplay = "summary" | "full" | "none";
+
+export type EmbeddingProvider = "ollama" | "openai-compat";
+
+export interface OllamaEmbeddingUserConfig {
+  baseUrl?: string;
+  model?: string;
+}
+
+export interface OpenAICompatEmbeddingUserConfig {
+  baseUrl?: string;
+  apiKey?: string;
+  model?: string;
+  extraBody?: Record<string, unknown>;
+  batchSize?: number;
+  timeoutMs?: number;
+}
+
+export interface SemanticEmbeddingUserConfig {
+  provider?: EmbeddingProvider;
+  ollama?: OllamaEmbeddingUserConfig;
+  openaiCompat?: OpenAICompatEmbeddingUserConfig;
+}
+
+export interface ResolvedOllamaEmbeddingConfig {
+  provider: "ollama";
+  baseUrl: string;
+  model: string;
+  timeoutMs: number;
+}
+
+export interface ResolvedOpenAICompatEmbeddingConfig {
+  provider: "openai-compat";
+  baseUrl: string;
+  apiKey: string;
+  model: string;
+  extraBody: Record<string, unknown>;
+  timeoutMs: number;
+  batchSize: number;
+}
+
+export type ResolvedEmbeddingConfig =
+  | ResolvedOllamaEmbeddingConfig
+  | ResolvedOpenAICompatEmbeddingConfig;
+
+export interface SemanticEmbeddingConfigView {
+  provider: EmbeddingProvider;
+  ollama: {
+    baseUrl: string;
+    model: string;
+  };
+  openaiCompat: {
+    baseUrl: string;
+    apiKey: string;
+    apiKeySet: boolean;
+    model: string;
+    extraBody: Record<string, unknown>;
+    batchSize: number;
+  };
+}
+
+export interface McpServerConfig {
+  command?: string;
+  args?: string[];
+  env?: Record<string, string>;
+  cwd?: string;
+  transport?: "stdio" | "sse" | "streamable-http";
+  /** Claude `.mcp.json` alias for `transport`; `"http"` is treated as `"streamable-http"`. */
+  type?: "stdio" | "sse" | "streamable-http" | "http";
+  url?: string;
+  headers?: Record<string, string>;
+  disabled?: boolean;
+  /** Per-request timeout in ms for this MCP server. Overrides the 60s default. (#2023) */
+  requestTimeoutMs?: number;
+}
+
+export interface QQBotConfig {
+  appId?: string;
+  appSecret?: string;
+  sandbox?: boolean;
+  enabled?: boolean;
+  ownerOpenId?: string;
+  allowlist?: string[];
+}
+
+export interface TelegramBotConfig {
+  botToken?: string;
+  enabled?: boolean;
+  ownerUserId?: string;
+  allowlist?: string[];
+}
+
+export interface WeixinBotConfig {
+  token?: string;
+  accountId?: string;
+  baseUrl?: string;
+  enabled?: boolean;
+  ownerUserId?: string;
+  allowlist?: string[];
+}
+
+export interface PricingOverride {
+  inputCacheHit?: number;
+  inputCacheMiss?: number;
+  output?: number;
+}
+
+export interface RateLimitConfig {
+  /** Client-side self-throttle in requests/minute — paces outbound chat calls with a min-interval timer. NOT a DeepSeek-enforced limit: DeepSeek's actual cap is concurrency, not RPM (500 for v4-pro, 2500 for v4-flash, account-wide), surfaced as HTTP 429. Set this only to be a polite neighbor on shared infra; single-user CLI rarely needs it. */
+  rpm?: number;
+}
+
+export interface ProxyConfig {
+  /** Proxy URL (e.g. `http://127.0.0.1:7897`, `socks5://host:1080`). Takes precedence over HTTPS_PROXY / HTTP_PROXY / ALL_PROXY env vars when set, so desktop users on Windows can route through Clash without fighting GUI env-var propagation (issue #1868). */
+  url?: string;
+  /** Skip proxy detection entirely — equivalent to launching with `--no-proxy`. */
+  disabled?: boolean;
+  /** Additional NO_PROXY patterns (curl syntax). Additive on top of env NO_PROXY and the default DeepSeek-bypass whitelist. */
+  noProxy?: string[];
+  /** When false, route api.deepseek.com / *.deepseek.com through the proxy too (issue #1497 — corporate firewalls that block direct egress). Default true preserves the clash/v2ray US-exit-IP 403 fix. Env `REASONIX_PROXY_DEEPSEEK_DIRECT` overrides. */
+  bypassDeepSeekDirect?: boolean;
+}
+
+export interface ReasonixConfig {
+  apiKey?: string;
+  baseUrl?: string;
+  lang?: LanguageCode;
+  /** Persisted DeepSeek model id — `/model <id>` and the dashboard model picker write through this. */
+  model?: string;
+  editMode?: EditMode;
+  editModeHintShown?: boolean;
+  mouseClipboardHintShown?: boolean;
+  /** When false, skip the boot splash animation and show the main UI immediately. Default true. */
+  banner?: boolean;
+  reasoningEffort?: ReasoningEffort;
+  /** Per-turn output token cap sent as `max_tokens` in the API request (#2196). Null = no cap. */
+  maxOutputTokens?: number | null;
+  /** Default workspace root for the desktop client. CLI uses cwd. */
+  workspaceDir?: string;
+  /** Last N workspace paths the desktop client has opened, most recent first. */
+  recentWorkspaces?: string[];
+  /** Desktop only — open tabs in tab order, each with its workspace dir, loaded session and focus, persisted so restart restores every tab and its conversation (issues #933, #1244). Empty/absent → boot with a single default tab. */
+  desktopOpenTabs?: DesktopOpenTab[];
+  /** Desktop only — window close behavior. "closeToTray" hides the window and keeps sessions running; "closeToQuit" exits Reasonix. Default closeToQuit. */
+  desktopCloseBehavior?: DesktopCloseBehavior;
+  /** Desktop only — `openWith` value for clicking file links. Empty/undefined = OS default app. Examples: "code", "cursor", "C:\\path\\to\\editor.exe". */
+  editor?: string;
+  theme?: ThemeName | "auto";
+  /** Stored as `--mcp`-format strings so one parser handles both flag and config. */
+  mcp?: string[];
+  /** Names of servers in `mcp` to skip on bridge — see `/mcp disable <name>`. */
+  mcpDisabled?: string[];
+  /** Env overlay per MCP server name (matches the `name=` prefix of the spec). Stdio transports merge this over process.env; SSE/HTTP ignore it. */
+  mcpEnv?: Record<string, Record<string, string>>;
+  /** Canonical MCP server configuration — merges with and overrides legacy `mcp`/`mcpEnv`/`mcpDisabled`. */
+  mcpServers?: Record<string, McpServerConfig>;
+  session?: string | null;
+  /** When false, each `reasonix code` / `reasonix chat` launch starts a fresh session instead
+   *  of resuming the last one (#2238). Default true preserves existing behavior. */
+  autoResumeSession?: boolean;
+  setupCompleted?: boolean;
+  search?: boolean;
+  /** Web search engine backend: "bing" (default, scrapes cn.bing.com), "bing-intl" (www.bing.com, indexes international sites), "searxng" (self-hosted SearXNG), "metaso" (Metaso API), "baidu" (Baidu AI Search API), "tavily" (LLM-friendly API, free tier), "perplexity" (Perplexity AI), "exa" (Exa API), "brave" (Brave Search API), or "ollama" (Ollama cloud web search). */
+  webSearchEngine?:
+    | "bing"
+    | "bing-intl"
+    | "searxng"
+    | "metaso"
+    | "baidu"
+    | "tavily"
+    | "perplexity"
+    | "exa"
+    | "brave"
+    | "ollama";
+  /** Base URL for SearXNG instance (default http://localhost:8080). */
+  webSearchEndpoint?: string;
+  /** Metaso API key. Falls back to METASO_API_KEY env var. */
+  metasoApiKey?: string;
+  /** Baidu AI Search API key. Falls back to BAIDU_API_KEY or QIANFAN_API_KEY env var. */
+  baiduApiKey?: string;
+  /** Tavily API key. Falls back to TAVILY_API_KEY env var. No baked-in default — free tier is 1000/mo per account, sharing would burn out. */
+  tavilyApiKey?: string;
+  /** Perplexity API key. Falls back to PERPLEXITY_API_KEY env var. Get one at https://perplexity.ai/settings/api */
+  perplexityApiKey?: string;
+  /** Exa API key. Falls back to EXA_API_KEY env var. Free 1000/mo signup at https://exa.ai */
+  exaApiKey?: string;
+  /** Ollama cloud API key. Falls back to OLLAMA_API_KEY env var. Used for Ollama web_search/web_fetch. */
+  ollamaApiKey?: string;
+  /** Brave Search API key. Falls back to BRAVE_SEARCH_API_KEY env var. Free 2000/mo signup at https://brave.com/search/api/ */
+  braveApiKey?: string;
+
+  /** TUI mouse-wheel scrolling via SGR mouse tracking. Default true. Set false to fall back to native terminal drag-select for copy (then wheel is terminal-dependent — most terminals translate wheel→arrow in alt-screen, some don't). */
+  mouseTracking?: boolean;
+  /** Rows scrolled per single SGR mouse-wheel report. Default 1 — most terminals emit 2-5 reports per physical notch, so 1 already produces 2-5 rows per notch (#1419). Bump to 3-5 only if your terminal emits one report per notch and scrolling feels slow (#1494). Clamped to [1, 10]. */
+  mouseWheelRows?: number;
+  /** Chat-history scrolling: "native" leaves terminal scrollback in charge; "app" captures wheel/PgUp/PgDn/End inside the TUI; "auto" enables app mode for terminals with known jumpy native scrollback. */
+  historyScrollMode?: HistoryScrollMode;
+  /** Diff display mode for edit_file / write_file / multi_edit results in CLI. */
+  diffDisplay?: DiffDisplay;
+  dashboard?: {
+    /** Whether the embedded dashboard auto-starts on launch. Default true. Set false to disable without passing --no-dashboard each time. */
+    enabled?: boolean;
+    /** Pin the embedded dashboard to a fixed port — required for stable SSH tunnels. 0/absent → ephemeral. */
+    port?: number;
+    /** Bind address (#968). Defaults to 127.0.0.1 (loopback only). Set to 0.0.0.0 / :: / a LAN IP to expose to other devices; the URL token is then the only auth, so keep it secret. */
+    host?: string;
+    /** Stable URL token (#968). If unset, a fresh token is minted each boot. Min 16 chars enforced at load time. */
+    token?: string;
+  };
+  /** Thread-area visibility toggles. */
+  thread?: {
+    /** When false, suppresses the quiet inline dividers for fold / abort / rate-limit
+     *  warnings (severity="high" from the kernel). Default true. */
+    showSystemEvents?: boolean;
+  };
+  /** Per-field visibility toggles for the bottom status row. All default to true (visible). */
+  statusBar?: {
+    showBalance?: boolean;
+    showSessionCost?: boolean;
+    showTurnCost?: boolean;
+    showCacheHit?: boolean;
+    showCtxUsage?: boolean;
+    showVersion?: boolean;
+    showFeedbackHint?: boolean;
+  };
+  /** Preferred display currency for costs (e.g. "USD" or "CNY"). When unset, falls back
+   *  to the wallet currency if available, then defaults to CNY. */
+  costCurrency?: string;
+  /** Maximum tool-call iterations per turn. Prevents runaway loops from consuming
+   *  unlimited API budget. Default 50. Env `REASONIX_MAX_ITER` overrides. */
+  maxIterPerTurn?: number;
+  projects?: {
+    [absoluteRootDir: string]: {
+      shellAllowed?: string[];
+      /** Project-scoped hooks are arbitrary shell commands; load only after explicit trust. */
+      hooksTrusted?: boolean;
+      /** Absolute directory prefixes the user pre-approved for outside-sandbox file access (#684). */
+      pathAllowed?: string[];
+    };
+  };
+  /** Global shell allowlist — command prefixes auto-approved across ALL projects (#2059).
+   *  Merged (union) with the per-project `projects[<root>].shellAllowed` at check time. */
+  shellAllowedGlobal?: string[];
+  /** Issue #259 — user-configurable sensitive-path prefixes and filename patterns.
+   *  Commands touching these paths are demoted to the confirm gate even when allowlisted. */
+  sensitivePaths?: {
+    /** Path prefixes (tilde-relative or absolute) that trigger confirmation. */
+    prefixes?: string[];
+    /** Glob-style filename patterns (matched against basename, case-insensitive). */
+    patterns?: string[];
+  };
+  index?: IndexUserConfig;
+  semantic?: SemanticEmbeddingUserConfig;
+  skills?: {
+    paths?: string[];
+  };
+  /** Per-skill model override for `runAs: subagent` skills, keyed by skill name. Empty / missing entry → spawn site's default. */
+  subagentModels?: Record<string, "flash" | "pro">;
+  /** Enable the `java_source` tool for finding and decompiling Java class source. Default off. */
+  javaSource?: boolean;
+  /** Per-model context-window override (tokens). Keys are model ids; values are prompt-side token caps. */
+  contextTokens?: Record<string, number>;
+  /** User-declared extensions to the built-in memory types (#709). Unknown types round-trip even without a declaration; declaring one lets you attach a default priority + lifecycle. */
+  memory?: {
+    customTypes?: CustomMemoryTypeConfig[];
+  };
+  pricingOverride?: Record<string, PricingOverride>;
+  /** Per-app proxy override. Layered on top of HTTPS_PROXY / NO_PROXY env vars + the default DeepSeek-bypass whitelist. */
+  proxy?: ProxyConfig;
+  rateLimit?: RateLimitConfig;
+  toolRateLimit?: ToolRateLimitConfig;
+  /** Host-enforced engineering lifecycle. Defaults to off so opt-outs pay zero prefix cost. */
+  engineeringLifecycle?: {
+    mode?: EngineeringLifecycleMode;
+  };
+  filesystem?: {
+    /** read_file flips to outline mode for files above this. Default 64 KiB — keeps the cache prefix slim while covering ~99% of source files. Raise to 524288 (512 KiB) for the pre-0.46.0 "trust the cache" behavior. */
+    outlineThresholdBytes?: number;
+  };
+  /** QQ Bot configuration */
+  qq?: QQBotConfig;
+  telegram?: TelegramBotConfig;
+  weixin?: WeixinBotConfig;
+}
+
+export interface CustomMemoryTypeConfig {
+  name: string;
+  description?: string;
+  priority?: "low" | "medium" | "high";
+  expires?: "project_end";
+}
+
+export interface MemoryTypeRegistryEntry {
+  name: string;
+  builtin: boolean;
+  description?: string;
+  priority?: "low" | "medium" | "high";
+  expires?: "project_end";
+}
+
+const BUILTIN_TYPE_DOCS: Record<string, string> = {
+  user: "role / skills / preferences",
+  feedback: "corrections or confirmed approaches",
+  project: "facts / decisions about the current work",
+  reference: "pointers to external systems the user uses",
+};
+
+/** Resolve the merged registry of memory types — built-ins, overlaid by anything in `config.memory.customTypes`. */
+export function loadMemoryTypeRegistry(
+  cfg: ReasonixConfig = readConfig(),
+): MemoryTypeRegistryEntry[] {
+  const out: MemoryTypeRegistryEntry[] = [];
+  for (const name of ["user", "feedback", "project", "reference"]) {
+    out.push({ name, builtin: true, description: BUILTIN_TYPE_DOCS[name] });
+  }
+  const seen = new Set(out.map((e) => e.name));
+  for (const raw of cfg.memory?.customTypes ?? []) {
+    if (!raw || typeof raw.name !== "string") continue;
+    const name = raw.name.trim();
+    if (!name || !/^[a-zA-Z][a-zA-Z0-9_-]{0,31}$/.test(name)) continue;
+    if (seen.has(name)) continue;
+    seen.add(name);
+    const entry: MemoryTypeRegistryEntry = { name, builtin: false };
+    if (typeof raw.description === "string") entry.description = raw.description;
+    if (raw.priority === "low" || raw.priority === "medium" || raw.priority === "high") {
+      entry.priority = raw.priority;
+    }
+    if (raw.expires === "project_end") entry.expires = raw.expires;
+    out.push(entry);
+  }
+  return out;
+}
+
+export function memoryTypeDefaults(
+  typeName: string,
+  cfg: ReasonixConfig = readConfig(),
+): { priority?: "low" | "medium" | "high"; expires?: "project_end" } {
+  const found = loadMemoryTypeRegistry(cfg).find((e) => e.name === typeName);
+  if (!found) return {};
+  const out: { priority?: "low" | "medium" | "high"; expires?: "project_end" } = {};
+  if (found.priority) out.priority = found.priority;
+  if (found.expires) out.expires = found.expires;
+  return out;
+}
+
+export function loadMetasoApiKey(path: string = defaultConfigPath()): string | undefined {
+  if (process.env.METASO_API_KEY) return process.env.METASO_API_KEY.trim();
+  const cfg = readConfig(path).metasoApiKey;
+  if (cfg && typeof cfg === "string" && cfg.trim()) return cfg.trim();
+  return undefined;
+}
+
+export function loadBaiduApiKey(path: string = defaultConfigPath()): string | undefined {
+  if (process.env.BAIDU_API_KEY) return process.env.BAIDU_API_KEY.trim();
+  if (process.env.QIANFAN_API_KEY) return process.env.QIANFAN_API_KEY.trim();
+  const cfg = readConfig(path).baiduApiKey;
+  if (cfg && typeof cfg === "string" && cfg.trim()) return cfg.trim();
+  return undefined;
+}
+
+/** Tavily API key — env > config > undefined. Returning undefined means the caller must error out with a clear "go get one at tavily.com" message; we deliberately ship no default because the free 1000/mo quota wouldn't survive being shared. */
+export function loadTavilyApiKey(path: string = defaultConfigPath()): string | undefined {
+  if (process.env.TAVILY_API_KEY) return process.env.TAVILY_API_KEY.trim();
+  const cfg = readConfig(path).tavilyApiKey;
+  if (cfg && typeof cfg === "string" && cfg.trim()) return cfg.trim();
+  return undefined;
+}
+
+/** Perplexity API key — env > config > undefined. Get one at https://perplexity.ai/settings/api */
+export function loadPerplexityApiKey(path: string = defaultConfigPath()): string | undefined {
+  if (process.env.PERPLEXITY_API_KEY) return process.env.PERPLEXITY_API_KEY.trim();
+  const cfg = readConfig(path).perplexityApiKey;
+  if (cfg && typeof cfg === "string" && cfg.trim()) return cfg.trim();
+  return undefined;
+}
+
+/** Exa API key — env > config > undefined. Free 1000/mo signup at https://exa.ai */
+export function loadExaApiKey(path: string = defaultConfigPath()): string | undefined {
+  if (process.env.EXA_API_KEY) return process.env.EXA_API_KEY.trim();
+  const cfg = readConfig(path).exaApiKey;
+  if (cfg && typeof cfg === "string" && cfg.trim()) return cfg.trim();
+  return undefined;
+}
+
+/** Ollama cloud API key — env > config > undefined. */
+export function loadOllamaApiKey(path: string = defaultConfigPath()): string | undefined {
+  if (process.env.OLLAMA_API_KEY) return process.env.OLLAMA_API_KEY.trim();
+  if (process.env.ollamaApiKey) return process.env.ollamaApiKey.trim();
+  const cfg = readConfig(path).ollamaApiKey;
+  if (cfg && typeof cfg === "string" && cfg.trim()) return cfg.trim();
+  return undefined;
+}
+
+/** Brave Search API key — env > config > undefined. Free 2000/mo signup at https://brave.com/search/api/ */
+export function loadBraveApiKey(path: string = defaultConfigPath()): string | undefined {
+  if (process.env.BRAVE_SEARCH_API_KEY) return process.env.BRAVE_SEARCH_API_KEY.trim();
+  if (process.env.BRAVE_API_KEY) return process.env.BRAVE_API_KEY.trim();
+  const cfg = readConfig(path).braveApiKey;
+  if (cfg && typeof cfg === "string" && cfg.trim()) return cfg.trim();
+  return undefined;
+}
+
+const DEFAULT_OLLAMA_URL = "http://localhost:11434";
+const DEFAULT_EMBED_MODEL = "nomic-embed-text";
+const DEFAULT_TIMEOUT_MS = 180_000;
+const DEFAULT_BATCH_SIZE = 10;
+
+export function defaultConfigPath(): string {
+  return join(homedir(), ".reasonix", "config.json");
+}
+
+const STRING_ARRAY_FIELDS: Array<readonly string[]> = [
+  ["mcp"],
+  ["mcpDisabled"],
+  ["recentWorkspaces"],
+  ["shellAllowedGlobal"],
+  ["skills", "paths"],
+];
+
+const stringArraySchema = z.array(z.string());
+
+function sanitizeStringArrayField(
+  cfg: Record<string, unknown>,
+  segments: readonly string[],
+  filePath: string,
+): void {
+  if (segments.length === 0) return;
+  let parent: Record<string, unknown> = cfg;
+  for (let i = 0; i < segments.length - 1; i++) {
+    const seg = segments[i] as string;
+    const next = parent[seg];
+    if (!next || typeof next !== "object" || Array.isArray(next)) return;
+    parent = next as Record<string, unknown>;
+  }
+  const leaf = segments[segments.length - 1] as string;
+  const value = parent[leaf];
+  if (value === undefined) return;
+  const fieldName = segments.join(".");
+  if (!Array.isArray(value)) {
+    console.warn(`reasonix: config "${filePath}" field "${fieldName}" is not an array — ignoring`);
+    delete parent[leaf];
+    return;
+  }
+  const parsed = stringArraySchema.safeParse(value);
+  if (parsed.success) return;
+  const filtered = value.filter((x): x is string => typeof x === "string");
+  console.warn(
+    `reasonix: config "${filePath}" field "${fieldName}" had ${value.length - filtered.length} non-string item(s) — dropped`,
+  );
+  parent[leaf] = filtered;
+}
+
+/** Mtime-keyed cache for readConfig (shared, read-only — callers must not mutate).
+ *  Caveat: mtime resolution ~1 s; external edits may be missed within that window. */
+const _configCache = new Map<string, { mtimeMs: number; cfg: ReasonixConfig }>();
+
+export function readConfig(path: string = defaultConfigPath()): ReasonixConfig {
+  let fd: number | undefined;
+  try {
+    // Open the file descriptor first, then fstat + read from the same fd.
+    // This eliminates the TOCTOU race where statSync sees one mtime but
+    // readFileSync reads a different version of the file (CodeQL flagged).
+    fd = openSync(path, "r");
+    const st = fstatSync(fd);
+    const cached = _configCache.get(path);
+    if (cached && cached.mtimeMs === st.mtimeMs) {
+      closeSync(fd);
+      return cached.cfg;
+    }
+    // Strip the UTF-8 BOM if a foreign writer left one in — Windows
+    // PowerShell 5's `Set-Content -Encoding UTF8` and several text
+    // editors emit `EF BB BF` at the head of the file. `JSON.parse`
+    // refuses BOM-prefixed input and throws, which used to fall
+    // through to `return {}` and silently nuke every saved field on
+    // the next read-modify-write.
+    const raw = readFileSync(fd, "utf8").replace(/^\uFEFF/, "");
+    closeSync(fd);
+    fd = undefined;
+    const parsed = JSON.parse(raw);
+    if (parsed && typeof parsed === "object" && !Array.isArray(parsed)) {
+      const cfg = parsed as Record<string, unknown>;
+      for (const segments of STRING_ARRAY_FIELDS) {
+        sanitizeStringArrayField(cfg, segments, path);
+      }
+      const result = cfg as ReasonixConfig;
+      _configCache.set(path, { mtimeMs: st.mtimeMs, cfg: result });
+      return result;
+    }
+  } catch {
+    /* missing or malformed → empty config */
+  } finally {
+    if (fd !== undefined) {
+      try {
+        closeSync(fd);
+      } catch {
+        /* already closed */
+      }
+    }
+  }
+  return {};
+}
+
+/** Whether the dashboard auto-starts. Default true; only false when explicitly set in config. */
+export function loadDashboardEnabled(
+  noConfig = false,
+  path: string = defaultConfigPath(),
+): boolean {
+  if (noConfig) return true;
+  const v = readConfig(path).dashboard?.enabled;
+  return v !== false;
+}
+
+/** Get-or-mint a 32-byte hex dashboard token, persisting on first call so subsequent CLI boots reuse it (URLs survive restarts). Returns the existing token if it's already ≥16 chars. */
+export function ensureDashboardToken(path: string = defaultConfigPath()): string {
+  const cfg = readConfig(path);
+  const existing = cfg.dashboard?.token?.trim();
+  if (existing && existing.length >= 16) return existing;
+  const minted = randomBytes(32).toString("hex");
+  const next: ReasonixConfig = { ...cfg, dashboard: { ...cfg.dashboard, token: minted } };
+  writeConfig(next, path);
+  return minted;
+}
+
+/** Persist the actual port the server bound to so the next boot reuses it (and falls back to ephemeral if it's taken). */
+export function saveDashboardPort(port: number, path: string = defaultConfigPath()): void {
+  if (!Number.isInteger(port) || port < 1 || port > 65535) return;
+  const cfg = readConfig(path);
+  if (cfg.dashboard?.port === port) return;
+  const next: ReasonixConfig = { ...cfg, dashboard: { ...cfg.dashboard, port } };
+  writeConfig(next, path);
+}
+
+/** Wipe the persisted dashboard token — next boot mints a fresh one. Used by `/dashboard reset-token`. */
+export function clearDashboardToken(path: string = defaultConfigPath()): void {
+  const cfg = readConfig(path);
+  if (!cfg.dashboard?.token) return;
+  const { token: _drop, ...rest } = cfg.dashboard;
+  const next: ReasonixConfig = { ...cfg, dashboard: rest };
+  writeConfig(next, path);
+}
+
+export function writeConfig(cfg: ReasonixConfig, path: string = defaultConfigPath()): void {
+  mkdirSync(dirname(path), { recursive: true });
+  // Atomic — write to a sibling tmp then rename. A torn write (process
+  // killed mid-write, or another reader catching the file before
+  // writeFileSync finished) used to leave a 0-byte or truncated
+  // config.json, which readConfig would then parse as `{}` and the next
+  // saveX would silently overwrite every other field with that empty
+  // baseline (issue #1535).
+  const tmp = `${path}.${randomBytes(8).toString("hex")}.tmp`;
+  atomicWriteSync(path, JSON.stringify(cfg, null, 2), tmp);
+  _configCache.delete(path);
+}
+
+/** Resolve the language from config file. */
+export function loadLanguage(path: string = defaultConfigPath()): LanguageCode | undefined {
+  return readConfig(path).lang;
+}
+
+export function mcpEnvFor(
+  serverName: string | null | undefined,
+  cfg: ReasonixConfig,
+): Record<string, string> | undefined {
+  if (!serverName) return undefined;
+  const entry = cfg.mcpEnv?.[serverName];
+  if (!entry) return undefined;
+  // Coerce to string and drop empty values — JSON config could be sloppy.
+  const filtered: Record<string, string> = {};
+  for (const [k, v] of Object.entries(entry)) {
+    if (typeof v === "string" && v.length > 0) filtered[k] = v;
+  }
+  return Object.keys(filtered).length > 0 ? filtered : undefined;
+}
+
+function inferMcpTransport(cfg: McpServerConfig): "stdio" | "sse" | "streamable-http" {
+  // Claude's `.mcp.json` uses `type` and shortens `streamable-http` to `http`.
+  const declared = cfg.transport ?? cfg.type;
+  if (declared === "http") return "streamable-http";
+  if (declared) return declared;
+  const url = cfg.url?.trim() ?? "";
+  if (/^streamable\+https?:\/\//i.test(url)) return "streamable-http";
+  if (/^https?:\/\//i.test(url)) return "sse";
+  return "stdio";
+}
+
+function normalizeStringRecord(value: unknown): Record<string, string> | undefined {
+  if (!value || typeof value !== "object" || Array.isArray(value)) return undefined;
+  const out: Record<string, string> = {};
+  for (const [k, v] of Object.entries(value)) {
+    if (typeof v === "string" && v.length > 0) out[k] = v;
+  }
+  return Object.keys(out).length > 0 ? out : undefined;
+}
+
+/** Expand env var references in header values (#2148). Supported forms:
+ *  `${VAR}`, `${env:VAR}`, `${VAR:-default}`, `${env:VAR:-default}`.
+ *  Unset variables with no default are left as-is so the error surfaces at bridge time. */
+function expandEnvInRecord(
+  record: Record<string, string> | undefined,
+): Record<string, string> | undefined {
+  if (!record) return undefined;
+  const out: Record<string, string> = {};
+  for (const [k, v] of Object.entries(record)) {
+    out[k] = v.replace(
+      /\$\{(?:env:)?([^}:]+)(?::-((?:[^}]|\}(?!\}))*))?\}/g,
+      (match, name: string, defaultVal?: string) => {
+        const expanded = process.env[name.trim()];
+        if (expanded !== undefined) return expanded;
+        if (defaultVal !== undefined) return defaultVal;
+        return match;
+      },
+    );
+  }
+  return out;
+}
+
+export function normalizeMcpConfig(cfg: ReasonixConfig, extraLegacy?: string[]): McpServerSpec[] {
+  const result: McpServerSpec[] = [];
+  const seen = new Set<string>();
+
+  // 1. Legacy specs first.
+  const disabledFromLegacy = new Set(cfg.mcpDisabled ?? []);
+  const legacySpecs = extraLegacy && extraLegacy.length > 0 ? extraLegacy : (cfg.mcp ?? []);
+  for (const raw of legacySpecs) {
+    if (typeof raw !== "string") continue;
+    try {
+      const spec = parseMcpSpec(raw);
+      const env = spec.name ? normalizeStringRecord(cfg.mcpEnv?.[spec.name]) : undefined;
+      const disabled = spec.name ? disabledFromLegacy.has(spec.name) : false;
+      if (spec.transport === "stdio") {
+        result.push({ ...spec, env, disabled });
+      } else if (spec.transport === "sse") {
+        result.push({ ...spec, disabled });
+      } else {
+        result.push({ ...spec, disabled });
+      }
+      if (spec.name) seen.add(spec.name);
+    } catch {
+      /* skip invalid legacy specs */
+    }
+  }
+
+  // 2. mcpServers objects override on name conflict.
+  for (const [name, serverCfg] of Object.entries(cfg.mcpServers ?? {})) {
+    if (!serverCfg || typeof serverCfg !== "object") continue;
+    const transport = inferMcpTransport(serverCfg as McpServerConfig);
+    const disabled = (serverCfg as McpServerConfig).disabled === true;
+    if (transport === "stdio") {
+      const env = normalizeStringRecord((serverCfg as McpServerConfig).env);
+      const spec: McpServerSpec = {
+        transport: "stdio",
+        name,
+        command: (serverCfg as McpServerConfig).command ?? "",
+        args: (serverCfg as McpServerConfig).args ?? [],
+        env,
+        cwd: (serverCfg as McpServerConfig).cwd,
+        disabled,
+        requestTimeoutMs: (serverCfg as McpServerConfig).requestTimeoutMs,
+      };
+      if (seen.has(name)) {
+        const idx = result.findIndex((s) => s.name === name);
+        if (idx >= 0) result[idx] = spec;
+      } else {
+        seen.add(name);
+        result.push(spec);
+      }
+    } else {
+      let url = (serverCfg as McpServerConfig).url ?? "";
+      const streamMatch = /^streamable\+(https?:\/\/.+)$/i.exec(url);
+      if (streamMatch) url = streamMatch[1]!;
+      const headers = expandEnvInRecord(
+        normalizeStringRecord((serverCfg as McpServerConfig).headers),
+      );
+      if (transport === "sse") {
+        const spec: McpServerSpec = {
+          transport: "sse",
+          name,
+          url,
+          headers,
+          disabled,
+          requestTimeoutMs: (serverCfg as McpServerConfig).requestTimeoutMs,
+        };
+        if (seen.has(name)) {
+          const idx = result.findIndex((s) => s.name === name);
+          if (idx >= 0) result[idx] = spec;
+        } else {
+          seen.add(name);
+          result.push(spec);
+        }
+      } else {
+        const spec: McpServerSpec = {
+          transport: "streamable-http",
+          name,
+          url,
+          headers,
+          disabled,
+          requestTimeoutMs: (serverCfg as McpServerConfig).requestTimeoutMs,
+        };
+        if (seen.has(name)) {
+          const idx = result.findIndex((s) => s.name === name);
+          if (idx >= 0) result[idx] = spec;
+        } else {
+          seen.add(name);
+          result.push(spec);
+        }
+      }
+    }
+  }
+
+  return result;
+}
+
+/** Persist the language so it survives a relaunch. */
+export function saveLanguage(lang: LanguageCode, path: 
+
+[… truncated 38843 chars …]
