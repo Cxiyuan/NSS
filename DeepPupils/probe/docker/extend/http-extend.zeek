@@ -165,6 +165,10 @@ event http_header(c: connection, is_orig: bool, original_name: string, name: str
     # ============================================================
     else
     {
+        # DEBUG: dump response header params to verify Zeek 8.2 ordering
+        if ( name == "SERVER" || name == "DATE" || name == "CONNECTION" || name == "VARY" || name == "EXPIRES" )
+            print fmt("DEBUG-RESP original_name=%s name=%s value=%s", original_name, name, value);
+
         if ( name == "SET-COOKIE" )
         {
             if ( ! c$http?$set_cookie || |c$http$set_cookie| == 0 )
