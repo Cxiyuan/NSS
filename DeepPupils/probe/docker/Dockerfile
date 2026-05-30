@@ -38,4 +38,5 @@ RUN for site_dir in /opt/zeek/share/zeek/site /usr/local/zeek/share/zeek/site; d
 # 用法：
 #   docker run ... probe                   # 默认 ens192
 #   docker run ... probe eth0              # 指定网卡
-CMD ["/opt/probe/extend/run.sh"]
+ENTRYPOINT ["/opt/probe/extend/run.sh"]
+CMD ["ens192"]
