@@ -35,32 +35,25 @@ RUN for site_dir in /opt/zeek/share/zeek/site /usr/local/zeek/share/zeek/site; d
     done
 
 # ============================================================
-# 编译并安装 zeek-kafka 插件（构建失败不阻塞镜像构建）
-# 需要：librdkafka-dev g++ make cmake pkgconf (Debian 13)
+# 编译并安装 zeek-kafka 插件（Zeek 8.2.0 兼容补丁）
+# Zeek 8.2.0 中 ODesc::Len() 已更名为 Size()
 # ============================================================
 RUN apt-get update && apt-get install -y --no-install-recommends \
-    g++ \
-    make \
-    cmake \
-    pkgconf \
-    librdkafka-dev \
-    && echo "[build] deps installed" \
+    g++ make cmake pkgconf librdkafka-dev git \
     && git clone https://github.com/SeisoLLC/zeek-kafka.git /tmp/zeek-kafka \
     && cd /tmp/zeek-kafka \
     && git checkout v1.2.0 \
-    && ./configure --with-librdkafka=/usr 2>&1 | tail -5 \
-    && echo "[build] configured" \
-    && (cd build && make -j$(nproc)) 2>&1 | tail -10 \
-    && echo "[build] compiled" \
-    && (cd build && make install) 2>&1 | tail -5 \
-    && echo "[build] installed" \
+    && sed -i 's/tsfmt\.Len()/tsfmt.Size()/' src/KafkaWriter.cc \
+    && ./configure --with-librdkafka=/usr \
+    && make -C build -j$(nproc) \
+    && make -C build install \
     && ldconfig \
     && zeek -N Seiso::Kafka \
-    && echo "[build] zeek-kafka plugin installed successfully" \
-    || echo "[build] zeek-kafka plugin build skipped/failed (non-critical)" \
+    && echo "[OK] zeek-kafka plugin installed" \
     && apt-get purge -y g++ make cmake pkgconf \
     && apt-get autoremove --purge -y \
-    && rm -rf /var/lib/apt/lists/*
+    && rm -rf /var/lib/apt/lists/* \
+    || echo "[WARN] zeek-kafka build failed (non-critical)"
 
 # run.sh 是统一的启动入口，自动组装 BPF 过滤规则 + 加载扩展脚本
 # 用法：
