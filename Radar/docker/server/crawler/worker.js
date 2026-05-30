@@ -26,22 +26,23 @@ async function run(taskConfig) {
     if (parentPort) parentPort.postMessage({ type, taskId, ...data });
   }
 
-  function enqueue(u, currentDepth, foundOn) {
+  function enqueue(u, currentDepth, foundOn, skipFilter = false) {
     const normalized = normalizeUrl(u);
     if (!normalized) return;
     if (visited.has(normalized)) return;
-    if (filter.isFiltered(normalized)) return;
+    if (!skipFilter && filter.isFiltered(normalized)) return;
     visited.add(normalized);
     queue.push({ url: normalized, depth: currentDepth, foundOn: foundOn || '' });
   }
 
+  // Seed URLs bypass filters — filters are for discovered links, not the target
   if (type === 'keyword_search') {
     const { search } = await import('./search.js').then(m => m.searchEngine(engine));
     try {
       const searchResults = await search(keywords, searchApiKey, searchCx);
       post('log', { level: 'info', message: `Search returned ${searchResults.length} results` });
       for (const r of searchResults) {
-        enqueue(r.url, 0, `search: ${keywords}`);
+        enqueue(r.url, 0, `search: ${keywords}`, true);
       }
     } catch (err) {
       post('log', { level: 'error', message: `Search API error: ${err.message}` });
@@ -49,7 +50,7 @@ async function run(taskConfig) {
       return;
     }
   } else {
-    enqueue(url, 0, '(seed)');
+    enqueue(url, 0, '(seed)', true);
   }
 
   post('status', { status: 'running' });
@@ -113,6 +114,7 @@ async function run(taskConfig) {
             isExternal: true,
           });
         } else if (currentDepth < (depth || 3)) {
+          // Discovered links ARE subject to filters
           enqueue(link.url, currentDepth + 1, crawlUrl);
         }
 
