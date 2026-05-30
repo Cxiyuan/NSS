@@ -1,5 +1,3 @@
-import { getDomain } from '../utils/url.js';
-
 export class FilterEngine {
   #patterns = [];
 

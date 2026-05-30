@@ -1,18 +1,41 @@
 import { useState } from 'react';
 
+const PATTERN_HELP = {
+  'qq.com': '精确匹配域名 qq.com',
+  '*.qq.com': '匹配所有 qq.com 子域名',
+  '*gov.cn': '匹配以 gov.cn 结尾的域名',
+};
+
+// Valid patterns: exact domain, *.subdomain, *suffix
+const VALID_PATTERN = /^(\*\.)?[a-zA-Z0-9][a-zA-Z0-9.-]*\.[a-zA-Z]{2,}$|^\*[a-zA-Z0-9][a-zA-Z0-9.-]*\.[a-zA-Z]{2,}$/;
+
 export default function FilterInput({ filters = [], onChange }) {
   const [input, setInput] = useState('');
+  const [error, setError] = useState('');
 
   function addFilter() {
     const val = input.trim();
+    setError('');
     if (!val) return;
-    if (filters.includes(val)) return;
+    if (filters.includes(val)) {
+      setError('该过滤条件已存在');
+      return;
+    }
+    if (!VALID_PATTERN.test(val)) {
+      setError('格式无效 — 请使用如 qq.com、*.qq.com、*gov.cn');
+      return;
+    }
     onChange?.([...filters, val]);
     setInput('');
   }
 
   function removeFilter(filter) {
     onChange?.(filters.filter(f => f !== filter));
+  }
+
+  function handleChange(e) {
+    setInput(e.target.value);
+    if (error) setError('');
   }
 
   function handleKeyDown(e) {
@@ -28,7 +51,7 @@ export default function FilterInput({ filters = [], onChange }) {
         <input
           type="text"
           value={input}
-          onChange={e => setInput(e.target.value)}
+          onChange={handleChange}
           onKeyDown={handleKeyDown}
           placeholder="e.g. qq.com, *.qq.com, *gov.cn"
           className="filter-input__field"
@@ -37,6 +60,8 @@ export default function FilterInput({ filters = [], onChange }) {
           + 添加过滤
         </button>
       </div>
+
+      {error && <div className="filter-input__error">{error}</div>}
 
       {filters.length > 0 && (
         <div className="filter-input__tags">

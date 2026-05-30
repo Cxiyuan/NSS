@@ -34,6 +34,7 @@ export default function ProgressPanel({ status, stats }) {
       <div className="progress-panel__stats">
         <Stat label="已爬取" value={`${crawled} / ${total}`} />
         <Stat label="外部链接" value={external} />
+        <Stat label="已过滤" value={stats.filtered || 0} />
         <Stat label="深度" value={depth} />
         <Stat label="进度" value={`${pct}%`} />
       </div>

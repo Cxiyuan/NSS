@@ -10,7 +10,7 @@ import { useTaskPolling } from '../hooks/useTaskPolling';
 export default function KeywordSearchPage() {
   const [taskId, setTaskId] = useState(null);
   const [status, setStatus] = useState('idle');
-  const [stats, setStats] = useState({ crawled: 0, total: 0, external: 0, depth: 0 });
+  const [stats, setStats] = useState({ crawled: 0, total: 0, external: 0, depth: 0, filtered: 0 });
   const [results, setResults] = useState([]);
   const [resultsTotal, setResultsTotal] = useState(0);
   const [page, setPage] = useState(1);
@@ -19,7 +19,7 @@ export default function KeywordSearchPage() {
 
   const onWSMessage = useCallback((data) => {
     if (data.type === 'progress') {
-      setStats(s => ({ ...s, crawled: data.crawled, total: data.total, depth: data.depth }));
+      setStats(s => ({ ...s, crawled: data.crawled, total: data.total, depth: data.depth, filtered: data.filtered ?? s.filtered }));
     }
     if (data.type === 'status') setStatus(data.status);
     if (data.type === 'result') {

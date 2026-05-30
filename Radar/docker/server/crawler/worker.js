@@ -25,22 +25,19 @@ async function run(taskConfig) {
   const visited = new Set();
   const queue = [];
   let crawled = 0;
+  let filteredCount = 0;
 
   function post(type, data) {
     if (parentPort) parentPort.postMessage({ type, taskId, ...data });
   }
 
-  // enqueue returns true if the URL was accepted (not filtered, not visited)
-  // Filter only applies to external domains — same-domain links are always accepted
-  function enqueue(u, currentDepth, foundOn, skipFilter = false) {
+  // enqueue adds a URL to the crawl queue.
+  // Same-domain URLs are always accepted (needed for crawl depth);
+  // filter check is done separately before posting results.
+  function enqueue(u, currentDepth, foundOn) {
     const normalized = normalizeUrl(u);
     if (!normalized) return false;
     if (visited.has(normalized)) return false;
-    // Only filter external domains, never filter the target site itself
-    if (!skipFilter && !isSameDomain(normalized, url) && filter.isFiltered(normalized)) {
-      post('log', { level: 'info', message: `Filtered: ${normalized}` });
-      return false;
-    }
     visited.add(normalized);
     queue.push({ url: normalized, depth: currentDepth, foundOn: foundOn || '' });
     return true;
@@ -134,13 +131,12 @@ async function run(taskConfig) {
 
       const newResults = [];
       for (const link of uniqueLinks) {
-        const isExt = type === 'keyword_search'
-          ? !link.url.includes(getDomain(crawlUrl))
-          : !isSameDomain(link.url, url);
+        const isExt = !isSameDomain(link.url, type === 'keyword_search' ? crawlUrl : url);
 
         if (isExt) {
           // Apply filter to external links — skip if it matches a filter pattern
           if (filter.isFiltered(link.url)) {
+            filteredCount++;
             post('log', { level: 'info', message: `Filtered external: ${link.url}` });
             continue;
           }
@@ -189,7 +185,7 @@ async function run(taskConfig) {
     }));
 
     crawled += batch.length;
-    post('progress', { crawled, total: visited.size, depth: Math.min(depth || 3, queue.length > 0 ? 1 : 0) });
+    post('progress', { crawled, total: visited.size, depth: Math.min(depth || 3, queue.length > 0 ? 1 : 0), filtered: filteredCount });
   }
 
   if (cancelled) {
