@@ -1,5 +1,54 @@
 import { parentPort } from 'node:worker_threads';
 import { fetchAndParse, setAntiDetect } from './fetcher.js';
+
+// Lightweight title fetch for external links — quick check with short timeout
+async function fetchTitle(url) {
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), 6000);
+  try {
+    const res = await fetch(url, {
+      signal: controller.signal,
+      headers: {
+        'User-Agent': 'Mozilla/5.0 (compatible; RadarCrawler/1.0)',
+        'Accept': 'text/html,application/xhtml+xml',
+      },
+      redirect: 'follow',
+    });
+    clearTimeout(timer);
+    const statusCode = res.status;
+    // Read first 64KB to extract <title>
+    const reader = res.body.getReader();
+    const { value, done } = await reader.read();
+    reader.cancel();
+    if (done && !value) return { title: '', statusCode };
+    const text = new TextDecoder('utf-8', { fatal: false }).decode(value);
+    const match = text.match(/<title[^>]*>([^<]+)<\/title>/i);
+    return { title: match ? match[1].trim() : '', statusCode };
+  } catch (err) {
+    clearTimeout(timer);
+    const code = err.name === 'AbortError' ? 408 : 0;
+    return { title: '', statusCode: code };
+  }
+}
+
+// Parallel title fetcher with concurrency limit
+async function fetchTitles(results, concurrency = 3) {
+  const pending = new Set();
+  for (const r of results) {
+    const p = fetchTitle(r.url).then(info => {
+      r.pageTitle = info.title;
+      r.statusCode = info.statusCode;
+      return r;
+    });
+    pending.add(p);
+    p.finally(() => pending.delete(p));
+    if (pending.size >= concurrency) {
+      await Promise.race(pending);
+    }
+  }
+  await Promise.allSettled(pending);
+  return results;
+}
 import { fetchWithBrowser } from './browser.js';
 import { extractLinks } from './link-extractor.js';
 import { FilterEngine } from './filter.js';
@@ -156,6 +205,7 @@ async function run(taskConfig) {
               depth: currentDepth + 1,
               pageTitle: title,
               isExternal: true,
+              statusCode: 0,
             },
           });
         } else if (currentDepth < (depth || 3)) {
@@ -187,6 +237,16 @@ async function run(taskConfig) {
         }
       }
 
+      // Fire-and-forget: fetch titles/status for external links in background
+      if (newResults.length > 0) {
+        fetchTitles(newResults).then(updated => {
+          for (const r of updated) {
+            if (r.pageTitle || r.statusCode) {
+              post('result_title', { url: r.url, pageTitle: r.pageTitle, statusCode: r.statusCode });
+            }
+          }
+        }).catch(() => {});
+      }
       return newResults;
     }));
 

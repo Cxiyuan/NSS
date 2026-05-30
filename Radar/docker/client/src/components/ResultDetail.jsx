@@ -28,6 +28,9 @@ export default function ResultDetail({ result, onClose }) {
           <dt>深度</dt>
           <dd>{result.depth}</dd>
 
+          <dt>状态</dt>
+          <dd>{result.status_code ? `HTTP ${result.status_code}` : '—'}</dd>
+
           {result.page_title && (
             <>
               <dt>页面标题</dt>

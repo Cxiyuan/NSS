@@ -43,11 +43,16 @@ export function createQueries(db) {
       db.prepare('DELETE FROM tasks WHERE id = ?').run(id);
     },
 
-    insertResult(taskId, { url, foundOn, linkType, isExternal, depth, pageTitle, snippet }) {
+    insertResult(taskId, { url, foundOn, linkType, isExternal, depth, pageTitle, statusCode, snippet }) {
       const now = new Date().toISOString();
       return db.prepare(
-        'INSERT INTO results (task_id, url, found_on, link_type, is_external, depth, page_title, snippet, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)'
-      ).run(taskId, url, foundOn, linkType, isExternal ? 1 : 0, depth, pageTitle || '', snippet || '', now);
+        'INSERT INTO results (task_id, url, found_on, link_type, is_external, depth, page_title, status_code, snippet, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)'
+      ).run(taskId, url, foundOn, linkType, isExternal ? 1 : 0, depth, pageTitle || '', statusCode || 0, snippet || '', now);
+    },
+
+    updateResultStatus(taskId, url, pageTitle, statusCode) {
+      db.prepare('UPDATE results SET page_title = ?, status_code = ? WHERE task_id = ? AND url = ?')
+        .run(pageTitle || '', statusCode || 0, taskId, url);
     },
 
     getResults(taskId, { domain, page = 1, limit = 50 } = {}) {

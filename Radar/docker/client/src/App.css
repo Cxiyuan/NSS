@@ -94,6 +94,7 @@ a:hover { text-decoration: underline; }
 .live-stream__item:hover { background: #f8fafc; }
 .live-stream__url { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--color-primary); }
 .live-stream__depth { color: var(--color-text-muted); font-size: 11px; min-width: 24px; text-align: right; }
+.live-stream__status { font-size: 11px; font-weight: 700; color: var(--color-error); min-width: 28px; text-align: center; }
 
 /* === Result Table === */
 .result-table-wrapper { max-height: 60vh; overflow-y: auto; border: 1px solid var(--color-border); border-radius: var(--radius); }
@@ -107,6 +108,8 @@ a:hover { text-decoration: underline; }
 .result-table__row:last-child td { border-bottom: none; }
 .result-table__link { color: var(--color-primary); font-size: 12px; word-break: break-all; }
 .result-table__empty { text-align: center; padding: 32px; color: var(--color-text-muted); }
+.result-table__title { font-size: 12px; color: var(--color-text); max-width: 180px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; display: block; }
+.result-table__title--error { color: var(--color-error); font-weight: 600; }
 .result-table__pagination { display: flex; align-items: center; justify-content: center; gap: 12px; padding: 12px 0; font-size: 13px; }
 .result-table__pagination button { padding: 6px 12px; border: 1px solid var(--color-border); background: var(--color-surface); border-radius: 4px; cursor: pointer; }
 .result-table__pagination button:disabled { opacity: 0.4; cursor: not-allowed; }

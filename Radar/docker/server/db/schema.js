@@ -22,6 +22,7 @@ export function initDB(db) {
       is_external INTEGER DEFAULT 0,
       depth       INTEGER DEFAULT 0,
       page_title  TEXT,
+      status_code INTEGER DEFAULT 0,
       snippet     TEXT,
       created_at  TEXT NOT NULL
     );

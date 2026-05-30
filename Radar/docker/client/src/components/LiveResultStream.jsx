@@ -32,9 +32,10 @@ export default function LiveResultStream({ results = [] }) {
       <div className="live-stream__body" ref={listRef}>
         {results.map((r, i) => (
           <div key={r.id ?? i} className="live-stream__item">
-            <a href={r.url} target="_blank" rel="noreferrer" className="live-stream__url">
-              {truncate(r.url, 55)}
+            <a href={r.url} target="_blank" rel="noreferrer" className="live-stream__url" title={r.page_title || ''}>
+              {r.page_title ? truncate(r.page_title, 40) : truncate(r.url, 55)}
             </a>
+            {r.status_code ? <span className="live-stream__status">{r.status_code}</span> : null}
             <span className={`link-type link-type--${r.link_type}`}>{LINK_TYPE_LABELS[r.link_type] || r.link_type}</span>
             <span className="live-stream__depth">d:{r.depth}</span>
           </div>

@@ -41,6 +41,11 @@ const pool = new WorkerPool(5, (taskId, msg) => {
     const stats = queries.getTaskStats(taskId);
     queries.updateTaskStats(taskId, stats);
   }
+  if (msg.type === 'result_title') {
+    queries.updateResultStatus(taskId, msg.url, msg.pageTitle, msg.statusCode);
+    wsBroadcast(taskId, msg);
+    return;
+  }
   if (msg.type === 'status') {
     queries.updateTaskStatus(taskId, msg.status);
   }

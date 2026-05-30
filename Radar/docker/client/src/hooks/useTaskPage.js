@@ -95,6 +95,19 @@ export function useTaskPage({ showExternalCount = true, pdfPrefix = 'crawl-resul
         external: showExternalCount ? s.external + (data.result.isExternal ? 1 : 0) : s.external,
       }));
     }
+    if (data.type === 'result_title') {
+      // Update title/status for an existing result
+      setResults(r => r.map(item =>
+        item.url === data.url
+          ? { ...item, page_title: data.pageTitle || item.page_title, status_code: data.statusCode || item.status_code }
+          : item
+      ));
+      setLiveResults(r => r.map(item =>
+        item.url === data.url
+          ? { ...item, page_title: data.pageTitle || item.page_title, status_code: data.statusCode || item.status_code }
+          : item
+      ));
+    }
     if (data.type === 'log') {
       setLogs(l => [...l.slice(-49), data]);
     }
