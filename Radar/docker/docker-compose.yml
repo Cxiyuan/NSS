@@ -1,0 +1,19 @@
+version: '3.8'
+
+services:
+  radar:
+    image: ghcr.io/cxiyuan/radar-web-crawler:latest
+    container_name: radar
+    ports:
+      - "3000:3000"
+    environment:
+      - PORT=3000
+      - DB_PATH=/data/crawler.db
+      - PUPPETEER_EXECUTABLE_PATH=/usr/bin/chromium-browser
+      # 可选：搜索引擎 API 密钥
+      # - GOOGLE_API_KEY=your_key
+      # - GOOGLE_CX=your_cx
+      # - BING_API_KEY=your_key
+    volumes:
+      - ./data:/data
+    restart: unless-stopped
