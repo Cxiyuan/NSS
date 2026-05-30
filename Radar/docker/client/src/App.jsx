@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import UrlCrawlPage from './pages/UrlCrawlPage';
 import KeywordSearchPage from './pages/KeywordSearchPage';
+import ConfigPage from './pages/ConfigPage';
 import './App.css';
 
 export default function App() {
@@ -23,11 +24,19 @@ export default function App() {
           >
             关键词搜索
           </button>
+          <button
+            className={`app__tab ${tab === 'config' ? 'app__tab--active' : ''}`}
+            onClick={() => setTab('config')}
+          >
+            配置
+          </button>
         </nav>
       </header>
 
       <main>
-        {tab === 'url' ? <UrlCrawlPage /> : <KeywordSearchPage />}
+        {tab === 'url' && <UrlCrawlPage />}
+        {tab === 'keyword' && <KeywordSearchPage />}
+        {tab === 'config' && <ConfigPage />}
       </main>
     </div>
   );

@@ -1,9 +1,10 @@
 import { parentPort } from 'node:worker_threads';
-import { fetchAndParse } from './fetcher.js';
+import { fetchAndParse, setAntiDetect } from './fetcher.js';
 import { fetchWithBrowser } from './browser.js';
 import { extractLinks } from './link-extractor.js';
 import { FilterEngine } from './filter.js';
 import { isSameDomain, getDomain, normalizeUrl } from '../utils/url.js';
+import { AntiDetect } from './anti-detect.js';
 
 let paused = false;
 let cancelled = false;
@@ -15,9 +16,12 @@ parentPort.on('message', (msg) => {
 });
 
 async function run(taskConfig) {
-  const { taskId, type, url, keywords, depth, concurrency, filters, searchApiKey, searchEngine: engine, searchCx } = taskConfig;
+  const { taskId, type, url, keywords, depth, concurrency, filters, searchApiKey, searchEngine: engine, searchCx, antiDetect: adConfig } = taskConfig;
 
   const filter = FilterEngine.fromJSON(filters || []);
+  const antiDetect = new AntiDetect(adConfig || {});
+  setAntiDetect(antiDetect);
+
   const visited = new Set();
   const queue = [];
   let crawled = 0;
@@ -35,7 +39,6 @@ async function run(taskConfig) {
     queue.push({ url: normalized, depth: currentDepth, foundOn: foundOn || '' });
   }
 
-  // Seed URLs bypass filters — filters are for discovered links, not the target
   if (type === 'keyword_search') {
     const { search } = await import('./search.js').then(m => m.searchEngine(engine));
     try {
@@ -68,23 +71,34 @@ async function run(taskConfig) {
       batch.push(queue.shift());
     }
 
+    // Random delay between batches
+    await antiDetect.delay();
+
     const results = await Promise.allSettled(batch.map(async ({ url: crawlUrl, depth: currentDepth, foundOn }) => {
       if (currentDepth > (depth || 3)) return [];
 
       let html, title;
-      let usedBrowser = false; // track if Puppeteer already used as fallback
+      let usedBrowser = false;
       try {
-        const result = await fetchAndParse(crawlUrl);
+        // Random per-request delay for anti-detection
+        await antiDetect.delay();
+
+        const result = await fetchAndParse(crawlUrl, foundOn);
         if (result.error) {
-          // Non-2xx response — try Puppeteer fallback for WAF bypass
+          // Non-2xx response — try Puppeteer fallback
           post('log', { level: 'warn', message: `${result.error}, trying browser render...` });
-          try {
-            const dynHtml = await fetchWithBrowser(crawlUrl);
-            html = dynHtml;
-            title = '';
-            usedBrowser = true;
-          } catch {
-            post('log', { level: 'error', message: `Both cheerio and browser failed for ${crawlUrl}` });
+          if (antiDetect.config.browserFallback) {
+            try {
+              const dynHtml = await fetchWithBrowser(crawlUrl);
+              html = dynHtml;
+              title = '';
+              usedBrowser = true;
+            } catch {
+              post('log', { level: 'error', message: `Both cheerio and browser failed for ${crawlUrl}` });
+              return [];
+            }
+          } else {
+            post('log', { level: 'warn', message: `${crawlUrl}: ${result.error} (browser fallback disabled)` });
             return [];
           }
         } else {
@@ -131,7 +145,6 @@ async function run(taskConfig) {
             isExternal: true,
           });
         } else if (currentDepth < (depth || 3)) {
-          // Discovered links ARE subject to filters
           enqueue(link.url, currentDepth + 1, crawlUrl);
         }
 

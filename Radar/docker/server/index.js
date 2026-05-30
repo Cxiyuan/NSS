@@ -14,6 +14,7 @@ import { createWSServer } from './ws/handler.js';
 import { WorkerPool } from './crawler/pool.js';
 import { generatePDF } from './utils/export-pdf.js';
 import { launchBrowser } from './crawler/browser.js';
+import { createConfigRoutes, getConfig } from './routes/config.js';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const PORT = process.env.PORT || 3000;
@@ -41,7 +42,8 @@ const pool = new WorkerPool(5, (taskId, msg) => {
 const app = express();
 app.use(express.json());
 
-app.use('/api/tasks', createTaskRoutes(queries, pool));
+app.use('/api/config', createConfigRoutes());
+app.use('/api/tasks', createTaskRoutes(queries, pool, getConfig));
 app.use('/api/tasks', createResultRoutes(queries));
 app.use('/api/tasks', createExportRoutes(queries, generatePDF));
 

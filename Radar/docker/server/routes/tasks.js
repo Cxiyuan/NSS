@@ -1,7 +1,7 @@
 import { Router } from 'express';
 import { v4 as uuid } from 'uuid';
 
-export function createTaskRoutes(queries, pool) {
+export function createTaskRoutes(queries, pool, getConfig) {
   const router = Router();
 
   router.post('/', (req, res) => {
@@ -18,7 +18,13 @@ export function createTaskRoutes(queries, pool) {
     }
 
     const id = uuid();
-    const config = { type, url, keywords, depth, concurrency, filters, searchEngine, searchApiKey, searchCx };
+    // Inject global anti-detect config into task
+    const globalCfg = getConfig ? getConfig() : {};
+    const antiDetect = globalCfg.antiDetect || {};
+    if (globalCfg.proxy?.enabled && globalCfg.proxy.url) {
+      antiDetect.proxy = globalCfg.proxy.url;
+    }
+    const config = { type, url, keywords, depth, concurrency, filters, searchEngine, searchApiKey, searchCx, antiDetect };
     const task = queries.createTask({ id, type, config });
 
     if (pool) {

@@ -31,4 +31,8 @@ export const api = {
   resumeTask: (id) => request(`/tasks/${id}/resume`, { method: 'POST' }),
   cancelTask: (id) => request(`/tasks/${id}/cancel`, { method: 'POST' }),
   deleteTask: (id) => request(`/tasks/${id}`, { method: 'DELETE' }),
+
+  getConfig: () => request('/config'),
+
+  updateConfig: (data) => request('/config', { method: 'PUT', body: JSON.stringify(data) }),
 };

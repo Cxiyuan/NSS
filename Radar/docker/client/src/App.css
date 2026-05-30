@@ -136,3 +136,25 @@ a:hover { text-decoration: underline; }
 .crawl-logs__entry--error { color: var(--color-error); font-weight: 600; }
 .crawl-logs__level { text-transform: uppercase; font-weight: 700; min-width: 36px; }
 .crawl-logs__msg { word-break: break-all; }
+
+/* === Config Page === */
+.config-page { max-width: 720px; }
+.config-page__main h2 { margin-bottom: 24px; }
+.config-section { background: var(--color-surface); border: 1px solid var(--color-border); border-radius: var(--radius); padding: 20px; margin-bottom: 20px; box-shadow: var(--shadow); }
+.config-section h3 { font-size: 15px; margin-bottom: 6px; }
+.config-section__desc { font-size: 12px; color: var(--color-text-muted); margin-bottom: 16px; }
+.config-field { margin-bottom: 16px; }
+.config-field:last-child { margin-bottom: 0; }
+.config-field label { display: block; font-size: 13px; font-weight: 500; margin-bottom: 4px; }
+.config-field input[type="text"],
+.config-field input[type="number"] { padding: 8px 12px; border: 1px solid var(--color-border); border-radius: 6px; font-size: 14px; background: var(--color-surface); }
+.config-field input[type="text"] { width: 100%; }
+.config-field input[type="number"] { width: 100px; }
+.config-field input:focus { outline: none; border-color: var(--color-primary); box-shadow: 0 0 0 3px rgba(37,99,235,0.1); }
+.config-field__label { display: flex !important; align-items: center; gap: 8px; cursor: pointer; }
+.config-field__label input[type="checkbox"] { width: 16px; height: 16px; accent-color: var(--color-primary); }
+.config-field__hint { display: block; font-size: 11px; color: var(--color-text-muted); margin-top: 4px; }
+.config-field__row { display: flex; align-items: center; gap: 8px; }
+.config-field__row span { font-size: 13px; color: var(--color-text-muted); }
+.config-page__save { width: 100%; padding: 12px; background: var(--color-primary); color: white; border: none; border-radius: 6px; font-size: 14px; font-weight: 600; cursor: pointer; transition: background 0.15s; }
+.config-page__save:hover { background: var(--color-primary-hover); }
