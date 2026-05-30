@@ -124,16 +124,9 @@ export class AntiDetect {
     throw lastError;
   }
 
-  // Build fetch options with proxy support
-  buildFetchOptions(url, headers, signal) {
-    const opts = { headers, signal, redirect: 'follow' };
-
-    if (this.config.proxy) {
-      const { ProxyAgent } = await import('undici');
-      opts.dispatcher = new ProxyAgent(this.config.proxy);
-    }
-
-    return opts;
+  // Build fetch options (proxy support via container-level HTTPS_PROXY env var)
+  buildFetchOptions(headers, signal) {
+    return { headers, signal, redirect: 'follow' };
   }
 
   toJSON() {
