@@ -139,6 +139,11 @@ async function run(taskConfig) {
           : !isSameDomain(link.url, url);
 
         if (isExt) {
+          // Apply filter to external links — skip if it matches a filter pattern
+          if (filter.isFiltered(link.url)) {
+            post('log', { level: 'info', message: `Filtered external: ${link.url}` });
+            continue;
+          }
           // External links: always record, never enqueue
           newResults.push({
             url: link.url,
