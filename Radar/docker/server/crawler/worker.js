@@ -72,10 +72,25 @@ async function run(taskConfig) {
       if (currentDepth > (depth || 3)) return [];
 
       let html, title;
+      let usedBrowser = false; // track if Puppeteer already used as fallback
       try {
         const result = await fetchAndParse(crawlUrl);
-        html = result.html;
-        title = result.title;
+        if (result.error) {
+          // Non-2xx response — try Puppeteer fallback for WAF bypass
+          post('log', { level: 'warn', message: `${result.error}, trying browser render...` });
+          try {
+            const dynHtml = await fetchWithBrowser(crawlUrl);
+            html = dynHtml;
+            title = '';
+            usedBrowser = true;
+          } catch {
+            post('log', { level: 'error', message: `Both cheerio and browser failed for ${crawlUrl}` });
+            return [];
+          }
+        } else {
+          html = result.html;
+          title = result.title;
+        }
       } catch (err) {
         post('log', { level: 'warn', message: `Fetch failed for ${crawlUrl}: ${err.message}` });
         return [];
@@ -84,11 +99,13 @@ async function run(taskConfig) {
       const staticLinks = extractLinks(html, crawlUrl);
 
       let dynamicLinks = [];
-      try {
-        const dynHtml = await fetchWithBrowser(crawlUrl);
-        dynamicLinks = extractLinks(dynHtml, crawlUrl);
-      } catch {
-        // Browser fetch is best-effort
+      if (!usedBrowser) {
+        try {
+          const dynHtml = await fetchWithBrowser(crawlUrl);
+          dynamicLinks = extractLinks(dynHtml, crawlUrl);
+        } catch {
+          // Browser fetch is best-effort
+        }
       }
 
       const allLinks = [...staticLinks, ...dynamicLinks];

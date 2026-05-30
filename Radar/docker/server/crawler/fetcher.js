@@ -21,10 +21,6 @@ export async function fetchAndParse(url) {
   }
   clearTimeout(timeout);
 
-  if (!response.ok) {
-    throw new Error(`HTTP ${response.status} for ${url}`);
-  }
-
   const contentType = response.headers.get('content-type') || '';
   if (!contentType.includes('text/html') && !contentType.includes('application/xhtml')) {
     throw new Error(`Non-HTML content type: ${contentType}`);
@@ -33,6 +29,10 @@ export async function fetchAndParse(url) {
   const html = await response.text();
   const $ = cheerio.load(html);
   const title = $('title').first().text().trim();
+
+  if (!response.ok) {
+    return { html: '', title, error: `HTTP ${response.status} for ${url}` };
+  }
 
   return { html, title };
 }
