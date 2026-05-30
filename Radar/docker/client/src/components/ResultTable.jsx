@@ -1,6 +1,24 @@
 import { useState, useCallback, useRef, useEffect } from 'react';
 import ResultDetail from './ResultDetail';
 
+const LINK_TYPE_LABELS = {
+  a: '超链接',
+  img: '图片',
+  link: '资源引用',
+  iframe: '内嵌框架',
+  form: '表单',
+  meta: '页面跳转',
+  script: '脚本',
+  js_dynamic: 'JS动态',
+  css: '样式表',
+  comment: '注释',
+  keyword_match: '关键词匹配',
+};
+
+function linkTypeLabel(type) {
+  return LINK_TYPE_LABELS[type] || type;
+}
+
 export default function ResultTable({ results, total, page, limit, onPageChange }) {
   const [selected, setSelected] = useState(null);
   const wrapperRef = useRef(null);
@@ -16,7 +34,7 @@ export default function ResultTable({ results, total, page, limit, onPageChange 
   const columns = [
     { key: 'url', label: 'URL', render: r => <a href={r.url} target="_blank" rel="noreferrer" className="result-table__link">{truncate(r.url, 60)}</a> },
     { key: 'found_on', label: '来源页面', render: r => truncate(r.found_on, 40) },
-    { key: 'link_type', label: '类型', render: r => <span className={`link-type link-type--${r.link_type}`}>{r.link_type}</span> },
+    { key: 'link_type', label: '类型', render: r => <span className={`link-type link-type--${r.link_type}`}>{linkTypeLabel(r.link_type)}</span> },
     { key: 'depth', label: '深度', render: r => r.depth },
   ];
 

@@ -1,5 +1,11 @@
 import { useRef, useEffect } from 'react';
 
+const LINK_TYPE_LABELS = {
+  a: '超链接', img: '图片', link: '资源引用', iframe: '内嵌框架',
+  form: '表单', meta: '页面跳转', script: '脚本', js_dynamic: 'JS动态',
+  css: '样式表', comment: '注释', keyword_match: '关键词匹配',
+};
+
 function truncate(str, max) {
   if (!str || str.length <= max) return str;
   return str.slice(0, max) + '...';
@@ -29,7 +35,7 @@ export default function LiveResultStream({ results = [] }) {
             <a href={r.url} target="_blank" rel="noreferrer" className="live-stream__url">
               {truncate(r.url, 55)}
             </a>
-            <span className={`link-type link-type--${r.link_type}`}>{r.link_type}</span>
+            <span className={`link-type link-type--${r.link_type}`}>{LINK_TYPE_LABELS[r.link_type] || r.link_type}</span>
             <span className="live-stream__depth">d:{r.depth}</span>
           </div>
         ))}
