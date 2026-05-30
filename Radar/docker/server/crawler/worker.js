@@ -162,17 +162,22 @@ async function run(taskConfig) {
             },
           });
         } else if (currentDepth < (depth || 3)) {
-          // Same-domain link: only enqueue and post if it passes filter
+          // Always enqueue same-domain links (needed for crawling depth to find more external links)
+          // But check filter before posting as result — filter applies to ALL domains
           if (enqueue(link.url, currentDepth + 1, crawlUrl)) {
-            post('result', {
-              result: {
-                url: link.url,
-                foundOn: crawlUrl,
-                linkType: link.linkType,
-                depth: currentDepth + 1,
-                pageTitle: title,
-              },
-            });
+            if (!filter.isFiltered(link.url)) {
+              post('result', {
+                result: {
+                  url: link.url,
+                  foundOn: crawlUrl,
+                  linkType: link.linkType,
+                  depth: currentDepth + 1,
+                  pageTitle: title,
+                },
+              });
+            } else {
+              post('log', { level: 'info', message: `Filtered same-domain: ${link.url}` });
+            }
           }
         }
       }
