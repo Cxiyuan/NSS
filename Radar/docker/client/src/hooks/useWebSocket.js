@@ -3,13 +3,17 @@ import { useEffect, useRef, useCallback } from 'react';
 export function useWebSocket(taskId, onMessage) {
   const wsRef = useRef(null);
   const onMessageRef = useRef(onMessage);
+  const retryRef = useRef(0);
+  const mountedRef = useRef(true);
+  const intentionalCloseRef = useRef(false);
+
   onMessageRef.current = onMessage;
 
-  useEffect(() => {
-    if (!taskId) return;
+  const connect = useCallback((id) => {
+    if (!id || !mountedRef.current) return;
 
     const protocol = location.protocol === 'https:' ? 'wss:' : 'ws:';
-    const wsUrl = `${protocol}//${location.host}/ws?taskId=${taskId}`;
+    const wsUrl = `${protocol}//${location.host}/ws?taskId=${id}`;
     const ws = new WebSocket(wsUrl);
     wsRef.current = ws;
 
@@ -21,15 +25,41 @@ export function useWebSocket(taskId, onMessage) {
     };
 
     ws.onerror = () => {};
-    ws.onclose = () => { wsRef.current = null; };
+
+    ws.onclose = () => {
+      wsRef.current = null;
+      if (!mountedRef.current || intentionalCloseRef.current) return;
+
+      // Exponential backoff reconnection: 1s → 2s → 4s → 8s → ... → 30s max
+      retryRef.current++;
+      const delay = Math.min(1000 * Math.pow(2, retryRef.current - 1), 30000);
+      setTimeout(() => connect(id), delay);
+    };
+
+    ws.onopen = () => {
+      retryRef.current = 0; // reset backoff on successful connection
+    };
+  }, []);
+
+  useEffect(() => {
+    mountedRef.current = true;
+    retryRef.current = 0;
+    intentionalCloseRef.current = false;
+
+    if (taskId) {
+      connect(taskId);
+    }
 
     return () => {
-      ws.close();
+      mountedRef.current = false;
+      intentionalCloseRef.current = true;
+      wsRef.current?.close();
       wsRef.current = null;
     };
-  }, [taskId]);
+  }, [taskId, connect]);
 
   const close = useCallback(() => {
+    intentionalCloseRef.current = true;
     wsRef.current?.close();
     wsRef.current = null;
   }, []);

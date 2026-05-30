@@ -78,8 +78,7 @@ async function run(taskConfig) {
       batch.push(queue.shift());
     }
 
-    await antiDetect.delay();
-
+    // Per-URL delay is handled inside the map callback — no batch-level delay needed
     const results = await Promise.allSettled(batch.map(async ({ url: crawlUrl, depth: currentDepth, foundOn }) => {
       if (currentDepth > (depth || 3)) return [];
 

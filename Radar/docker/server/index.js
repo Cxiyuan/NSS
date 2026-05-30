@@ -42,7 +42,7 @@ const pool = new WorkerPool(5, (taskId, msg) => {
 const app = express();
 app.use(express.json());
 
-app.use('/api/config', createConfigRoutes());
+app.use('/api/config', createConfigRoutes(dataDir));
 app.use('/api/tasks', createTaskRoutes(queries, pool, getConfig));
 app.use('/api/tasks', createResultRoutes(queries));
 app.use('/api/tasks', createExportRoutes(queries, generatePDF));

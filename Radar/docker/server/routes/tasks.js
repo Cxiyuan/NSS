@@ -25,10 +25,17 @@ export function createTaskRoutes(queries, pool, getConfig) {
       antiDetect.proxy = globalCfg.proxy.url;
     }
     const config = { type, url, keywords, depth, concurrency, filters, searchEngine, searchApiKey, searchCx, antiDetect };
-    const task = queries.createTask({ id, type, config });
+    // Strip secrets from the config before storing to DB — worker still gets full config
+    const { searchApiKey: _, searchCx: __, ...safeConfig } = config;
+    const task = queries.createTask({ id, type, config: safeConfig });
 
     if (pool) {
-      pool.startTask(id, { taskId: id, ...config });
+      const worker = pool.startTask(id, { taskId: id, ...config });
+      if (worker === null) {
+        // Pool at capacity — clean up the DB entry and return 429
+        queries.deleteTask(id);
+        return res.status(429).json({ error: 'Server busy — too many concurrent tasks. Try again later.' });
+      }
     }
 
     res.status(201).json(task);

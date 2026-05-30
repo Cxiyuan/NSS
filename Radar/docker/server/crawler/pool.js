@@ -15,6 +15,11 @@ export class WorkerPool {
   }
 
   startTask(taskId, config) {
+    // Respect maxWorkers cap — refuse new task if at capacity
+    if (this.#workers.size >= this.#maxWorkers) {
+      return null;
+    }
+
     const worker = new Worker(join(__dirname, 'worker.js'));
     this.#workers.set(taskId, worker);
 
@@ -35,7 +40,7 @@ export class WorkerPool {
     });
 
     worker.postMessage({ type: 'start', config });
-    return worker;
+    return worker; // non-null = success
   }
 
   pauseTask(taskId) {
