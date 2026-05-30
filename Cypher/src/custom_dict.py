@@ -5,7 +5,6 @@
 
 import argparse
 import logging
-import os
 
 logger = logging.getLogger('custom_dict')
 

@@ -6,7 +6,6 @@ NTLM 预计算查表模块 — CPU 环境下秒级弱口令检测
 import argparse
 import hashlib
 import logging
-import os
 import sys
 import time
 from typing import Dict

@@ -4,7 +4,6 @@ John the Ripper — Hashtopolis Generic Cracker Wrapper
 """
 
 import argparse
-import hashlib
 import json
 import logging
 import os
@@ -13,7 +12,6 @@ import subprocess
 import sys
 import tempfile
 import time
-from pathlib import Path
 from typing import Optional
 
 from src.config import Config

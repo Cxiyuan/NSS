@@ -18,7 +18,8 @@ class Config:
         self.john_format: str = os.environ.get('CYPHER_JOHN_FORMAT', 'ntlm')
         self.john_threads: int = int(os.environ.get('CYPHER_JOHN_THREADS', '0'))
         self.john_timeout: int = int(os.environ.get('CYPHER_JOHN_TIMEOUT', '3600'))
-        self.lookup_db: str = os.environ.get('CYPHER_LOOKUP_DB', '/data/lookup/ntlm_precomputed.txt')
+        self.lookup_db: str = os.environ.get(
+            'CYPHER_LOOKUP_DB', '/data/lookup/ntlm_precomputed.txt')
         self.lookup_max: int = int(os.environ.get('CYPHER_LOOKUP_MAX', '100000'))
         self.spray_delay: int = int(os.environ.get('CYPHER_SPRAY_DELAY', '30'))
         self.protocol_timeout: int = int(os.environ.get('CYPHER_PROTO_TIMEOUT', '300'))

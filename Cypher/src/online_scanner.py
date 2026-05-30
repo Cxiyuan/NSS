@@ -14,7 +14,7 @@ import sys
 import time
 from dataclasses import dataclass, field
 from datetime import datetime
-from typing import List, Optional
+from typing import List
 
 logger = logging.getLogger('online_scanner')
 
@@ -33,11 +33,11 @@ class ScanResult:
 
 PROTOCOLS = {
     'ssh':      {'port': 22,  'hydra': 'ssh',           'ncrack': 'ssh',      'weight': 3.0},
-    'rdp':      {'port': 3389,'hydra': 'rdp',           'ncrack': 'rdp',      'weight': 3.0},
-    'mysql':    {'port': 3306,'hydra': 'mysql',         'ncrack': None,       'weight': 2.0},
-    'smb':      {'port': 445, 'hydra': 'smb',           'ncrack': None,       'weight': 3.0},
-    'postgres': {'port': 5432,'hydra': 'postgres',      'ncrack': None,       'weight': 2.0},
-    'ftp':      {'port': 21,  'hydra': 'ftp',           'ncrack': 'ftp',      'weight': 1.5},
+    'rdp':      {'port': 3389, 'hydra': 'rdp',      'ncrack': 'rdp',    'weight': 3.0},
+    'mysql':    {'port': 3306, 'hydra': 'mysql',    'ncrack': None,     'weight': 2.0},
+    'smb':      {'port': 445,  'hydra': 'smb',      'ncrack': None,     'weight': 3.0},
+    'postgres': {'port': 5432, 'hydra': 'postgres', 'ncrack': None,     'weight': 2.0},
+    'ftp':      {'port': 21,   'hydra': 'ftp',      'ncrack': 'ftp',    'weight': 1.5},
     'web-form': {'port': 80,  'hydra': 'http-post-form', 'ncrack': None,      'weight': 1.0},
 }
 

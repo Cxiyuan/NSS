@@ -41,7 +41,8 @@ PRIVILEGE_WEIGHT = {
     'domain_admin': 3.0, 'enterprise_admin': 3.0,
     'root': 3.0, 'administrator': 3.0,
     'local_admin': 2.0, 'db_admin': 2.0,
-    'regular_user': 1.0, 'service_account': 2.0,
+    'regular_user': 1.0,
+    'service_account': 2.0,
 }
 
 
