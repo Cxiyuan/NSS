@@ -1,0 +1,95 @@
+version: '3.8'
+
+services:
+  db:
+    container_name: cypher-db
+    image: mysql:8.0
+    restart: unless-stopped
+    volumes:
+      - db-data:/var/lib/mysql
+    environment:
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASS:-cypher_root}
+      MYSQL_DATABASE: ${MYSQL_DATABASE:-cypher}
+      MYSQL_USER: ${MYSQL_USER:-cypher}
+      MYSQL_PASSWORD: ${MYSQL_PASSWORD:-cypher_pass}
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - cypher-net
+
+  hashtopolis-server:
+    container_name: cypher-server
+    image: hashtopolis/backend:latest
+    restart: unless-stopped
+    volumes:
+      - hashtopolis-data:/usr/local/share/hashtopolis:Z
+      - ./deploy/docker/hashtopolis/htp_config.php:/etc/hashtopolis/config.php:ro
+    # context path for build below is NSS/Cypher/
+    environment:
+      HASHTOPOLIS_DB_USER: ${MYSQL_USER:-cypher}
+      HASHTOPOLIS_DB_PASS: ${MYSQL_PASSWORD:-cypher_pass}
+      HASHTOPOLIS_DB_HOST: db
+      HASHTOPOLIS_DB_DATABASE: ${MYSQL_DATABASE:-cypher}
+      HASHTOPOLIS_ADMIN_USER: ${HTP_ADMIN_USER:-admin}
+      HASHTOPOLIS_ADMIN_PASSWORD: ${HTP_ADMIN_PASSWORD:-admin123}
+      HASHTOPOLIS_APIV2_ENABLE: 1
+    depends_on:
+      db:
+        condition: service_healthy
+    ports:
+      - "8080:80"
+    networks:
+      - cypher-net
+
+  hashtopolis-frontend:
+    container_name: cypher-frontend
+    image: hashtopolis/frontend:latest
+    restart: unless-stopped
+    environment:
+      HASHTOPOLIS_BACKEND_URL: http://hashtopolis-server:80/api/v2
+    depends_on:
+      - hashtopolis-server
+    ports:
+      - "4200:80"
+    networks:
+      - cypher-net
+
+  cypher:
+    container_name: cypher-engine
+    build:
+      context: .
+      dockerfile: deploy/Dockerfile
+      args:
+        JOHN_VERSION: bleeding-jumbo
+        SIMD_FLAGS: --enable-simd=AVX512
+    image: ${CYPHER_IMAGE:-cypher:latest}
+    restart: unless-stopped
+    volumes:
+      - cypher-data:/data
+      - ./src:/opt/cypher/src:ro
+      - ./pcfg:/opt/cypher/pcfg:ro
+      - ./deploy/docker/john/dict:/opt/cypher/dict:ro
+    environment:
+      CYPHER_LOOKUP_DB: /data/lookup/ntlm_precomputed.txt
+      CYPHER_REPORT_OUTPUT: /data/reports
+      CYPHER_HTP_API_URL: http://hashtopolis-server:80/api/v2
+      OMP_NUM_THREADS: ${OMP_NUM_THREADS:-0}
+      CYPHER_JOHN_THREADS: ${CYPHER_JOHN_THREADS:-0}
+    depends_on:
+      - hashtopolis-server
+    command: >
+      sh -c "sleep 10 && python3 -m src.john_wrapper --serve"
+    networks:
+      - cypher-net
+
+volumes:
+  db-data:
+  hashtopolis-data:
+  cypher-data:
+
+networks:
+  cypher-net:
+    driver: bridge

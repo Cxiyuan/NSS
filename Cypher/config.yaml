@@ -1,0 +1,24 @@
+# Cypher 配置文件
+john_binary: john
+john_format: ntlm
+john_threads: 0
+john_timeout: 3600
+lookup_db: /data/lookup/ntlm_precomputed.txt
+lookup_max: 100000
+
+online:
+  spray_delay: 30
+  protocol_timeout: 300
+  default_wordlist: top_100.txt
+
+risk_scoring:
+  entropy_weight: 0.4
+  reuse_weight: 0.15
+
+report:
+  output_dir: /data/reports
+  formats: [html, csv]
+  title: 弱口令检测报告
+
+hashtopolis:
+  api_url: http://localhost:8080/api/v2
