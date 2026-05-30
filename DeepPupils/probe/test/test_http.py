@@ -100,11 +100,11 @@ class TestBody:
 
     def test_body_json(self, http_records):
         """Verify JSON body parses correctly."""
-        json_body_records = [r for r in http_records if r.get("request_body")]
+        json_body_records = [r for r in http_records if r.get("req_body")]
         assert len(json_body_records) > 0, "No body records found"
         json_found = False
         for r in json_body_records:
-            body_val = str(r.get("request_body", ""))
+            body_val = str(r.get("req_body", ""))
             if "username" in body_val and "password" in body_val:
                 json_found = True
                 break
@@ -112,11 +112,11 @@ class TestBody:
 
     def test_body_form(self, http_records):
         """Verify form-urlencoded body parses correctly."""
-        json_body_records = [r for r in http_records if r.get("request_body")]
+        json_body_records = [r for r in http_records if r.get("req_body")]
         assert len(json_body_records) > 0, "No body records found"
         form_found = False
         for r in json_body_records:
-            body_val = str(r.get("request_body", ""))
+            body_val = str(r.get("req_body", ""))
             if "username=admin" in body_val and "password=admin" in body_val:
                 form_found = True
                 break
@@ -124,11 +124,11 @@ class TestBody:
 
     def test_body_multipart(self, http_records):
         """Verify multipart body parses correctly."""
-        json_body_records = [r for r in http_records if r.get("request_body")]
+        json_body_records = [r for r in http_records if r.get("req_body")]
         assert len(json_body_records) > 0, "No body records found"
         multipart_found = False
         for r in json_body_records:
-            body_val = str(r.get("request_body", ""))
+            body_val = str(r.get("req_body", ""))
             if "bound" in body_val and "Content-Disposition" in body_val:
                 multipart_found = True
                 break
@@ -136,11 +136,11 @@ class TestBody:
 
     def test_body_xml(self, http_records):
         """Verify XML body parses correctly."""
-        json_body_records = [r for r in http_records if r.get("request_body")]
+        json_body_records = [r for r in http_records if r.get("req_body")]
         assert len(json_body_records) > 0, "No body records found"
         xml_found = False
         for r in json_body_records:
-            body_val = str(r.get("request_body", ""))
+            body_val = str(r.get("req_body", ""))
             if "soap:Envelope" in body_val or "xml" in body_val.lower():
                 xml_found = True
                 break

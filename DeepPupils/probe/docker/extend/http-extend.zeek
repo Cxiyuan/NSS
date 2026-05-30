@@ -32,9 +32,11 @@ redef record Info += {
 
     # ---- Body ----
     ## 请求体内容（最大 10KB）
-    request_body:          string    &log &optional;
+    ## request_body:          string    &log &optional;
     ## 响应体内容（最大 10KB）
-    response_body:         string    &log &optional;
+    ## response_body:         string    &log &optional;
+    req_body:              string    &log &optional;
+    resp_body:             string    &log &optional;
 
     # ---- 标准请求头 ----
     ## Accept 头
@@ -165,10 +167,6 @@ event http_header(c: connection, is_orig: bool, original_name: string, name: str
     # ============================================================
     else
     {
-        # DEBUG: dump response header params to verify Zeek 8.2 ordering
-        if ( name == "SERVER" || name == "DATE" || name == "CONNECTION" || name == "VARY" || name == "EXPIRES" )
-            print fmt("DEBUG-RESP original_name=%s name=%s value=%s", original_name, name, value);
-
         if ( name == "SET-COOKIE" )
         {
             if ( ! c$http?$set_cookie || |c$http$set_cookie| == 0 )
@@ -225,16 +223,16 @@ event http_entity_data(c: connection, is_orig: bool, length: count, data: string
 
     if ( is_orig )
     {
-        if ( ! c$http?$request_body )
-            c$http$request_body = data;
-        else if ( |c$http$request_body| < 10240 )
-            c$http$request_body = c$http$request_body + data;
+        if ( ! c$http?$req_body )
+            c$http$req_body = data;
+        else if ( |c$http$req_body| < 10240 )
+            c$http$req_body = c$http$req_body + data;
     }
     else
     {
-        if ( ! c$http?$response_body )
-            c$http$response_body = data;
-        else if ( |c$http$response_body| < 10240 )
-            c$http$response_body = c$http$response_body + data;
+        if ( ! c$http?$resp_body )
+            c$http$resp_body = data;
+        else if ( |c$http$resp_body| < 10240 )
+            c$http$resp_body = c$http$resp_body + data;
     }
 }
