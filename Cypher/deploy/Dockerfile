@@ -29,16 +29,20 @@ ARG MAKE_FLAGS=-j$(nproc)
 ARG SIMD_FLAGS=--enable-simd
 
 WORKDIR /build
-RUN git clone --depth=1 --branch=${JOHN_VERSION} ${JOHN_REPO} john
+RUN git clone --depth=1 --branch=${JOHN_VERSION} ${JOHN_REPO} john 2>&1 \
+    && ls -la /build/john/
 
 WORKDIR /build/john/src
+RUN ls -la && echo '--- src contents above ---'
 RUN ./configure ${SIMD_FLAGS} --disable-opencl \
-    CFLAGS="-O3 -march=native -mtune=native" 2>&1 | tee /tmp/configure.log
+    CFLAGS="-O3" 2>&1 | tee /tmp/configure.log
 
-# 单线程编译以捕获错误; 生产环境可改为 -j$(nproc)
-RUN make ${MAKE_FLAGS} 2>&1 | tee /tmp/make.log \
+# Debug: verify files exist before make
+RUN ls -la /build/john/src/ 2>&1 | head -20
+
+RUN make -j$(nproc) 2>&1 | tee /tmp/make.log \
     && cp ../run/john /usr/local/bin/john \
-    || (tail -50 /tmp/make.log; exit 1)
+    || (tail -100 /tmp/make.log; echo 'MAKE FAILED'; exit 1)
 
 RUN john --list=build-info 2>&1 | head -30
 
