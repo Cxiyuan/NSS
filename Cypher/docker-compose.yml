@@ -64,7 +64,7 @@ services:
       dockerfile: deploy/Dockerfile
       args:
         JOHN_VERSION: bleeding-jumbo
-        SIMD_FLAGS: --enable-simd=AVX512
+        SIMD_FLAGS: --enable-simd
     image: ${CYPHER_IMAGE:-cypher:latest}
     restart: unless-stopped
     volumes:

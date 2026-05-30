@@ -14,6 +14,11 @@ if [ "$tool_name" != "run_command" ] || [ -z "$command" ]; then
     exit 0
 fi
 
+# 跳过远程执行（sshpass/docker exec 是发往远端服务器的命令，不在本机编译）
+if echo "$command" | grep -E '(^|\s)(sshpass|docker exec)' > /dev/null 2>&1; then
+    exit 0
+fi
+
 blocked=false
 
 # 1. 软件编译

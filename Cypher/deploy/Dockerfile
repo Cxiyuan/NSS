@@ -25,14 +25,15 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 ARG JOHN_VERSION=bleeding-jumbo
 ARG JOHN_REPO=https://github.com/openwall/john.git
 ARG MAKE_FLAGS=-j$(nproc)
-ARG SIMD_FLAGS=--enable-simd=AVX512
+# SIMD flags: 默认 auto-detect (CI runner 通常无 AVX512)
+# 在 AVX512 自托管 runner 上可传 --build-arg SIMD_FLAGS=--enable-simd=AVX512
+ARG SIMD_FLAGS=--enable-simd
 
 WORKDIR /build
 RUN git clone --depth=1 --branch=${JOHN_VERSION} ${JOHN_REPO} john
 
 WORKDIR /build/john/src
 RUN ./configure ${SIMD_FLAGS} --enable-rexgen \
-    CPPFLAGS="-mavx512f -mavx512bw -mavx512dq -mavx512cd -mavx512vl" \
     CFLAGS="-O3 -march=native -mtune=native" 2>&1 | tee /tmp/configure.log
 
 RUN make ${MAKE_FLAGS} \

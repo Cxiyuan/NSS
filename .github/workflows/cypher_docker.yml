@@ -126,10 +126,21 @@ jobs:
           registry: ${{ env.REGISTRY }}
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
-      - run: |
-          docker pull ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:sha-${GITHUB_SHA::7}
-          docker run --rm ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:sha-${GITHUB_SHA::7} \
-            python3 -c "
+      - name: Build with AVX512
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          file: Cypher/deploy/Dockerfile
+          push: false
+          load: true
+          tags: cypher-acceptance:latest
+          build-args: |
+            SIMD_FLAGS=--enable-simd=AVX512
+            MAKE_FLAGS=-j$(nproc)
+
+      - name: Verify AVX512 + crack test + benchmark
+        run: |
+          docker run --rm cypher-acceptance:latest python3 -c "
           import subprocess, hashlib, tempfile, os
 
           r = subprocess.run(['john','--list=build-info'], capture_output=True,text=True)

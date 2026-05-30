@@ -1,0 +1,902 @@
+$ gh run list --repo Cxiyuan/NSS --workflow "Radar-构建镜像" --limit 1 --json databaseId -q '.[0].databaseId' | xargs -I{} sh -c 'gh run watch {} --repo Cxiyuan/NSS && sshpass -p "cxiyuan" ssh -o StrictHostKeyChecking=no root@10.44.77.5 "cd /root/Radar && docker compose pull && docker compose up -d"'
+[killed after timeout]
+Refreshing run status every 3 seconds. Press Ctrl+C to quit.
+
+* main Radar-构建镜像 · 26689787965
+Triggered via push less than a minute ago
+
+JOBS
+* 构建镜像 (ID 78664064978)
+  ✓ Set up job
+  ✓ Checkout code
+  ✓ Set up Docker Buildx
+  ✓ Log in to GitHub Container Registry
+  ✓ Extract metadata for Docker image
+  * Build and push Docker image
+  * Post Build and push Docker image
+  * Post Log in to GitHub Container Registry
+  * Post Set up Docker Buildx
+  * Post Checkout code
+Refreshing run status every 3 seconds. Press Ctrl+C to quit.
+
+* main Radar-构建镜像 · 26689787965
+Triggered via push less than a minute ago
+
+JOBS
+* 构建镜像 (ID 78664064978)
+  ✓ Set up job
+  ✓ Checkout code
+  ✓ Set up Docker Buildx
+  ✓ Log in to GitHub Container Registry
+  ✓ Extract metadata for Docker image
+  * Build and push Docker image
+  * Post Build and push Docker image
+  * Post Log in to GitHub Container Registry
+  * Post Set up Docker Buildx
+  * Post Checkout code
+Refreshing run status every 3 seconds. Press Ctrl+C to quit.
+
+* main Radar-构建镜像 · 26689787965
+Triggered via push less than a minute ago
+
+JOBS
+* 构建镜像 (ID 78664064978)
+  ✓ Set up job
+  ✓ Checkout code
+  ✓ Set up Docker Buildx
+  ✓ Log in to GitHub Container Registry
+  ✓ Extract metadata for Docker image
+  * Build and push Docker image
+  * Post Build and push Docker image
+  * Post Log in to GitHub Container Registry
+  * Post Set up Docker Buildx
+  * Post Checkout code
+Refreshing run status every 3 seconds. Press Ctrl+C to quit.
+
+* main Radar-构建镜像 · 26689787965
+Triggered via push less than a minute ago
+
+JOBS
+* 构建镜像 (ID 78664064978)
+  ✓ Set up job
+  ✓ Checkout code
+  ✓ Set up Docker Buildx
+  ✓ Log in to GitHub Container Registry
+  ✓ Extract metadata for Docker image
+  * Build and push Docker image
+  * Post Build and push Docker image
+  * Post Log in to GitHub Container Registry
+  * Post Set up Docker Buildx
+  * Post Checkout code
+Refreshing run status every 3 seconds. Press Ctrl+C to quit.
+
+* main Radar-构建镜像 · 26689787965
+Triggered via push less than a minute ago
+
+JOBS
+* 构建镜像 (ID 78664064978)
+  ✓ Set up job
+  ✓ Checkout code
+  ✓ Set up Docker Buildx
+  ✓ Log in to GitHub Container Registry
+  ✓ Extract metadata for Docker image
+  * Build and push Docker image
+  * Post Build and push Docker image
+  * Post Log in to GitHub Container Registry
+  * Post Set up Docker Buildx
+  * Post Checkout code
+Refreshing run status every 3 seconds. Press Ctrl+C to quit.
+
+* main Radar-构建镜像 · 26689787965
+Triggered via push less than a minute ago
+
+JOBS
+* 构建镜像 (ID 78664064978)
+  ✓ Set up job
+  ✓ Checkout code
+  ✓ Set up Docker Buildx
+  ✓ Log in to GitHub Container Registry
+  ✓ Extract metadata for Docker image
+  * Build and push Docker image
+  * Post Build and push Docker image
+  * Post Log in to GitHub Container Registry
+  * Post Set up Docker Buildx
+  * Post Checkout code
+Refreshing run status every 3 seconds. Press Ctrl+C to quit.
+
+* main Radar-构建镜像 · 26689787965
+Triggered via push less than a minute ago
+
+JOBS
+* 构建镜像 (ID 78664064978)
+  ✓ Set up job
+  ✓ Checkout code
+  ✓ Set up Docker Buildx
+  ✓ Log in to GitHub Container Registry
+  ✓ Extract metadata for Docker image
+  * Build and push Docker image
+  * Post Build and push Docker image
+  * Post Log in to GitHub Container Registry
+  * Post Set up Docker Buildx
+  * Post Checkout code
+Refreshing run status every 3 seconds. Press Ctrl+C to quit.
+
+* main Radar-构建镜像 · 26689787965
+Triggered via push less than a minute ago
+
+JOBS
+* 构建镜像 (ID 78664064978)
+  ✓ Set up job
+  ✓ Checkout code
+  ✓ Set up Docker Buildx
+  ✓ Log in to GitHub Container Registry
+  ✓ Extract metadata for Docker image
+  * Build and push Docker image
+  * Post Build and push Docker image
+  * Post Log in to GitHub Container Registry
+  * Post Set up Docker Buildx
+  * Post Checkout code
+Refreshing run status every 3 seconds. Press Ctrl+C to quit.
+
+* main Radar-构建镜像 · 26689787965
+Triggered via push less than a minute ago
+
+JOBS
+* 构建镜像 (ID 78664064978)
+  ✓ Set up job
+  ✓ Checkout code
+  ✓ Set up Docker Buildx
+  ✓ Log in to GitHub Container Registry
+  ✓ Extract metadata for Docker image
+  * Build and push Docker image
+  * Post Build and push Docker image
+  * Post Log in to GitHub Container Registry
+  * Post Set up Docker Buildx
+  * Post Checkout code
+Refreshing run status every 3 seconds. Press Ctrl+C to quit.
+
+* main Radar-构建镜像 · 26689787965
+Triggered via push about 1 minute ago
+
+JOBS
+* 构建镜像 (ID 78664064978)
+  ✓ Set up job
+  ✓ Checkout code
+  ✓ Set up Docker Buildx
+  ✓ Log in to GitHub Container Registry
+  ✓ Extract metadata for Docker image
+  * Build and push Docker image
+  * Post Build and push Docker image
+  * Post Log in to GitHub Container Registry
+  * Post Set up Docker Buildx
+  * Post Checkout code
+Refreshing run status every 3 seconds. Press Ctrl+C to quit.
+
+* main Radar-构建镜像 · 26689787965
+Triggered via push about 1 minute ago
+
+JOBS
+* 构建镜像 (ID 78664064978)
+  ✓ Set up job
+  ✓ Checkout code
+  ✓ Set up Docker Buildx
+  ✓ Log in to GitHub Container Registry
+  ✓ Extract metadata for Docker image
+  * Build and push Docker image
+  * Post Build and push Docker image
+  * Post Log in to GitHub Container Registry
+  * Post Set up Docker Buildx
+  * Post Checkout code
+Refreshing run status every 3 seconds. Press Ctrl+C to quit.
+
+* main Radar-构建镜像 · 26689787965
+Triggered via push about 1 minute ago
+
+JOBS
+* 构建镜像 (ID 78664064978)
+  ✓ Set up job
+  ✓ Checkout code
+  ✓ Set up Docker Buildx
+  ✓ Log in to GitHub Container Registry
+  ✓ Extract metadata for Docker image
+  * Build and push Docker image
+  * Post Build and push Docker image
+  * Post Log in to GitHub Container Registry
+  * Post Set up Docker Buildx
+  * Post Checkout code
+Refreshing run status every 3 seconds. Press Ctrl+C to quit.
+
+* main Radar-构建镜像 · 26689787965
+Triggered via push about 1 minute ago
+
+JOBS
+* 构建镜像 (ID 78664064978)
+  ✓ Set up job
+  ✓ Checkout code
+  ✓ Set up Docker Buildx
+  ✓ Log in to GitHub Container Registry
+  ✓ Extract metadata for Docker image
+  * Build and push Docker image
+  * Post Build and push Docker image
+  * Post Log in to GitHub Container Registry
+  * Post Set up Docker Buildx
+  * Post Checkout code
+Refreshing run status every 3 seconds. Press Ctrl+C to quit.
+
+* main Radar-构建镜像 · 26689787965
+Triggered via push about 1 minute ago
+
+JOBS
+* 构建镜像 (ID 78664064978)
+  ✓ Set up job
+  ✓ Checkout code
+  ✓ Set up Docker Buildx
+  ✓ Log in to GitHub Container Registry
+  ✓ Extract metadata for Docker image
+  * Build and push Docker image
+  * Post Build and push Docker image
+  * Post Log in to GitHub Container Registry
+  * Post Set up Docker Buildx
+  * Post Checkout code
+Refreshing run status every 3 seconds. Press Ctrl+C to quit.
+
+* main Radar-构建镜像 · 26689787965
+Triggered via push about 1 minute ago
+
+JOBS
+* 构建镜像 (ID 78664064978)
+  ✓ Set up job
+  ✓ Checkout code
+  ✓ Set up Docker Buildx
+  ✓ Log in to GitHub Container Registry
+  ✓ Extract metadata for Docker image
+  * Build and push Docker image
+  * Post Build and push Docker image
+  * Post Log in to GitHub Container Registry
+  * Post Set up Docker Buildx
+  * Post Checkout code
+Refreshing run status every 3 seconds. Press Ctrl+C to quit.
+
+* main Radar-构建镜像 · 26689787965
+Triggered via push about 1 minute ago
+
+JOBS
+* 构建镜像 (ID 78664064978)
+  ✓ Set up job
+  ✓ Checkout code
+  ✓ Set up Docker Buildx
+  ✓ Log in to GitHub Container Registry
+  ✓ Extract metadata for Docker image
+  * Build and push Docker image
+  * Post Build and push Docker image
+  * Post Log in to GitHub Container Registry
+  * Post Set up Docker Buildx
+  * Post Checkout code
+Refreshing run status every 3 seconds. Press Ctrl+C to quit.
+
+* main Radar-构建镜像 · 26689787965
+Triggered via push about 1 minute ago
+
+JOBS
+* 构建镜像 (ID 78664064978)
+  ✓ Set up job
+  ✓ Checkout code
+  ✓ Set up Docker Buildx
+  ✓ Log in to GitHub Container Registry
+  ✓ Extract metadata for Docker image
+  * Build and push Docker image
+  * Post Build and push Docker image
+  * Post Log in to GitHub Container Registry
+  * Post Set up Docker Buildx
+  * Post Checkout code
+Refreshing run status every 3 seconds. Press Ctrl+C to quit.
+
+* main Radar-构建镜像 · 26689787965
+Triggered via push about 1 minute ago
+
+JOBS
+* 构建镜像 (ID 78664064978)
+  ✓ Set up job
+  ✓ Checkout code
+  ✓ Set up Docker Buildx
+  ✓ Log in to GitHub Container Registry
+  ✓ Extract metadata for Docker image
+  * Build and push Docker image
+  * Post Build and push Docker image
+  * Post Log in to GitHub Container Registry
+  * Post Set up Docker Buildx
+  * Post Checkout code
+Refreshing run status every 3 seconds. Press Ctrl+C to quit.
+
+* main Radar-构建镜像 · 26689787965
+Triggered via push about 1 minute ago
+
+JOBS
+* 构建镜像 (ID 78664064978)
+  ✓ Set up job
+  ✓ Checkout code
+  ✓ Set up Docker Buildx
+  ✓ Log in to GitHub Container Registry
+  ✓ Extract metadata for Docker image
+  * Build and push Docker image
+  * Post Build and push Docker image
+  * Post Log in to GitHub Container Registry
+  * Post Set up Docker Buildx
+  * Post Checkout code
+Refreshing run status every 3 seconds. Press Ctrl+C to quit.
+
+* main Radar-构建镜像 · 26689787965
+Triggered via push about 1 minute ago
+
+JOBS
+* 构建镜像 (ID 78664064978)
+  ✓ Set up job
+  ✓ Checkout code
+  ✓ Set up Docker Buildx
+  ✓ Log in to GitHub Container Registry
+  ✓ Extract metadata for Docker image
+  * Build and push Docker image
+  * Post Build and push Docker image
+  * Post Log in to GitHub Container Registry
+  * Post Set up Docker Buildx
+  * Post Checkout code
+Refreshing run status every 3 seconds. Press Ctrl+C to quit.
+
+* main Radar-构建镜像 · 26689787965
+Triggered via push about 2 minutes ago
+
+JOBS
+* 构建镜像 (ID 78664064978)
+  ✓ Set up job
+  ✓ Checkout code
+  ✓ Set up Docker Buildx
+  ✓ Log in to GitHub Container Registry
+  ✓ Extract metadata for Docker image
+  ✓ Build and push Docker image
+  ✓ Post Build and push Docker image
+  ✓ Post Log in to GitHub Container Registry
+  * Post Set up Docker Buildx
+  * Post Checkout code
+Refreshing run status every 3 seconds. Press Ctrl+C to quit.
+
+* main Radar-构建镜像 · 26689787965
+Triggered via push about 2 minutes ago
+
+JOBS
+✓ 构建镜像 in 2m1s (ID 78664064978)
+  ✓ Set up job
+  ✓ Checkout code
+  ✓ Set up Docker Buildx
+  ✓ Log in to GitHub Container Registry
+  ✓ Extract metadata for Docker image
+  ✓ Build and push Docker image
+  ✓ Post Build and push Docker image
+  ✓ Post Log in to GitHub Container Registry
+  ✓ Post Set up Docker Buildx
+  ✓ Post Checkout code
+  ✓ Complete job
+* 单元测试 (ID 78664183692)
+  ✓ Set up job
+  ✓ Checkout code
+  * 运行后端单元测试
+  * Post Checkout code
+* 集成验证 (ID 78664183708)
+  ✓ Set up job
+  * 启动容器并验证 API
+
+ANNOTATIONS
+! Node.js 20 actions are deprecated. The following actions are running on Node.js 20 and may not work as expected: actions/checkout@v4, docker/build-push-action@v5, docker/login-action@v3, docker/metadata-action@v5, docker/setup-buildx-action@v3. Actions will be forced to run with Node.js 24 by default starting June 16th, 2026. Node.js 20 will be removed from the runner on September 16th, 2026. Please check if updated versions of these actions are available that support Node.js 24. To opt into Node.js 24 now, set the FORCE_JAVASCRIPT_ACTIONS_TO_NODE24=true environment variable on the runner or in your workflow file. Once Node.js 24 becomes the default, you can temporarily opt out by setting ACTIONS_ALLOW_USE_UNSECURE_NODE_VERSION=true. For more information see: https://github.blog/changelog/2025-09-19-deprecation-of-node-20-on-github-actions-runners/
+构建镜像: .github#2
+
+Refreshing run status every 3 seconds. Press Ctrl+C to quit.
+
+* main Radar-构建镜像 · 26689787965
+Triggered via push about 2 minutes ago
+
+JOBS
+✓ 构建镜像 in 2m1s (ID 78664064978)
+  ✓ Set up job
+  ✓ Checkout code
+  ✓ Set up Docker Buildx
+  ✓ Log in to GitHub Container Registry
+  ✓ Extract metadata for Docker image
+  ✓ Build and push Docker image
+  ✓ Post Build and push Docker image
+  ✓ Post Log in to GitHub Container Registry
+  ✓ Post Set up Docker Buildx
+  ✓ Post Checkout code
+  ✓ Complete job
+* 单元测试 (ID 78664183692)
+  ✓ Set up job
+  ✓ Checkout code
+  * 运行后端单元测试
+  * Post Checkout code
+* 集成验证 (ID 78664183708)
+  ✓ Set up job
+  * 启动容器并验证 API
+
+ANNOTATIONS
+! Node.js 20 actions are deprecated. The following actions are running on Node.js 20 and may not work as expected: actions/checkout@v4, docker/build-push-action@v5, docker/login-action@v3, docker/metadata-action@v5, docker/setup-buildx-action@v3. Actions will be forced to run with Node.js 24 by default starting June 16th, 2026. Node.js 20 will be removed from the runner on September 16th, 2026. Please check if updated versions of these actions are available that support Node.js 24. To opt into Node.js 24 now, set the FORCE_JAVASCRIPT_ACTIONS_TO_NODE24=true environment variable on the runner or in your workflow file. Once Node.js 24 becomes the default, you can temporarily opt out by setting ACTIONS_ALLOW_USE_UNSECURE_NODE_VERSION=true. For more information see: https://github.blog/changelog/2025-09-19-deprecation-of-node-20-on-github-actions-runners/
+构建镜像: .github#2
+
+Refreshing run status every 3 seconds. Press Ctrl+C to quit.
+
+* main Radar-构建镜像 · 26689787965
+Triggered via push about 2 minutes ago
+
+JOBS
+✓ 构建镜像 in 2m1s (ID 78664064978)
+  ✓ Set up job
+  ✓ Checkout code
+  ✓ Set up Docker Buildx
+  ✓ Log in to GitHub Container Registry
+  ✓ Extract metadata for Docker image
+  ✓ Build and push Docker image
+  ✓ Post Build and push Docker image
+  ✓ Post Log in to GitHub Container Registry
+  ✓ Post Set up Docker Buildx
+  ✓ Post Checkout code
+  ✓ Complete job
+* 单元测试 (ID 78664183692)
+  ✓ Set up job
+  ✓ Checkout code
+  * 运行后端单元测试
+  * Post Checkout code
+* 集成验证 (ID 78664183708)
+  ✓ Set up job
+  * 启动容器并验证 API
+
+ANNOTATIONS
+! Node.js 20 actions are deprecated. The following actions are running on Node.js 20 and may not work as expected: actions/checkout@v4, docker/build-push-action@v5, docker/login-action@v3, docker/metadata-action@v5, docker/setup-buildx-action@v3. Actions will be forced to run with Node.js 24 by default starting June 16th, 2026. Node.js 20 will be removed from the runner on September 16th, 2026. Please check if updated versions of these actions are available that support Node.js 24. To opt into Node.js 24 now, set the FORCE_JAVASCRIPT_ACTIONS_TO_NODE24=true environment variable on the runner or in your workflow file. Once Node.js 24 becomes the default, you can temporarily opt out by setting ACTIONS_ALLOW_USE_UNSECURE_NODE_VERSION=true. For more information see: https://github.blog/changelog/2025-09-19-deprecation-of-node-20-on-github-actions-runners/
+构建镜像: .github#2
+
+Refreshing run status every 3 seconds. Press Ctrl+C to quit.
+
+* main Radar-构建镜像 · 26689787965
+Triggered via push about 2 minutes ago
+
+JOBS
+✓ 构建镜像 in 2m1s (ID 78664064978)
+  ✓ Set up job
+  ✓ Checkout code
+  ✓ Set up Docker Buildx
+  ✓ Log in to GitHub Container Registry
+  ✓ Extract metadata for Docker image
+  ✓ Build and push Docker image
+  ✓ Post Build and push Docker image
+  ✓ Post Log in to GitHub Container Registry
+  ✓ Post Set up Docker Buildx
+  ✓ Post Checkout code
+  ✓ Complete job
+* 单元测试 (ID 78664183692)
+  ✓ Set up job
+  ✓ Checkout code
+  * 运行后端单元测试
+  * Post Checkout code
+* 集成验证 (ID 78664183708)
+  ✓ Set up job
+  * 启动容器并验证 API
+
+ANNOTATIONS
+! Node.js 20 actions are deprecated. The following actions are running on Node.js 20 and may not work as expected: actions/checkout@v4, docker/build-push-action@v5, docker/login-action@v3, docker/metadata-action@v5, docker/setup-buildx-action@v3. Actions will be forced to run with Node.js 24 by default starting June 16th, 2026. Node.js 20 will be removed from the runner on September 16th, 2026. Please check if updated versions of these actions are available that support Node.js 24. To opt into Node.js 24 now, set the FORCE_JAVASCRIPT_ACTIONS_TO_NODE24=true environment variable on the runner or in your workflow file. Once Node.js 24 becomes the default, you can temporarily opt out by setting ACTIONS_ALLOW_USE_UNSECURE_NODE_VERSION=true. For more information see: https://github.blog/changelog/2025-09-19-deprecation-of-node-20-on-github-actions-runners/
+构建镜像: .github#2
+
+Refreshing run status every 3 seconds. Press Ctrl+C to quit.
+
+* main Radar-构建镜像 · 26689787965
+Triggered via push about 2 minutes ago
+
+JOBS
+✓ 构建镜像 in 2m1s (ID 78664064978)
+  ✓ Set up job
+  ✓ Checkout code
+  ✓ Set up Docker Buildx
+  ✓ Log in to GitHub Container Registry
+  ✓ Extract metadata for Docker image
+  ✓ Build and push Docker image
+  ✓ Post Build and push Docker image
+  ✓ Post Log in to GitHub Container Registry
+  ✓ Post Set up Docker Buildx
+  ✓ Post Checkout code
+  ✓ Complete job
+* 单元测试 (ID 78664183692)
+  ✓ Set up job
+  ✓ Checkout code
+  * 运行后端单元测试
+  * Post Checkout code
+* 集成验证 (ID 78664183708)
+  ✓ Set up job
+  ✓ 启动容器并验证 API
+  ✓ Complete job
+
+ANNOTATIONS
+! Node.js 20 actions are deprecated. The following actions are running on Node.js 20 and may not work as expected: actions/checkout@v4, docker/build-push-action@v5, docker/login-action@v3, docker/metadata-action@v5, docker/setup-buildx-action@v3. Actions will be forced to run with Node.js 24 by default starting June 16th, 2026. Node.js 20 will be removed from the runner on September 16th, 2026. Please check if updated versions of these actions are available that support Node.js 24. To opt into Node.js 24 now, set the FORCE_JAVASCRIPT_ACTIONS_TO_NODE24=true environment variable on the runner or in your workflow file. Once Node.js 24 becomes the default, you can temporarily opt out by setting ACTIONS_ALLOW_USE_UNSECURE_NODE_VERSION=true. For more information see: https://github.blog/changelog/2025-09-19-deprecation-of-node-20-on-github-actions-runners/
+构建镜像: .github#2
+
+Refreshing run status every 3 seconds. Press Ctrl+C to quit.
+
+* main Radar-构建镜像 · 26689787965
+Triggered via push about 2 minutes ago
+
+JOBS
+✓ 构建镜像 in 2m1s (ID 78664064978)
+  ✓ Set up job
+  ✓ Checkout code
+  ✓ Set up Docker Buildx
+  ✓ Log in to GitHub Container Registry
+  ✓ Extract metadata for Docker image
+  ✓ Build and push Docker image
+  ✓ Post Build and push Docker image
+  ✓ Post Log in to GitHub Container Registry
+  ✓ Post Set up Docker Buildx
+  ✓ Post Checkout code
+  ✓ Complete job
+* 单元测试 (ID 78664183692)
+  ✓ Set up job
+  ✓ Checkout code
+  * 运行后端单元测试
+  * Post Checkout code
+✓ 集成验证 in 29s (ID 78664183708)
+  ✓ Set up job
+  ✓ 启动容器并验证 API
+  ✓ Complete job
+
+ANNOTATIONS
+! Node.js 20 actions are deprecated. The following actions are running on Node.js 20 and may not work as expected: actions/checkout@v4, docker/build-push-action@v5, docker/login-action@v3, docker/metadata-action@v5, docker/setup-buildx-action@v3. Actions will be forced to run with Node.js 24 by default starting June 16th, 2026. Node.js 20 will be removed from the runner on September 16th, 2026. Please check if updated versions of these actions are available that support Node.js 24. To opt into Node.js 24 now, set the FORCE_JAVASCRIPT_ACTIONS_TO_NODE24=true environment variable on the runner or in your workflow file. Once Node.js 24 becomes the default, you can temporarily opt out by setting ACTIONS_ALLOW_USE_UNSECURE_NODE_VERSION=true. For more information see: https://github.blog/changelog/2025-09-19-deprecation-of-node-20-on-github-actions-runners/
+构建镜像: .github#2
+
+Refreshing run status every 3 seconds. Press Ctrl+C to quit.
+
+* main Radar-构建镜像 · 26689787965
+Triggered via push about 2 minutes ago
+
+JOBS
+✓ 构建镜像 in 2m1s (ID 78664064978)
+  ✓ Set up job
+  ✓ Checkout code
+  ✓ Set up Docker Buildx
+  ✓ Log in to GitHub Container Registry
+  ✓ Extract metadata for Docker image
+  ✓ Build and push Docker image
+  ✓ Post Build and push Docker image
+  ✓ Post Log in to GitHub Container Registry
+  ✓ Post Set up Docker Buildx
+  ✓ Post Checkout code
+  ✓ Complete job
+✓ 单元测试 in 35s (ID 78664183692)
+  ✓ Set up job
+  ✓ Checkout code
+  ✓ 运行后端单元测试
+  ✓ Post Checkout code
+  ✓ Complete job
+✓ 集成验证 in 29s (ID 78664183708)
+  ✓ Set up job
+  ✓ 启动容器并验证 API
+  ✓ Complete job
+* 发布 (ID 78664219561)
+  ✓ Set up job
+  ✓ 确认发布
+  ✓ Complete job
+
+ANNOTATIONS
+! Node.js 20 actions are deprecated. The following actions are running on Node.js 20 and may not work as expected: actions/checkout@v4, docker/build-push-action@v5, docker/login-action@v3, docker/metadata-action@v5, docker/setup-buildx-action@v3. Actions will be forced to run with Node.js 24 by default starting June 16th, 2026. Node.js 20 will be removed from the runner on September 16th, 2026. Please check if updated versions of these actions are available that support Node.js 24. To opt into Node.js 24 now, set the FORCE_JAVASCRIPT_ACTIONS_TO_NODE24=true environment variable on the runner or in your workflow file. Once Node.js 24 becomes the default, you can temporarily opt out by setting ACTIONS_ALLOW_USE_UNSECURE_NODE_VERSION=true. For more information see: https://github.blog/changelog/2025-09-19-deprecation-of-node-20-on-github-actions-runners/
+构建镜像: .github#2
+
+✓ main Radar-构建镜像 · 26689787965
+Triggered via push about 2 minutes ago
+
+JOBS
+✓ 构建镜像 in 2m1s (ID 78664064978)
+  ✓ Set up job
+  ✓ Checkout code
+  ✓ Set up Docker Buildx
+  ✓ Log in to GitHub Container Registry
+  ✓ Extract metadata for Docker image
+  ✓ Build and push Docker image
+  ✓ Post Build and push Docker image
+  ✓ Post Log in to GitHub Container Registry
+  ✓ Post Set up Docker Buildx
+  ✓ Post Checkout code
+  ✓ Complete job
+✓ 单元测试 in 35s (ID 78664183692)
+  ✓ Set up job
+  ✓ Checkout code
+  ✓ 运行后端单元测试
+  ✓ Post Checkout code
+  ✓ Complete job
+✓ 集成验证 in 29s (ID 78664183708)
+  ✓ Set up job
+  ✓ 启动容器并验证 API
+  ✓ Complete job
+✓ 发布 in 3s (ID 78664219561)
+  ✓ Set up job
+  ✓ 确认发布
+  ✓ Complete job
+
+ANNOTATIONS
+! Node.js 20 actions are deprecated. The following actions are running on Node.js 20 and may not work as expected: actions/checkout@v4, docker/build-push-action@v5, docker/login-action@v3, docker/metadata-action@v5, docker/setup-buildx-action@v3. Actions will be forced to run with Node.js 24 by default starting June 16th, 2026. Node.js 20 will be removed from the runner on September 16th, 2026. Please check if updated versions of these actions are available that support Node.js 24. To opt into Node.js 24 now, set the FORCE_JAVASCRIPT_ACTIONS_TO_NODE24=true environment variable on the runner or in your workflow file. Once Node.js 24 becomes the default, you can temporarily opt out by setting ACTIONS_ALLOW_USE_UNSECURE_NODE_VERSION=true. For more information see: https://github.blog/changelog/2025-09-19-deprecation-of-node-20-on-github-actions-runners/
+构建镜像: .github#2
+
+bash: warning: setlocale: LC_ALL: cannot change locale (en_US.UTF-8)
+time="2026-05-30T17:07:41Z" level=warning msg="/root/Radar/docker-compose.yml: the attribute `version` is obsolete, it will be ignored, please remove it to avoid potential confusion"
+ Image ghcr.io/cxiyuan/radar-web-crawler:latest Pulling 
+ 565dfa5d4785 Pulling fs layer 0B
+ b3c1483a7d7f Pulling fs layer 0B
+ b74474839072 Pulling fs layer 0B
+ 2975159102fb Pulling fs layer 0B
+ 05c1cf35ece1 Pulling fs layer 0B
+ c1c4ece8848c Pulling fs layer 0B
+ 0c74724e516d Download complete 0B
+ b74474839072 Download complete 0B
+ 2975159102fb Download complete 0B
+ 565dfa5d4785 Download complete 0B
+ b74474839072 Pull complete 0B
+ 565dfa5d4785 Pull complete 0B
+ c1c4ece8848c Downloading 1.049MB
+ c1c4ece8848c Downloading 1.049MB
+ c1c4ece8848c Downloading 1.049MB
+ c1c4ece8848c Downloading 1.049MB
+ b3c1483a7d7f Download complete 0B
+ c1c4ece8848c Downloading 1.049MB
+ c1c4ece8848c Downloading 1.049MB
+ c1c4ece8848c Downloading 1.049MB
+ c1c4ece8848c Downloading 1.049MB
+ c1c4ece8848c Downloading 3.146MB
+ c1c4ece8848c Downloading 3.146MB
+ 05c1cf35ece1 Downloading 1.049MB
+ c1c4ece8848c Downloading 4.194MB
+ 05c1cf35ece1 Downloading 1.049MB
+ 05c1cf35ece1 Downloading 1.049MB
+ c1c4ece8848c Downloading 4.194MB
+ c1c4ece8848c Downloading 4.194MB
+ 05c1cf35ece1 Downloading 1.049MB
+ 05c1cf35ece1 Downloading 1.049MB
+ c1c4ece8848c Downloading 5.243MB
+ 05c1cf35ece1 Downloading 1.049MB
+ c1c4ece8848c Downloading 5.243MB
+ c1c4ece8848c Downloading 7.34MB
+ 05c1cf35ece1 Downloading 1.049MB
+ c1c4ece8848c Downloading 7.34MB
+ 05c1cf35ece1 Downloading 1.049MB
+ 05c1cf35ece1 Downloading 2.097MB
+ c1c4ece8848c Downloading 8.389MB
+ 05c1cf35ece1 Downloading 2.097MB
+ c1c4ece8848c Downloading 8.389MB
+ 05c1cf35ece1 Downloading 2.097MB
+ c1c4ece8848c Downloading 8.389MB
+ 05c1cf35ece1 Downloading 2.097MB
+ c1c4ece8848c Downloading 8.389MB
+ c1c4ece8848c Downloading 9.437MB
+ 05c1cf35ece1 Downloading 3.146MB
+ 05c1cf35ece1 Downloading 4.194MB
+ c1c4ece8848c Downloading 10.49MB
+ 05c1cf35ece1 Downloading 4.194MB
+ c1c4ece8848c Downloading 11.53MB
+ c1c4ece8848c Downloading 12.58MB
+ 05c1cf35ece1 Downloading 4.194MB
+ 05c1cf35ece1 Downloading 5.243MB
+ c1c4ece8848c Downloading 12.58MB
+ 05c1cf35ece1 Downloading 5.243MB
+ c1c4ece8848c Downloading 12.58MB
+ 05c1cf35ece1 Downloading 5.243MB
+ c1c4ece8848c Downloading 12.58MB
+ 05c1cf35ece1 Downloading 5.243MB
+ c1c4ece8848c Downloading 12.58MB
+ c1c4ece8848c Downloading 12.58MB
+ 05c1cf35ece1 Downloading 5.243MB
+ c1c4ece8848c Downloading 14.68MB
+ 05c1cf35ece1 Downloading 5.243MB
+ c1c4ece8848c Downloading 14.68MB
+ 05c1cf35ece1 Downloading 6.291MB
+ 05c1cf35ece1 Downloading 7.34MB
+ c1c4ece8848c Downloading 15.73MB
+ 05c1cf35ece1 Downloading 7.34MB
+ c1c4ece8848c Downloading 16.78MB
+ 05c1cf35ece1 Downloading 7.34MB
+ c1c4ece8848c Downloading 16.78MB
+ c1c4ece8848c Downloading 16.78MB
+ 05c1cf35ece1 Downloading 7.34MB
+ 05c1cf35ece1 Downloading 7.34MB
+ c1c4ece8848c Downloading 16.78MB
+ c1c4ece8848c Downloading 16.78MB
+ 05c1cf35ece1 Downloading 7.34MB
+ 05c1cf35ece1 Downloading 8.389MB
+ c1c4ece8848c Downloading 16.78MB
+ 05c1cf35ece1 Downloading 8.389MB
+ c1c4ece8848c Downloading 18.87MB
+ 05c1cf35ece1 Downloading 8.389MB
+ c1c4ece8848c Downloading 18.87MB
+ 05c1cf35ece1 Downloading 9.437MB
+ c1c4ece8848c Downloading 19.92MB
+ 05c1cf35ece1 Downloading 9.437MB
+ c1c4ece8848c Downloading 19.92MB
+ 05c1cf35ece1 Downloading 9.437MB
+ c1c4ece8848c Downloading 19.92MB
+ c1c4ece8848c Downloading 19.92MB
+ 05c1cf35ece1 Downloading 9.437MB
+ c1c4ece8848c Downloading 19.92MB
+ 05c1cf35ece1 Downloading 9.437MB
+ 05c1cf35ece1 Downloading 9.437MB
+ c1c4ece8848c Downloading 19.92MB
+ 05c1cf35ece1 Downloading 10.49MB
+ c1c4ece8848c Downloading 22.02MB
+ 05c1cf35ece1 Downloading 11.53MB
+ c1c4ece8848c Downloading 22.02MB
+ 05c1cf35ece1 Downloading 12.58MB
+ c1c4ece8848c Downloading 22.02MB
+ 05c1cf35ece1 Downloading 12.58MB
+ c1c4ece8848c Downloading 22.02MB
+ c1c4ece8848c Downloading 22.02MB
+ 05c1cf35ece1 Downloading 12.58MB
+ c1c4ece8848c Downloading 23.07MB
+ 05c1cf35ece1 Downloading 12.58MB
+ 05c1cf35ece1 Downloading 12.58MB
+ c1c4ece8848c Downloading 23.07MB
+ 05c1cf35ece1 Downloading 12.58MB
+ c1c4ece8848c Downloading 23.07MB
+ c1c4ece8848c Downloading 25.17MB
+ 05c1cf35ece1 Downloading 12.58MB
+ 05c1cf35ece1 Downloading 12.58MB
+ c1c4ece8848c Downloading 25.17MB
+ c1c4ece8848c Downloading 25.17MB
+ 05c1cf35ece1 Downloading 12.58MB
+ 05c1cf35ece1 Downloading 12.58MB
+ c1c4ece8848c Downloading 25.17MB
+ 05c1cf35ece1 Downloading 14.68MB
+ c1c4ece8848c Downloading 25.17MB
+ 05c1cf35ece1 Downloading 14.68MB
+ c1c4ece8848c Downloading 26.21MB
+ 05c1cf35ece1 Downloading 14.68MB
+ c1c4ece8848c Downloading 28.31MB
+ 05c1cf35ece1 Downloading 14.68MB
+ c1c4ece8848c Downloading 28.31MB
+ 05c1cf35ece1 Downloading 14.68MB
+ c1c4ece8848c Downloading 29.36MB
+ 05c1cf35ece1 Downloading 14.68MB
+ c1c4ece8848c Downloading 30.41MB
+ 05c1cf35ece1 Downloading 15.73MB
+ c1c4ece8848c Downloading 30.41MB
+ 05c1cf35ece1 Downloading 15.73MB
+ c1c4ece8848c Downloading 30.41MB
+ 05c1cf35ece1 Downloading 15.73MB
+ c1c4ece8848c Downloading 30.41MB
+ c1c4ece8848c Downloading 32.51MB
+ 05c1cf35ece1 Downloading 15.73MB
+ 05c1cf35ece1 Downloading 16.78MB
+ c1c4ece8848c Downloading 32.51MB
+ 05c1cf35ece1 Downloading 17.83MB
+ c1c4ece8848c Downloading 33.55MB
+ 05c1cf35ece1 Downloading 17.83MB
+ c1c4ece8848c Downloading 34.6MB
+ 05c1cf35ece1 Downloading 17.83MB
+ c1c4ece8848c Downloading 35.65MB
+ c1c4ece8848c Downloading 35.65MB
+ 05c1cf35ece1 Downloading 17.83MB
+ 05c1cf35ece1 Downloading 17.83MB
+ c1c4ece8848c Downloading 35.65MB
+ c1c4ece8848c Downloading 36.7MB
+ 05c1cf35ece1 Downloading 17.83MB
+ 05c1cf35ece1 Downloading 17.83MB
+ c1c4ece8848c Downloading 36.7MB
+ 05c1cf35ece1 Downloading 17.83MB
+ c1c4ece8848c Downloading 37.75MB
+ c1c4ece8848c Downloading 38.8MB
+ 05c1cf35ece1 Downloading 19.92MB
+ c1c4ece8848c Downloading 39.85MB
+ 05c1cf35ece1 Downloading 20.97MB
+ 05c1cf35ece1 Downloading 20.97MB
+ c1c4ece8848c Downloading 40.89MB
+ 05c1cf35ece1 Downloading 20.97MB
+ c1c4ece8848c Downloading 40.89MB
+ 05c1cf35ece1 Downloading 20.97MB
+ c1c4ece8848c Downloading 40.89MB
+ 05c1cf35ece1 Downloading 20.97MB
+ c1c4ece8848c Downloading 40.89MB
+ 05c1cf35ece1 Downloading 20.97MB
+ c1c4ece8848c Downloading 40.89MB
+ c1c4ece8848c Downloading 40.89MB
+ 05c1cf35ece1 Downloading 22.02MB
+ 05c1cf35ece1 Downloading 22.02MB
+ c1c4ece8848c Downloading 42.99MB
+ 05c1cf35ece1 Downloading 22.02MB
+ c1c4ece8848c Downloading 42.99MB
+ 05c1cf35ece1 Downloading 23.07MB
+ c1c4ece8848c Downloading 45.09MB
+ 05c1cf35ece1 Downloading 23.07MB
+ c1c4ece8848c Downloading 45.09MB
+ 05c1cf35ece1 Downloading 24.12MB
+ c1c4ece8848c Downloading 45.09MB
+ 05c1cf35ece1 Downloading 24.12MB
+ c1c4ece8848c Downloading 45.09MB
+ c1c4ece8848c Downloading 46.14MB
+ 05c1cf35ece1 Downloading 24.12MB
+ c1c4ece8848c Downloading 47.19MB
+ 05c1cf35ece1 Downloading 24.12MB
+ 05c1cf35ece1 Downloading 24.12MB
+ c1c4ece8848c Downloading 48.23MB
+ c1c4ece8848c Downloading 49.28MB
+ 05c1cf35ece1 Downloading 24.12MB
+ c1c4ece8848c Downloading 50.33MB
+ 05c1cf35ece1 Downloading 25.17MB
+ c1c4ece8848c Downloading 50.33MB
+ 05c1cf35ece1 Downloading 26.21MB
+ 05c1cf35ece1 Downloading 26.21MB
+ c1c4ece8848c Downloading 50.33MB
+ c1c4ece8848c Downloading 50.33MB
+ 05c1cf35ece1 Downloading 26.21MB
+ 05c1cf35ece1 Downloading 26.21MB
+ c1c4ece8848c Downloading 51.38MB
+ 05c1cf35ece1 Downloading 26.21MB
+ c1c4ece8848c Downloading 52.43MB
+ c1c4ece8848c Downloading 53.48MB
+ 05c1cf35ece1 Downloading 26.21MB
+ c1c4ece8848c Downloading 54.53MB
+ 05c1cf35ece1 Downloading 26.21MB
+ c1c4ece8848c Downloading 55.57MB
+ 05c1cf35ece1 Downloading 26.21MB
+ c1c4ece8848c Downloading 56.62MB
+ 05c1cf35ece1 Downloading 28.31MB
+ 05c1cf35ece1 Downloading 28.31MB
+ c1c4ece8848c Downloading 56.62MB
+ 05c1cf35ece1 Downloading 28.31MB
+ c1c4ece8848c Downloading 56.62MB
+ c1c4ece8848c Downloading 56.62MB
+ 05c1cf35ece1 Downloading 28.31MB
+ 05c1cf35ece1 Downloading 28.31MB
+ c1c4ece8848c Downloading 57.67MB
+ 05c1cf35ece1 Downloading 28.31MB
+ c1c4ece8848c Downloading 58.72MB
+ 05c1cf35ece1 Downloading 28.31MB
+ c1c4ece8848c Downloading 59.77MB
+ 05c1cf35ece1 Downloading 29.36MB
+ c1c4ece8848c Downloading 60.82MB
+ 05c1cf35ece1 Downloading 30.41MB
+ c1c4ece8848c Downloading 61.87MB
+ c1c4ece8848c Downloading 61.87MB
+ 05c1cf35ece1 Downloading 30.41MB
+ c1c4ece8848c Downloading 61.87MB
+ 05c1cf35ece1 Downloading 30.41MB
+ c1c4ece8848c Downloading 61.87MB
+ 05c1cf35ece1 Downloading 30.41MB
+ 05c1cf35ece1 Downloading 31.46MB
+ c1c4ece8848c Downloading 61.87MB
+ 05c1cf35ece1 Downloading 31.46MB
+ c1c4ece8848c Downloading 61.87MB
+ c1c4ece8848c Downloading 62.91MB
+ 05c1cf35ece1 Downloading 31.46MB
+ c1c4ece8848c Downloading 65.01MB
+ 05c1cf35ece1 Downloading 31.46MB
+ 05c1cf35ece1 Downloading 31.46MB
+ c1c4ece8848c Downloading 65.01MB
+ c1c4ece8848c Downloading 65.01MB
+ 05c1cf35ece1 Downloading 32.51MB
+ 05c1cf35ece1 Downloading 32.51MB
+ c1c4ece8848c Downloading 65.01MB
+ 05c1cf35ece1 Downloading 32.51MB
+ c1c4ece8848c Downloading 65.01MB
+ 05c1cf35ece1 Downloading 32.51MB
+ c1c4ece8848c Downloading 65.01MB
+ 05c1cf35ece1 Downloading 33.55MB
+ c1c4ece8848c Downloading 66.06MB
+ 05c1cf35ece1 Downloading 33.55MB
+ c1c4ece8848c Downloading 66.06MB
+ 05c1cf35ece1 Downloading 33.55MB
+ c1c4ece8848c Downloading 68.16MB
+ c1c4ece8848c Downloading 68.16MB
+ 05c1cf35ece1 Downloading 33.55MB
+ 05c1cf35ece1 Downloading 33.55MB
+ c1c4ece8848c Downloading 68.16MB
+ 05c1cf35ece1 Downloading 33.55MB
+ c1c4ece8848c Downloading 69.21MB
+ c1c4ece8848c Downloading 69.21MB
+ 05c1cf35ece1 Downloading 33.55MB
+ c1c4ece8848c Downloading 69.21MB
+ 05c1cf35ece1 Downloading 33.55MB
+ 05c1cf35ece1 Downloading 35.65MB
+ c1c4ece8848c Downloading 69.21MB
+ 05c1cf35ece1 Downloading 35.65MB
+ c1c4ece8848c Downloading 69.21MB
+ c1c4ece8848c Downloading 70.25MB
+ 05c1cf35ece1 Downloa
+
+[… truncated 49285 chars …]
