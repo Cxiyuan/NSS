@@ -10,6 +10,7 @@ RUN echo "cache_bust=${CACHE_BUST}"
 RUN apt-get update && apt-get install -y --no-install-recommends \
     curl \
     jq \
+    librdkafka-dev \
     && rm -rf /var/lib/apt/lists/*
 
 WORKDIR /opt/probe
@@ -33,6 +34,11 @@ RUN for site_dir in /opt/zeek/share/zeek/site /usr/local/zeek/share/zeek/site; d
             break; \
         fi; \
     done
+
+# 安装 Kafka 日志输出插件（通过 KAFKA_BROKERS 环境变量控制开关）
+RUN printf 'y\n/usr\n' | zkg install seisollc/zeek-kafka --version v1.2.0 && \
+    zeek -N Seiso::Kafka && \
+    echo "[OK] zeek-kafka plugin installed"
 
 # run.sh 是统一的启动入口，自动组装 BPF 过滤规则 + 加载扩展脚本
 # 用法：

@@ -14,5 +14,11 @@ services:
     # run.sh 自动加载 extend/filters/*.bpf 中的 BPF 规则
     # 以及 extend/*.zeek 中的 Zeek 扩展脚本
     # 参数：监听网卡名（默认 ens192，由 Dockerfile 的 CMD 提供）
+    # 可选环境变量：
+    #   KAFKA_BROKERS=kafka:9092  启用 Kafka 日志输出
+    #   KAFKA_TOPIC=probe         指定 Kafka topic（默认 probe）
+    environment:
+      - KAFKA_BROKERS=${KAFKA_BROKERS:-}
+      - KAFKA_TOPIC=${KAFKA_TOPIC:-probe}
     command: ens192
     restart: unless-stopped

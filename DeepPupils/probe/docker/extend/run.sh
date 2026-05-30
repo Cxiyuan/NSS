@@ -58,6 +58,25 @@ for zeek_file in "$EXTEND_DIR"/*.zeek; do
     echo "[zeek-run] loaded script: $(basename "$zeek_file")" >&2
 done
 
+# ---------- Kafka 日志输出（可选）----------
+kafka_scripts=()
+if [ -n "${KAFKA_BROKERS:-}" ]; then
+    kafka_cfg=$(mktemp /tmp/kafka-XXXXXX.zeek)
+    cat > "$kafka_cfg" <<-ZEK
+@load packages/zeek-kafka
+redef Kafka::send_all_active_logs = T;
+redef Kafka::topic_name = "${KAFKA_TOPIC:-probe}";
+redef Kafka::tag_json = T;
+redef Kafka::json_timestamps = JSON::TS_ISO8601;
+redef Kafka::kafka_conf = table(
+    ["metadata.broker.list"] = "${KAFKA_BROKERS}",
+    ["client.id"] = "probe"
+);
+ZEK
+    kafka_scripts+=("$kafka_cfg")
+    echo "[zeek-run] Kafka output enabled: ${KAFKA_BROKERS}" >&2
+fi
+
 # ---------- 执行 Zeek ----------
 echo "[zeek-run] starting zeek on interface $INTERFACE..." >&2
-exec zeek -i "$INTERFACE" "${BPF_ARGS[@]}" "${scripts[@]}"
+exec zeek -i "$INTERFACE" "${BPF_ARGS[@]}" "${scripts[@]}" "${kafka_scripts[@]}"
