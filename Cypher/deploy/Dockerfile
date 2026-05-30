@@ -33,7 +33,7 @@ WORKDIR /build
 RUN git clone --depth=1 --branch=${JOHN_VERSION} ${JOHN_REPO} john
 
 WORKDIR /build/john/src
-RUN ./configure ${SIMD_FLAGS} --enable-rexgen \
+RUN ./configure ${SIMD_FLAGS} \
     CFLAGS="-O3 -march=native -mtune=native" 2>&1 | tee /tmp/configure.log
 
 RUN make ${MAKE_FLAGS} \
