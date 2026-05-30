@@ -123,7 +123,7 @@ export default function KeywordSearchPage() {
               </div>
             )}
 
-            <h3>爬取结果 ({resultsTotal})</h3>
+            <h3>探测结果 ({resultsTotal})</h3>
             <ResultTable
               results={results}
               total={resultsTotal}

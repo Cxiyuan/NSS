@@ -110,7 +110,7 @@ export default function UrlCrawlPage() {
   return (
     <div className="page">
       <div className="page__main">
-        <h2>网站 URL 爬取</h2>
+        <h2>网站外链探测</h2>
         <TaskForm type="url_crawl" onSubmit={handleSubmit} disabled={status === 'running'} />
 
         {taskId && (
@@ -136,7 +136,7 @@ export default function UrlCrawlPage() {
               </div>
             )}
 
-            <h3>爬取结果 ({resultsTotal})</h3>
+            <h3>探测结果 ({resultsTotal})</h3>
             <ResultTable
               results={results}
               total={resultsTotal}

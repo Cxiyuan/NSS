@@ -29,7 +29,7 @@ export default function TaskForm({ type, onSubmit, disabled }) {
     <form onSubmit={handleSubmit} className="task-form">
       {type === 'url_crawl' ? (
         <div className="task-form__field">
-          <label htmlFor="tf-url">目标 URL</label>
+          <label htmlFor="tf-url">探测站点</label>
           <input
             id="tf-url"
             type="url"
@@ -76,7 +76,7 @@ export default function TaskForm({ type, onSubmit, disabled }) {
 
       <div className="task-form__row">
         <div className="task-form__field">
-          <label htmlFor="tf-depth">爬取深度</label>
+          <label htmlFor="tf-depth">探测深度</label>
           <input id="tf-depth" type="number" min={1} max={10} value={depth} onChange={e => setDepth(e.target.value)} />
         </div>
         <div className="task-form__field">
@@ -91,7 +91,7 @@ export default function TaskForm({ type, onSubmit, disabled }) {
       </div>
 
       <button type="submit" className="task-form__submit" disabled={disabled}>
-        {type === 'url_crawl' ? '开始爬取' : '开始搜索并爬取'}
+        {type === 'url_crawl' ? '开始探测' : '开始搜索并探测'}
       </button>
     </form>
   );

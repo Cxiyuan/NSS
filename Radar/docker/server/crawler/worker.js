@@ -159,6 +159,7 @@ async function run(taskConfig) {
               linkType: link.linkType,
               depth: currentDepth + 1,
               pageTitle: title,
+              isExternal: true,
             },
           });
         } else if (currentDepth < (depth || 3)) {

@@ -16,7 +16,7 @@ export default function App() {
             className={`app__tab ${tab === 'url' ? 'app__tab--active' : ''}`}
             onClick={() => setTab('url')}
           >
-            URL 爬取
+            外链探测
           </button>
           <button
             className={`app__tab ${tab === 'keyword' ? 'app__tab--active' : ''}`}
