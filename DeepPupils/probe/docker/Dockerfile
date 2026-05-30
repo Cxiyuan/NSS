@@ -34,6 +34,8 @@ RUN for site_dir in /opt/zeek/share/zeek/site /usr/local/zeek/share/zeek/site; d
         fi; \
     done
 
-# zeek-run.sh 是统一的启动入口，自动组装 BPF 过滤规则 + 加载扩展脚本
-# 也可直接传参：docker run ... probe-image eth0
-CMD ["/opt/probe/extend/zeek-run.sh"]
+# run.sh 是统一的启动入口，自动组装 BPF 过滤规则 + 加载扩展脚本
+# 用法：
+#   docker run ... probe                   # 默认 ens192
+#   docker run ... probe eth0              # 指定网卡
+CMD ["/opt/probe/extend/run.sh"]
