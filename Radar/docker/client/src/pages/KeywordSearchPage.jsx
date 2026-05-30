@@ -14,6 +14,7 @@ export default function KeywordSearchPage() {
   const [results, setResults] = useState([]);
   const [resultsTotal, setResultsTotal] = useState(0);
   const [page, setPage] = useState(1);
+  const [logs, setLogs] = useState([]);
   const taskIdRef = useRef(null);
 
   const onWSMessage = useCallback((data) => {
@@ -25,6 +26,9 @@ export default function KeywordSearchPage() {
       setResults(r => [data.result, ...r].slice(0, 200));
       setStats(s => ({ ...s, total: s.total + 1 }));
     }
+    if (data.type === 'log') {
+      setLogs(l => [...l.slice(-49), data]);
+    }
   }, []);
 
   useWebSocket(taskId, onWSMessage);
@@ -35,6 +39,7 @@ export default function KeywordSearchPage() {
   async function handleSubmit(config) {
     setResults([]);
     setStats({ crawled: 0, total: 0, external: 0, depth: 0 });
+    setLogs([]);
     setPage(1);
     try {
       const task = await api.createTask(config);
@@ -100,6 +105,17 @@ export default function KeywordSearchPage() {
                 <button onClick={handleExportPDF} className="btn btn--primary">Export PDF</button>
               )}
             </div>
+
+            {logs.length > 0 && (
+              <div className="crawl-logs">
+                {logs.map((l, i) => (
+                  <div key={i} className={`crawl-logs__entry crawl-logs__entry--${l.level}`}>
+                    <span className="crawl-logs__level">{l.level}</span>
+                    <span className="crawl-logs__msg">{l.message}</span>
+                  </div>
+                ))}
+              </div>
+            )}
 
             <h3>Results ({resultsTotal})</h3>
             <ResultTable

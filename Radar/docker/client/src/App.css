@@ -128,3 +128,11 @@ a:hover { text-decoration: underline; }
 .task-history__date { color: var(--color-text-muted); font-size: 11px; }
 .task-history__delete { padding: 0 10px; border: none; background: none; cursor: pointer; font-size: 16px; color: var(--color-text-muted); border-left: 1px solid var(--color-border); }
 .task-history__delete:hover { color: var(--color-error); background: #fef2f2; }
+
+/* === Crawl Logs === */
+.crawl-logs { background: var(--color-surface); border: 1px solid var(--color-border); border-radius: var(--radius); padding: 12px; margin-bottom: 16px; max-height: 200px; overflow-y: auto; }
+.crawl-logs__entry { display: flex; gap: 8px; padding: 3px 0; font-size: 12px; font-family: monospace; }
+.crawl-logs__entry--warn { color: #92400e; }
+.crawl-logs__entry--error { color: var(--color-error); font-weight: 600; }
+.crawl-logs__level { text-transform: uppercase; font-weight: 700; min-width: 36px; }
+.crawl-logs__msg { word-break: break-all; }
