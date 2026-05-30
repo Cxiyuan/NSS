@@ -19,7 +19,6 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     build-essential git curl ca-certificates \
     libssl-dev libgmp-dev libmpfr-dev libmpc-dev zlib1g-dev \
     libbz2-dev libpcap-dev libkrb5-dev libnss3-dev \
-    ocl-icd-opencl-dev opencl-headers \
     && rm -rf /var/lib/apt/lists/*
 
 ARG JOHN_VERSION=bleeding-jumbo
@@ -33,11 +32,13 @@ WORKDIR /build
 RUN git clone --depth=1 --branch=${JOHN_VERSION} ${JOHN_REPO} john
 
 WORKDIR /build/john/src
-RUN ./configure ${SIMD_FLAGS} \
+RUN ./configure ${SIMD_FLAGS} --disable-opencl \
     CFLAGS="-O3 -march=native -mtune=native" 2>&1 | tee /tmp/configure.log
 
-RUN make ${MAKE_FLAGS} \
-    && cp ../run/john /usr/local/bin/john
+# 单线程编译以捕获错误; 生产环境可改为 -j$(nproc)
+RUN make ${MAKE_FLAGS} 2>&1 | tee /tmp/make.log \
+    && cp ../run/john /usr/local/bin/john \
+    || (tail -50 /tmp/make.log; exit 1)
 
 RUN john --list=build-info 2>&1 | head -30
 
