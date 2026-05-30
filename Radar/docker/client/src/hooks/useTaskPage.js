@@ -4,11 +4,15 @@ import { useWebSocket } from './useWebSocket';
 import { useTaskPolling } from './useTaskPolling';
 
 const EMPTY_STATS = { crawled: 0, total: 0, external: 0, depth: 0, filtered: 0 };
-const SESSION_KEY = 'radarLastTaskId';
+
+function sessionKey(pdfPrefix) {
+  return pdfPrefix === 'search-results' ? 'radarTaskId_search' : 'radarTaskId_url';
+}
 
 export function useTaskPage({ showExternalCount = true, pdfPrefix = 'crawl-results' }) {
-  // Restore taskId from sessionStorage on mount
-  const [taskId, setTaskId] = useState(() => sessionStorage.getItem(SESSION_KEY));
+  const KEY = sessionKey(pdfPrefix);
+  // Restore taskId from sessionStorage on mount (separate key per page type)
+  const [taskId, setTaskId] = useState(() => sessionStorage.getItem(KEY));
   const [status, setStatus] = useState('idle');
   const [stats, setStats] = useState(EMPTY_STATS);
   const [liveResults, setLiveResults] = useState([]);
@@ -31,11 +35,11 @@ export function useTaskPage({ showExternalCount = true, pdfPrefix = 'crawl-resul
   // --- Persist taskId to sessionStorage ---
   useEffect(() => {
     if (taskId) {
-      sessionStorage.setItem(SESSION_KEY, taskId);
+      sessionStorage.setItem(KEY, taskId);
     } else {
-      sessionStorage.removeItem(SESSION_KEY);
+      sessionStorage.removeItem(KEY);
     }
-  }, [taskId]);
+  }, [taskId, KEY]);
 
   // --- Restore task data when taskId is set (from sessionStorage or user action) ---
   useEffect(() => {
