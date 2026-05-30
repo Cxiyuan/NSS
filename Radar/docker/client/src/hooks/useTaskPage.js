@@ -17,6 +17,7 @@ export function useTaskPage({ showExternalCount = true, pdfPrefix = 'crawl-resul
   const [page, setPage] = useState(1);
   const [logs, setLogs] = useState([]);
   const taskIdRef = useRef(null);
+  const pageRef = useRef(1);
 
   // --- Data loading (defined before effects that use it) ---
   async function loadResults(tid, p) {
@@ -47,6 +48,7 @@ export function useTaskPage({ showExternalCount = true, pdfPrefix = 'crawl-resul
         setStatus(task.status);
         if (task.stats) setStats(s => ({ ...s, ...task.stats }));
         taskIdRef.current = taskId;
+        pageRef.current = 1;
         loadResults(taskId, 1);
       } catch {
         if (!cancelled) {
@@ -73,6 +75,12 @@ export function useTaskPage({ showExternalCount = true, pdfPrefix = 'crawl-resul
         link_type: data.result.linkType ?? data.result.link_type,
       };
       setLiveResults(r => [result, ...r].slice(0, 20));
+      // Only update main results table when on page 1 (default crawling view)
+      // Prevents WS results from corrupting paginated data on pages 2+
+      if (pageRef.current === 1) {
+        setResults(r => [result, ...r]);
+        setResultsTotal(t => t + 1);
+      }
       setStats(s => ({
         ...s,
         total: s.total + 1,
@@ -97,6 +105,7 @@ export function useTaskPage({ showExternalCount = true, pdfPrefix = 'crawl-resul
     setStats(EMPTY_STATS);
     setLogs([]);
     setPage(1);
+    pageRef.current = 1;
     try {
       const task = await api.createTask(config);
       setTaskId(task.id);
@@ -109,6 +118,7 @@ export function useTaskPage({ showExternalCount = true, pdfPrefix = 'crawl-resul
   }
 
   function handlePageChange(p) {
+    pageRef.current = p;
     setPage(p);
     loadResults(taskIdRef.current, p);
   }
@@ -126,6 +136,7 @@ export function useTaskPage({ showExternalCount = true, pdfPrefix = 'crawl-resul
   }
 
   function handleSelectTask(task) {
+    pageRef.current = 1;
     setTaskId(task.id);
     setStatus(task.status);
     taskIdRef.current = task.id;
