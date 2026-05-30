@@ -19,7 +19,7 @@ describe('FilterEngine', () => {
       f.addFilter('*.qq.com');
       assert.ok(f.isFiltered('https://news.qq.com/page'));
       assert.ok(f.isFiltered('https://sports.qq.com/page'));
-      assert.strictEqual(f.isFiltered('https://qq.com/page'), false);
+      assert.ok(f.isFiltered('https://qq.com/page'));
     });
     it('matches suffix wildcard *gov.cn', () => {
       const f = new FilterEngine();

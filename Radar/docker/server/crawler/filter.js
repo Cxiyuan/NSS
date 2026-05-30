@@ -14,19 +14,26 @@ export class FilterEngine {
   }
 
   isFiltered(url) {
-    const domain = getDomain(url);
-    if (!domain) return false;
-
-    return this.#patterns.some(pattern => {
-      const regex = FilterEngine.#patternToRegex(pattern);
-      return regex.test(domain);
-    });
+    try {
+      // Use full hostname instead of getDomain() — preserves subdomains
+      // so *.sceea.cn correctly matches www.sceea.cn
+      const hostname = new URL(url).hostname;
+      if (!hostname) return false;
+      return this.#patterns.some(pattern => {
+        const regex = FilterEngine.#patternToRegex(pattern);
+        return regex.test(hostname);
+      });
+    } catch {
+      return false;
+    }
   }
 
   static #patternToRegex(pattern) {
     if (pattern.startsWith('*.')) {
       const base = pattern.slice(2).replace(/\./g, '\\.');
-      return new RegExp(`^[^.]+\\.${base}$`);
+      // Match any subdomain depth (including bare domain):
+      // e.g. *.sceea.cn matches sceea.cn, www.sceea.cn, deep.sub.sceea.cn
+      return new RegExp('(?:^.+\\.)?' + base + '$');
     }
     if (pattern.startsWith('*')) {
       const base = pattern.slice(1).replace(/\./g, '\\.');
