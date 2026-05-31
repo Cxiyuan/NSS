@@ -334,10 +334,11 @@ jobs:
         env:
           KAFKA_NODE_ID: 1
           KAFKA_PROCESS_ROLES: broker,controller
-          KAFKA_LISTENERS: PLAINTEXT://0.0.0.0:9092
+          KAFKA_LISTENERS: PLAINTEXT://0.0.0.0:9092,CONTROLLER://0.0.0.0:9093
           KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://localhost:9092
           KAFKA_CONTROLLER_LISTENER_NAMES: CONTROLLER
           KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: PLAINTEXT:PLAINTEXT,CONTROLLER:PLAINTEXT
+          KAFKA_CONTROLLER_QUORUM_VOTERS: 1@localhost:9093
           CLUSTER_ID: kafka-test-cluster
 
     steps:
@@ -364,7 +365,7 @@ jobs:
             echo "=== Kafka验证: $name (topic=$topic) ==="
 
             # 生成临时 Zeek Kafka 配置
-            cfg=$(mktemp /tmp/kafka_${name}.zeek)
+            cfg=$(mktemp /tmp/kafka_XXXXXX.zeek)
             echo '@load packages/zeek-kafka' >> "$cfg"
             echo 'redef Kafka::send_all_active_logs = T;' >> "$cfg"
             echo "redef Kafka::topic_name = \"${topic}\";" >> "$cfg"
