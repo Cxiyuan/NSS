@@ -365,16 +365,14 @@ jobs:
 
             # 生成临时 Zeek Kafka 配置
             cfg=$(mktemp /tmp/kafka_${name}.zeek)
-            cat > "$cfg" <<ZEK
-@load packages/zeek-kafka
-redef Kafka::send_all_active_logs = T;
-redef Kafka::topic_name = "${topic}";
-redef Kafka::tag_json = T;
-redef Kafka::kafka_conf = table(
-    ["metadata.broker.list"] = "localhost:9092",
-    ["message.timeout.ms"] = "10000"
-);
-ZEK
+            echo '@load packages/zeek-kafka' >> "$cfg"
+            echo 'redef Kafka::send_all_active_logs = T;' >> "$cfg"
+            echo "redef Kafka::topic_name = \"${topic}\";" >> "$cfg"
+            echo 'redef Kafka::tag_json = T;' >> "$cfg"
+            echo 'redef Kafka::kafka_conf = table(' >> "$cfg"
+            echo '    ["metadata.broker.list"] = "localhost:9092",' >> "$cfg"
+            echo '    ["message.timeout.ms"] = "10000"' >> "$cfg"
+            echo ');' >> "$cfg"
 
             # 运行 Zeek 离线分析，输出到 Kafka
             docker run --rm \
