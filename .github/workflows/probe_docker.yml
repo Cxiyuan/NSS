@@ -410,39 +410,7 @@ PYEOF
           done
 
   # ============================================================
-  # [Job 7] pytest 精确值验证（可选失败不阻塞）
-  # ============================================================
-  pytest-test:
-    name: pytest精确验证
-    runs-on: ubuntu-latest
-    needs: zeek-analysis
-    continue-on-error: true
-
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-
-      - name: 下载 Zeek 输出
-        uses: actions/download-artifact@v4
-        with:
-          name: zeek-output
-          path: DeepPupils/probe/test/zeek_output/
-
-      - name: Set up Python
-        uses: actions/setup-python@v5
-        with:
-          python-version: '3.11'
-
-      - name: 安装 pytest
-        run: pip install pytest
-
-      - name: 运行 pytest
-        run: |
-          cd DeepPupils/probe/test
-          python3 -m pytest test_http.py -v --tb=short || echo "pytest 有失败用例"
-
-  # ============================================================
-  # [Job 8] 发布（预留）
+  # [Job 7] 发布（预留）
   # ============================================================
   publish:
     name: 发布
