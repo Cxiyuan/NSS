@@ -326,7 +326,6 @@ jobs:
     name: Kafka验证
     runs-on: ubuntu-latest
     needs: [build-image, unit-test]
-    continue-on-error: true
     services:
       kafka:
         image: apache/kafka:latest
@@ -367,7 +366,7 @@ jobs:
 
             # 生成临时 Zeek Kafka 配置
             cfg=$(mktemp /tmp/kafka_XXXXXX.zeek)
-            echo '@load packages/zeek-kafka' >> "$cfg"
+            echo '@load zeek-kafka' >> "$cfg"
             echo 'redef Kafka::send_all_active_logs = T;' >> "$cfg"
             echo "redef Kafka::topic_name = \"${topic}\";" >> "$cfg"
             echo 'redef Kafka::tag_json = T;' >> "$cfg"
