@@ -366,6 +366,7 @@ jobs:
 
             # 生成临时 Zeek Kafka 配置
             cfg=$(mktemp /tmp/kafka_XXXXXX.zeek)
+            echo 'redef Kafka::debug = "all";' >> "$cfg"
             echo 'redef Kafka::send_all_active_logs = T;' >> "$cfg"
             echo "redef Kafka::topic_name = \"${topic}\";" >> "$cfg"
             echo 'redef Kafka::tag_json = T;' >> "$cfg"
@@ -374,7 +375,20 @@ jobs:
             echo '    ["message.timeout.ms"] = "10000"' >> "$cfg"
             echo ');' >> "$cfg"
 
+            # 验证 Kafka 连通性
+            echo "=== Testing Kafka connectivity ==="
+            for attempt in 1 2 3; do
+              if echo "test" | timeout 3 nc -w 2 localhost 9092; then
+                echo "Kafka reachable on attempt $attempt"
+                break
+              else
+                echo "Kafka NOT reachable on attempt $attempt, retry..."
+                sleep 2
+              fi
+            done 2>&1 || true
+
             # 运行 Zeek 离线分析，输出到 Kafka
+            echo "=== Running Zeek with Kafka ==="
             docker run --rm \
               --network host \
               -v "$(pwd):/pcap:ro" \
@@ -384,9 +398,11 @@ jobs:
               -r /pcap/${pcap} \
               /opt/probe/extend/http-extend.zeek \
               /kafka.zeek 2>&1
+            zeek_exit=$?
+            echo "Zeek exit code: $zeek_exit"
 
             # 等待 Kafka 写入完成
-            sleep 3
+            sleep 5
 
             # 消费 Kafka + 精确值验证
             python3 ../test_kafka_output.py \
