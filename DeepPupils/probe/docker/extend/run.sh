@@ -63,7 +63,6 @@ kafka_scripts=()
 if [ -n "${KAFKA_BROKERS:-}" ]; then
     kafka_cfg=$(mktemp /tmp/kafka-XXXXXX.zeek)
     cat > "$kafka_cfg" <<-ZEK
-@load packages/zeek-kafka
 redef Kafka::send_all_active_logs = T;
 redef Kafka::topic_name = "${KAFKA_TOPIC:-probe}";
 redef Kafka::tag_json = T;

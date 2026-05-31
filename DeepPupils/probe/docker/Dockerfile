@@ -50,14 +50,6 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     && ldconfig \
     && zeek -N Seiso::Kafka \
     && echo "[OK] zeek-kafka plugin installed" \
-    && for site_dir in /usr/local/zeek/share/zeek/site /opt/zeek/share/zeek/site; do \
-        if [ -d "$site_dir" ]; then \
-            mkdir -p "$site_dir/packages/zeek-kafka" && \
-            cp -r /tmp/zeek-kafka/scripts/* "$site_dir/packages/zeek-kafka/" && \
-            echo "[OK] zeek-kafka scripts installed to $site_dir/packages/zeek-kafka"; \
-            break; \
-        fi; \
-    done \
     && apt-get purge -y g++ make cmake pkgconf \
     && rm -rf /var/lib/apt/lists/* \
     || echo "[WARN] zeek-kafka build failed (non-critical)"
