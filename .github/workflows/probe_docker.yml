@@ -389,22 +389,11 @@ jobs:
             sleep 3
 
             # 消费 Kafka + 精确值验证
-            python3 <<PYEOF
-import sys
-sys.path.insert(0, "..")
-from test_kafka_output import consume, extract_records, SCENARIO_VERIFIERS
-
-msgs = consume("localhost:9092", "${topic}", timeout_ms=8000)
-recs = extract_records(msgs)
-print(f"消费 {len(msgs)} 条消息, {len(recs)} 条 HTTP 记录")
-
-verifier = SCENARIO_VERIFIERS.get("${name}")
-if verifier:
-    verifier(recs)
-    print(f"✅ ${name} 通过")
-else:
-    print(f"⚠️ 跳过 ${name} (无验证器)")
-PYEOF
+            python3 ../test_kafka_output.py \
+              --broker localhost:9092 \
+              --topic "${topic}" \
+              --scenario "${name}" \
+              --timeout 8000
           done
 
   # ============================================================
