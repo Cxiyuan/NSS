@@ -1,0 +1,7 @@
+# General
+.reasonix/
+.DS_Store
+.claude/
+
+# Project specific
+DeepPupils/probe/docs/
