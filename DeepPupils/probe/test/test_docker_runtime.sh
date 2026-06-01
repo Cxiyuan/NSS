@@ -91,9 +91,14 @@ ZEEK_EXIT=$?
 set -e
 check "Zeek completed (exit code: $ZEEK_EXIT)" "$ZEEK_EXIT"
 
-echo "--- probe container logs ---"
-docker logs "$PROBE_CONTAINER" 2>&1 || true
+echo "--- probe container stdout+stderr ---"
+docker logs "$PROBE_CONTAINER" 2>&1 || echo "(no logs captured)"
 echo "--- end probe logs ---"
+
+# 验证容器 exit code 时内部发生了什么
+echo "--- docker inspect exit code ---"
+docker inspect "$PROBE_CONTAINER" --format '{{.State.ExitCode}} {{.State.Error}} {{.State.FinishedAt}}' 2>/dev/null || true
+echo "--- end inspect ---"
 
 # ============================================================
 # 3. 验证 Kafka 消息
