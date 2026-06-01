@@ -21,6 +21,17 @@ COPY extend/ /opt/probe/extend/
 
 ENV PATH="/opt/probe/bin:${PATH}"
 
+# 安装附加协议脚本包（FTP、RDP、X509、SMB、MySQL、PostgreSQL、Redis）
+# 这些以 Zeek 脚本包形式存在，非内置 BiF 分析器
+RUN if [ -f /usr/local/zeek/share/zeek/policy/protocols/mysql/__load__.zeek ]; then \
+        echo "[OK] protocol packages already present"; \
+    else \
+        apt-get update -qq && apt-get install -y -qq --no-install-recommends \
+            zeek \
+            && rm -rf /var/lib/apt/lists/* \
+            && echo "[OK] zeek packages reinstalled"; \
+    fi
+
 # 在 local.zeek 中注册扩展脚本（兜底机制）
 # 主加载入口：run.sh 通过命令行参数加载扩展脚本
 # 兜  底：local.zeek 中的 @load 在 zeek -r 离线分析等场景生效

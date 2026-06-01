@@ -29,7 +29,7 @@ export {
 # 加载协议脚本包（确保日志流可用）
 # ============================================================
 
-@load policy/protocols/ftp
+@load base/protocols/ftp
 @load policy/protocols/rdp
 @load policy/protocols/x509
 @load policy/protocols/smb
