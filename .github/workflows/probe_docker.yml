@@ -214,7 +214,7 @@ jobs:
               -w /output \
               --entrypoint zeek \
               ${{ env.IMAGE_NAME }}:${{ github.sha }} \
-              -r /pcap/${pcap} ${bpf} "${bpf_val}" ${scripts}
+              -r /pcap/${pcap} ${bpf} ${bpf_val:+"${bpf_val}"} ${scripts}
 
             echo "--- generated log files ---"
             ls -la "$tmpdir/"
