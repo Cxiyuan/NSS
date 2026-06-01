@@ -23,6 +23,7 @@ docker compose ps
 | `PROBE_KAFKA_BROKERS` | `localhost:9092` | Kafka broker 地址 |
 | `PROBE_KAFKA_TOPIC` | `probe` | Kafka topic 名称 |
 | `PROBE_INTERFACE` | `ens192` | 监听网卡接口 |
+| `KAFKA_LOG_RETENTION_DAYS` | `15` | Kafka 日志保留天数 |
 | `PROBE_LOG_DIR` | `/var/log/probe` | 日志挂载目录 |
 
 ## 架构
