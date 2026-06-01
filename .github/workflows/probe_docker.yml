@@ -288,13 +288,12 @@ jobs:
             || { echo "[FAIL] $files_json: total_bytes missing or zero"; exit 1; }
 
   # ============================================================
-  # [Job 5] pytest 精确值验证（可选失败不阻塞）
+  # [Job 5] pytest 精确值验证
   # ============================================================
   pytest-test:
     name: pytest精确验证
     runs-on: ubuntu-latest
     needs: zeek-analysis
-    continue-on-error: true
 
     steps:
       - name: Checkout code
@@ -317,7 +316,7 @@ jobs:
       - name: 运行 pytest
         run: |
           cd DeepPupils/probe/test
-          python3 -m pytest test_http.py -v --tb=short || echo "pytest 有失败用例"
+          python3 -m pytest test_http.py -v --tb=short
 
   # ============================================================
   # [Job 6] Kafka 日志输出验证
@@ -326,7 +325,6 @@ jobs:
     name: Kafka验证
     runs-on: ubuntu-latest
     needs: [build-image, unit-test]
-    continue-on-error: true
     services:
       kafka:
         image: apache/kafka:latest
@@ -368,6 +366,7 @@ jobs:
             # 生成临时 Zeek Kafka 配置
             cfg=$(mktemp /tmp/kafka_XXXXXX.zeek)
             echo 'redef Kafka::send_all_active_logs = T;' >> "$cfg"
+            echo 'redef Kafka::max_wait_on_shutdown = 30000;' >> "$cfg"
             echo "redef Kafka::topic_name = \"${topic}\";" >> "$cfg"
             echo 'redef Kafka::tag_json = T;' >> "$cfg"
             echo 'redef Kafka::kafka_conf = table(' >> "$cfg"
@@ -417,7 +416,7 @@ jobs:
   publish:
     name: 发布
     runs-on: ubuntu-latest
-    needs: [build-image, field-assertion]
+    needs: [build-image, field-assertion, kafka-verify, pytest-test]
     if: github.ref == 'refs/heads/main' && github.event_name == 'push'
 
     steps:
