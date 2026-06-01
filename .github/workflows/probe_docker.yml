@@ -99,7 +99,7 @@ jobs:
           cd DeepPupils/probe/test
           mkdir -p pcap
           python3 http_traffic.py -s auth -o pcap/http_auth.pcap -c 3
-          python3 http_traffic.py -s proxies -o pcap/http_proxy.pcap -c 1
+          python3 http_traffic.py -s proxy -o pcap/http_proxy.pcap -c 1
           python3 http_traffic.py -s cookies -o pcap/http_cookies.pcap -c 1
           python3 http_traffic.py -s methods -o pcap/http_methods.pcap -c 1
           python3 conn_traffic.py -o pcap/conn.pcap -c 3
