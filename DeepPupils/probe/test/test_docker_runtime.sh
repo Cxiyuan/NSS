@@ -79,17 +79,47 @@ docker run -d --name "$KAFKA_CONTAINER" --network "$NET" \
     apache/kafka:latest
 
 echo "[step 2/5] Waiting for Kafka to be ready..."
-KAFKA_READY=1
-for i in $(seq 1 120); do
-    if docker exec "$KAFKA_CONTAINER" \
-        /opt/kafka/bin/kafka-topics.sh --bootstrap-server localhost:9092 --list \
-        >/dev/null 2>&1; then
-        KAFKA_READY=0
+
+# 先探测 kafka-topics.sh 路径
+KAFKA_BIN=""
+for candidate in /opt/kafka/bin/kafka-topics.sh /opt/bitnami/kafka/bin/kafka-topics.sh /usr/bin/kafka-topics.sh; do
+    if docker exec "$KAFKA_CONTAINER" test -x "$candidate" 2>/dev/null; then
+        KAFKA_BIN="$candidate"
         break
+    fi
+done
+echo "  Kafka binary: ${KAFKA_BIN:-auto-detect}"
+
+# 轮询等待 Kafka 就绪（最多 180s — CI 机器较慢）
+KAFKA_READY=1
+for i in $(seq 1 180); do
+    # 方法 1: kafka-topics.sh（如果找到）
+    if [ -n "$KAFKA_BIN" ]; then
+        if docker exec "$KAFKA_CONTAINER" "$KAFKA_BIN" --bootstrap-server localhost:9092 --list >/dev/null 2>&1; then
+            KAFKA_READY=0
+            echo "  Kafka ready in ~${i}s (via kafka-topics)"
+            break
+        fi
+    fi
+    # 方法 2: 日志关键字
+    if docker logs "$KAFKA_CONTAINER" 2>&1 | grep -qi "started\|KafkaServer.*start\|leader.*election.*complete" >/dev/null 2>&1; then
+        # 等端口确认
+        sleep 3
+        if [ -n "$KAFKA_BIN" ]; then
+            if docker exec "$KAFKA_CONTAINER" "$KAFKA_BIN" --bootstrap-server localhost:9092 --list >/dev/null 2>&1; then
+                KAFKA_READY=0
+                echo "  Kafka ready in ~${i}s (via log+probe)"
+                break
+            fi
+        else
+            KAFKA_READY=0
+            echo "  Kafka ready in ~${i}s (via log, no binary)"
+            break
+        fi
     fi
     sleep 1
 done
-check "Kafka ready in ${i}s" "$KAFKA_READY"
+check "Kafka ready" "$KAFKA_READY"
 
 # ============================================================
 # 3. 启动 Probe（run.sh 入口点 + PROBE_PCAP 离线模式）
