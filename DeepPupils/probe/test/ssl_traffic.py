@@ -202,20 +202,24 @@ def build_tls_handshake(tls_version=0x0303, sni=None, full_handshake=False):
 
 
 def generate_ssl_pcap(output_file, session_count=3):
-    """Generate PCAP with TLS/SSL handshakes."""
+    """Generate PCAP with TLS/SSL handshakes.
+
+    All sessions include full handshake (ClientHello + ServerHello + Certificate)
+    so Zeek's SSL analyzer can produce complete ssl.log entries with version field.
+    """
     packets = []
 
-    # TLS 1.3 ClientHello (with SNI)
-    packets.extend(build_tls_handshake(tls_version=0x0304, sni="example.com"))
+    # Session 1: TLS 1.3-indicating ClientHello + TLS 1.2 wire handshake, SNI
+    packets.extend(build_tls_handshake(tls_version=0x0304, sni="example.com", full_handshake=True))
 
-    # TLS 1.2 ClientHello (with SNI)
-    packets.extend(build_tls_handshake(tls_version=0x0303, sni="google.com"))
+    # Session 2: TLS 1.2 ClientHello + full handshake, SNI
+    packets.extend(build_tls_handshake(tls_version=0x0303, sni="google.com", full_handshake=True))
 
-    # Full TLS 1.2 handshake (ClientHello + ServerHello + Certificate)
+    # Session 3: TLS 1.2 ClientHello + full handshake, SNI (different server)
     packets.extend(build_tls_handshake(tls_version=0x0303, sni="github.com", full_handshake=True))
 
-    # TLS 1.3 ClientHello without SNI
-    packets.extend(build_tls_handshake(tls_version=0x0304, sni=None))
+    # Session 4: TLS 1.3-indicating ClientHello + full handshake, no SNI
+    packets.extend(build_tls_handshake(tls_version=0x0304, sni=None, full_handshake=True))
 
     wrpcap(output_file, packets)
     print(f"[+] ssl: {output_file} ({len(packets)} packets, 4 handshakes)")
