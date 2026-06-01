@@ -54,8 +54,9 @@ def build_dns_rr_a(name, ttl, ip, rtype=1, rclass=1):
 
 def build_dns_rr_aaaa(name, ttl, ipv6, rtype=28, rclass=1):
     """Build a DNS AAAA resource record."""
+    import ipaddress
     name_wire = dns_name_to_wire(name)
-    ip_bytes = bytes(int(x, 16) for x in ipv6.split(':'))
+    ip_bytes = ipaddress.IPv6Address(ipv6).packed
     rdlength = len(ip_bytes)
     return name_wire + struct.pack(">HHIH", rtype, rclass, ttl, rdlength) + ip_bytes
 
