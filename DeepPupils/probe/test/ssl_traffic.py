@@ -177,6 +177,5 @@ def generate_ssl_pcap(output_file):
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Generate SSL/TLS log test PCAP")
     parser.add_argument("-o", "--output", type=str, default="ssl.pcap")
-    parser.add_argument("-c", "--count", type=int, default=3)
     args = parser.parse_args()
     generate_ssl_pcap(args.output)
