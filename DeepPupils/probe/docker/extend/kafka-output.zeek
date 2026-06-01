@@ -26,6 +26,18 @@ export {
 }
 
 # ============================================================
+# 加载协议脚本包（确保日志流可用）
+# ============================================================
+
+@load policy/protocols/ftp
+@load policy/protocols/rdp
+@load policy/protocols/x509
+@load policy/protocols/smb
+@load policy/protocols/mysql
+@load policy/protocols/postgresql
+@load policy/protocols/redis
+
+# ============================================================
 # 顶层 redef（解析时生效）
 # ============================================================
 
@@ -38,8 +50,6 @@ redef Kafka::json_timestamps = JSON::TS_ISO8601;
 # ============================================================
 # 为各日志流注册 Kafka 写入器（显式 add_filter）
 # 在 priority=5 执行，早于 kafka_only 的 remove_filter (priority=-10)
-# 和默认 ASCII 写入器的 filter name 空串不同，Kafka 写入器
-# 使用 stream_id 名称作为 filter name
 # ============================================================
 
 event zeek_init() &priority=5
@@ -47,7 +57,7 @@ event zeek_init() &priority=5
     if ( Probe::kafka_brokers == "" )
         return;
 
-    # 为 5 个核心日志流添加 Kafka 写入器
+    # ---- 核心协议 ----
     Log::add_filter(Conn::LOG, [$name="kafka-conn",
         $writer=Log::WRITER_KAFKAWRITER,
         $config=table(["stream_id"]="conn")]);
@@ -68,6 +78,40 @@ event zeek_init() &priority=5
         $writer=Log::WRITER_KAFKAWRITER,
         $config=table(["stream_id"]="ssl")]);
 
+    # ---- 文件分析框架 ----
+    Log::add_filter(Files::LOG, [$name="kafka-files",
+        $writer=Log::WRITER_KAFKAWRITER,
+        $config=table(["stream_id"]="files")]);
+
+    # ---- 应用层协议 ----
+    Log::add_filter(FTP::LOG, [$name="kafka-ftp",
+        $writer=Log::WRITER_KAFKAWRITER,
+        $config=table(["stream_id"]="ftp")]);
+
+    Log::add_filter(RDP::LOG, [$name="kafka-rdp",
+        $writer=Log::WRITER_KAFKAWRITER,
+        $config=table(["stream_id"]="rdp")]);
+
+    Log::add_filter(X509::LOG, [$name="kafka-x509",
+        $writer=Log::WRITER_KAFKAWRITER,
+        $config=table(["stream_id"]="x509")]);
+
+    Log::add_filter(SMB::LOG, [$name="kafka-smb",
+        $writer=Log::WRITER_KAFKAWRITER,
+        $config=table(["stream_id"]="smb")]);
+
+    Log::add_filter(MySQL::LOG, [$name="kafka-mysql",
+        $writer=Log::WRITER_KAFKAWRITER,
+        $config=table(["stream_id"]="mysql")]);
+
+    Log::add_filter(PostgreSQL::LOG, [$name="kafka-postgresql",
+        $writer=Log::WRITER_KAFKAWRITER,
+        $config=table(["stream_id"]="postgresql")]);
+
+    Log::add_filter(Redis::LOG, [$name="kafka-redis",
+        $writer=Log::WRITER_KAFKAWRITER,
+        $config=table(["stream_id"]="redis")]);
+
     print fmt("[probe] Kafka output enabled: %s topic=%s",
               Probe::kafka_brokers, Probe::kafka_topic);
 }
@@ -84,12 +128,20 @@ event zeek_init() &priority=-10
     if ( ! Probe::kafka_only )
         return;
 
-    # 移除 5 个核心日志流的默认 ASCII 写入器（filter name 为空串）
+    # 移除所有已注册流的默认 ASCII 写入器（filter name 为空串）
     Log::remove_filter(Conn::LOG, "");
     Log::remove_filter(HTTP::LOG, "");
     Log::remove_filter(DNS::LOG, "");
     Log::remove_filter(SSH::LOG, "");
     Log::remove_filter(SSL::LOG, "");
+    Log::remove_filter(Files::LOG, "");
+    Log::remove_filter(FTP::LOG, "");
+    Log::remove_filter(RDP::LOG, "");
+    Log::remove_filter(X509::LOG, "");
+    Log::remove_filter(SMB::LOG, "");
+    Log::remove_filter(MySQL::LOG, "");
+    Log::remove_filter(PostgreSQL::LOG, "");
+    Log::remove_filter(Redis::LOG, "");
 
     print "[probe] ASCII log output disabled, Kafka-only mode active";
 }

@@ -35,6 +35,24 @@ docker compose ps
                      (BPF 过滤组播)      (不写本地文件)
 ```
 
+## 输出到 Kafka 的日志类型（共 12 种）
+
+| stream_id | 日志内容 | 说明 |
+|-----------|---------|------|
+| `conn` | 连接日志 | TCP/UDP/ICMP 连接元数据 |
+| `http` | HTTP 日志 | 含 22 个扩展字段（Authorization/Cookie/Body/XFF 等） |
+| `dns` | DNS 日志 | 查询、响应类型、NXDOMAIN 等 |
+| `ssh` | SSH 日志 | 版本号协商 |
+| `ssl` | SSL/TLS 日志 | 版本、密码套件、SNI |
+| `files` | 文件分析日志 | Zeek Files 框架 |
+| `ftp` | FTP 日志 | 文件传输协议 |
+| `rdp` | RDP 日志 | 远程桌面协议 |
+| `x509` | X.509 证书日志 | TLS 证书信息 |
+| `smb` | SMB 日志 | Windows 文件共享 |
+| `mysql` | MySQL 日志 | SQL 查询审计 |
+| `postgresql` | PostgreSQL 日志 | SQL 查询审计 |
+| `redis` | Redis 日志 | 缓存/消息队列协议 |
+
 ## 验证数据
 
 ```bash
