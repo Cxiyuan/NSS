@@ -365,13 +365,17 @@ jobs:
 
             # 生成临时 Zeek Kafka 配置
             cfg=$(mktemp /tmp/kafka_XXXXXX.zeek)
-            echo 'redef Kafka::logs_to_send = set(HTTP::LOG, Conn::LOG);' >> "$cfg"
-            echo 'redef Kafka::max_wait_on_shutdown = 30000;' >> "$cfg"
             echo "redef Kafka::topic_name = \"${topic}\";" >> "$cfg"
+            echo 'redef Kafka::max_wait_on_shutdown = 30000;' >> "$cfg"
             echo 'redef Kafka::tag_json = T;' >> "$cfg"
             echo 'redef Kafka::kafka_conf = table(' >> "$cfg"
             echo '    ["metadata.broker.list"] = "localhost:9092"' >> "$cfg"
             echo ');' >> "$cfg"
+            echo 'event zeek_init() &priority=5' >> "$cfg"
+            echo '{' >> "$cfg"
+            echo '    Log::add_filter(HTTP::LOG, [$name="kafka-http", $writer=Log::WRITER_KAFKAWRITER,' >> "$cfg"
+            echo '        $config=table(["stream_id"]="http")]);' >> "$cfg"
+            echo '}' >> "$cfg"
 
             # 运行 Zeek 离线分析，输出到 Kafka
             echo "=== Running Zeek with Kafka ==="
