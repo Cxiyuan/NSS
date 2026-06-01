@@ -11,7 +11,7 @@
 #    事件触发时插件已初始化完毕，redef 不会生效。
 # ============================================================
 
-@load Seiso::Kafka
+# zeek-kafka 是编译到 Zeek 中的 BiF 插件，无需 @load
 
 module Probe;
 
