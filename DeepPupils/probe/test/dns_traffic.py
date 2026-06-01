@@ -18,7 +18,7 @@ conf.verb = 0
 
 
 def random_ip():
-    return f"10.{random.randint(0,255)}.{random.randint(0,255)}.{random.randint(0,255)}.{random.randint(1,254)}"
+    return f"10.{random.randint(0,255)}.{random.randint(0,255)}.{random.randint(1,254)}"
 
 
 def random_port():
