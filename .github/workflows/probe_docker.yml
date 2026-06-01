@@ -109,6 +109,10 @@ jobs:
           python3 http_traffic.py -s boundary_mixed_encoding -o pcap/http_boundary_mixed_encoding.pcap -c 1
           python3 http_traffic.py -s multicast -o pcap/http_multicast.pcap -c 1
           python3 http_traffic.py -s http_files -o pcap/http_http_files.pcap -c 1
+          python3 conn_traffic.py -o pcap/conn.pcap -c 3
+          python3 dns_traffic.py -o pcap/dns.pcap -c 3
+          python3 ssh_traffic.py -o pcap/ssh.pcap -c 3
+          python3 ssl_traffic.py -o pcap/ssl.pcap -c 3
           ls -la pcap/
 
       - name: 上传流量文件
@@ -154,28 +158,68 @@ jobs:
             rm -rf "$tmpdir"
             mkdir -p "$tmpdir"
 
-            if [ "$name" = "http_multicast" ]; then
-              docker run --rm \
-                -v "$(pwd):/pcap:ro" \
-                -v "$(pwd)/${tmpdir}:/output" \
-                -w /output \
-                --entrypoint zeek \
-                ${{ env.IMAGE_NAME }}:${{ github.sha }} \
-                -r /pcap/${pcap} -f 'not net 224.0.0.0/4 and not net ff00::/8' /opt/probe/extend/http-extend.zeek
-            else
-              docker run --rm \
-                -v "$(pwd):/pcap:ro" \
-                -v "$(pwd)/${tmpdir}:/output" \
-                -w /output \
-                --entrypoint zeek \
-                ${{ env.IMAGE_NAME }}:${{ github.sha }} \
-                -r /pcap/${pcap} /opt/probe/extend/http-extend.zeek
-            fi
+            # 根据 pcap 名称选择 Zeek 扩展脚本和日志类型
+            case "$name" in
+              http_multicast)
+                scripts="/opt/probe/extend/http-extend.zeek"
+                bpf="-f"
+                bpf_val="not net 224.0.0.0/4 and not net ff00::/8"
+                logfile="http.log"
+                kind="http"
+                ;;
+              http_*)
+                scripts="/opt/probe/extend/http-extend.zeek"
+                bpf=""
+                bpf_val=""
+                logfile="http.log"
+                kind="http"
+                ;;
+              conn)
+                scripts=""
+                bpf=""
+                bpf_val=""
+                logfile="conn.log"
+                kind="conn"
+                ;;
+              dns)
+                scripts=""
+                bpf=""
+                bpf_val=""
+                logfile="dns.log"
+                kind="dns"
+                ;;
+              ssh)
+                scripts=""
+                bpf=""
+                bpf_val=""
+                logfile="ssh.log"
+                kind="ssh"
+                ;;
+              ssl)
+                scripts=""
+                bpf=""
+                bpf_val=""
+                logfile="ssl.log"
+                kind="ssl"
+                ;;
+              *)
+                echo "[SKIP] $name: unknown scenario, skipping"
+                continue
+                ;;
+            esac
+
+            docker run --rm \
+              -v "$(pwd):/pcap:ro" \
+              -v "$(pwd)/${tmpdir}:/output" \
+              -w /output \
+              --entrypoint zeek \
+              ${{ env.IMAGE_NAME }}:${{ github.sha }} \
+              -r /pcap/${pcap} ${bpf} ${bpf_val} ${scripts}
 
             echo "--- generated log files ---"
             ls -la "$tmpdir/"
 
-            python3 ../convert_zeek_logs.py "${tmpdir}/http.log" "../zeek_output/${name}.json"
+            python3 ../convert_zeek_logs.py "${tmpdir}/${logfile}" "../zeek_output/${name}.json" "${kind}"
 
             # http_files 场景额外转换 files.log (Zeek Files 框架)
             if [ "$name" = "http_http_files" ]; then
@@ -287,6 +331,56 @@ jobs:
             && echo "[PASS] $files_json: total_bytes > 0" \
             || { echo "[FAIL] $files_json: total_bytes missing or zero"; exit 1; }
 
+      - name: jq 其他协议字段检查
+        run: |
+          cd DeepPupils/probe/test/zeek_output
+
+          echo "=== conn.log fields ==="
+          if [ -s conn.json ]; then
+            jq -s -e 'any(.[]; .conn.proto != null)' conn.json \
+              && echo "[PASS] conn: proto" || { echo "[FAIL] conn: proto missing"; exit 1; }
+            jq -s -e 'any(.[]; .conn.orig_bytes != null)' conn.json \
+              && echo "[PASS] conn: orig_bytes" || { echo "[FAIL] conn: orig_bytes missing"; exit 1; }
+            jq -s -e 'any(.[]; .conn.resp_bytes != null)' conn.json \
+              && echo "[PASS] conn: resp_bytes" || { echo "[FAIL] conn: resp_bytes missing"; exit 1; }
+            jq -s -e 'any(.[]; .conn.conn_state != null)' conn.json \
+              && echo "[PASS] conn: conn_state" || { echo "[FAIL] conn: conn_state missing"; exit 1; }
+          else
+            echo "[SKIP] conn.json missing"
+          fi
+
+          echo "=== dns.log fields ==="
+          if [ -s dns.json ]; then
+            jq -s -e 'any(.[]; .dns.query != null)' dns.json \
+              && echo "[PASS] dns: query" || { echo "[FAIL] dns: query missing"; exit 1; }
+            jq -s -e 'any(.[]; .dns.qtype_name != null)' dns.json \
+              && echo "[PASS] dns: qtype_name" || { echo "[FAIL] dns: qtype_name missing"; exit 1; }
+            jq -s -e 'any(.[]; .dns.rcode_name != null)' dns.json \
+              && echo "[PASS] dns: rcode_name" || { echo "[FAIL] dns: rcode_name missing"; exit 1; }
+          else
+            echo "[SKIP] dns.json missing"
+          fi
+
+          echo "=== ssh.log fields ==="
+          if [ -s ssh.json ]; then
+            jq -s -e 'any(.[]; .ssh.client != null)' ssh.json \
+              && echo "[PASS] ssh: client" || { echo "[FAIL] ssh: client missing"; exit 1; }
+            jq -s -e 'any(.[]; .ssh.server != null)' ssh.json \
+              && echo "[PASS] ssh: server" || { echo "[FAIL] ssh: server missing"; exit 1; }
+          else
+            echo "[SKIP] ssh.json missing"
+          fi
+
+          echo "=== ssl.log fields ==="
+          if [ -s ssl.json ]; then
+            jq -s -e 'any(.[]; .ssl.version != null)' ssl.json \
+              && echo "[PASS] ssl: version" || { echo "[FAIL] ssl: version missing"; exit 1; }
+            jq -s -e 'any(.[]; .ssl.cipher != null)' ssl.json \
+              && echo "[PASS] ssl: cipher" || { echo "[FAIL] ssl: cipher missing"; exit 1; }
+          else
+            echo "[SKIP] ssl.json missing"
+          fi
+
   # ============================================================
   # [Job 5] pytest 精确值验证
   # ============================================================
@@ -316,7 +410,7 @@ jobs:
       - name: 运行 pytest
         run: |
           cd DeepPupils/probe/test
-          python3 -m pytest test_http.py -v --tb=short
+          python3 -m pytest test_http.py test_conn.py test_dns.py test_ssh.py test_ssl.py -v --tb=short
 
   # ============================================================
   # [Job 6] Kafka 日志输出验证
@@ -363,19 +457,66 @@ jobs:
             topic="probe_${name}"
             echo "=== Kafka验证: $name (topic=$topic) ==="
 
-            # 生成临时 Zeek Kafka 配置
+            # 根据场景生成 Zeek Kafka 配置
             cfg=$(mktemp /tmp/kafka_XXXXXX.zeek)
-            echo "redef Kafka::topic_name = \"${topic}\";" >> "$cfg"
             echo 'redef Kafka::max_wait_on_shutdown = 30000;' >> "$cfg"
             echo 'redef Kafka::tag_json = T;' >> "$cfg"
             echo 'redef Kafka::kafka_conf = table(' >> "$cfg"
             echo '    ["metadata.broker.list"] = "localhost:9092"' >> "$cfg"
             echo ');' >> "$cfg"
-            echo 'event zeek_init() &priority=5' >> "$cfg"
-            echo '{' >> "$cfg"
-            echo '    Log::add_filter(HTTP::LOG, [$name="kafka-http", $writer=Log::WRITER_KAFKAWRITER,' >> "$cfg"
-            echo '        $config=table(["stream_id"]="http")]);' >> "$cfg"
-            echo '}' >> "$cfg"
+
+            case "$name" in
+              http_*)
+                echo "redef Kafka::topic_name = \"${topic}\";" >> "$cfg"
+                echo 'event zeek_init() &priority=5 {' >> "$cfg"
+                echo '    Log::add_filter(HTTP::LOG, [$name="kafka-http", $writer=Log::WRITER_KAFKAWRITER,' >> "$cfg"
+                echo '        $config=table(["stream_id"]="http")]);' >> "$cfg"
+                echo '}' >> "$cfg"
+                scripts="/opt/probe/extend/http-extend.zeek"
+                scenario="$name"
+                ;;
+              conn)
+                echo "redef Kafka::topic_name = \"${topic}\";" >> "$cfg"
+                echo 'event zeek_init() &priority=5 {' >> "$cfg"
+                echo '    Log::add_filter(Conn::LOG, [$name="kafka-conn", $writer=Log::WRITER_KAFKAWRITER,' >> "$cfg"
+                echo '        $config=table(["stream_id"]="conn")]);' >> "$cfg"
+                echo '}' >> "$cfg"
+                scripts=""
+                scenario="conn"
+                ;;
+              dns)
+                echo "redef Kafka::topic_name = \"${topic}\";" >> "$cfg"
+                echo 'event zeek_init() &priority=5 {' >> "$cfg"
+                echo '    Log::add_filter(DNS::LOG, [$name="kafka-dns", $writer=Log::WRITER_KAFKAWRITER,' >> "$cfg"
+                echo '        $config=table(["stream_id"]="dns")]);' >> "$cfg"
+                echo '}' >> "$cfg"
+                scripts=""
+                scenario="dns"
+                ;;
+              ssh)
+                echo "redef Kafka::topic_name = \"${topic}\";" >> "$cfg"
+                echo 'event zeek_init() &priority=5 {' >> "$cfg"
+                echo '    Log::add_filter(SSH::LOG, [$name="kafka-ssh", $writer=Log::WRITER_KAFKAWRITER,' >> "$cfg"
+                echo '        $config=table(["stream_id"]="ssh")]);' >> "$cfg"
+                echo '}' >> "$cfg"
+                scripts=""
+                scenario="ssh"
+                ;;
+              ssl)
+                echo "redef Kafka::topic_name = \"${topic}\";" >> "$cfg"
+                echo 'event zeek_init() &priority=5 {' >> "$cfg"
+                echo '    Log::add_filter(SSL::LOG, [$name="kafka-ssl", $writer=Log::WRITER_KAFKAWRITER,' >> "$cfg"
+                echo '        $config=table(["stream_id"]="ssl")]);' >> "$cfg"
+                echo '}' >> "$cfg"
+                scripts=""
+                scenario="ssl"
+                ;;
+              *)
+                echo "[SKIP] $name: unknown scenario for Kafka"
+                rm -f "$cfg"
+                continue
+                ;;
+            esac
 
             # 运行 Zeek 离线分析，输出到 Kafka
             echo "=== Running Zeek with Kafka ==="
@@ -386,7 +527,7 @@ jobs:
               --entrypoint zeek \
               ${{ env.IMAGE_NAME }}:${{ github.sha }} \
               -r /pcap/${pcap} \
-              /opt/probe/extend/http-extend.zeek \
+              ${scripts} \
               /kafka.zeek 2>&1
             zeek_exit=$?
             echo "Zeek exit code: $zeek_exit"
@@ -398,7 +539,7 @@ jobs:
             python3 ../test_kafka_output.py \
               --broker localhost:9092 \
               --topic "${topic}" \
-              --scenario "${name}" \
+              --scenario "${scenario}" \
               --timeout 8000
           done
 

@@ -172,6 +172,64 @@ def verify_http_files(records):
     print(f"  [PASS] http_files: {len(http_recs)} 条 HTTP 记录")
 
 
+def verify_conn(records):
+    """连接日志验证：TCP/UDP/ICMP 连接字段"""
+    assert len(records) > 0, "conn: 无消息到达 Kafka"
+
+    protos = {r.get("proto") for r in records if r.get("proto")}
+    assert "tcp" in protos or "udp" in protos, f"conn: 缺少 tcp/udp 协议, 有 {protos}"
+
+    orig_bytes = [r.get("orig_bytes") for r in records if r.get("orig_bytes") is not None]
+    resp_bytes = [r.get("resp_bytes") for r in records if r.get("resp_bytes") is not None]
+    assert len(orig_bytes) > 0, "conn: 缺少 orig_bytes"
+    assert len(resp_bytes) > 0, "conn: 缺少 resp_bytes"
+
+    states = {r.get("conn_state") for r in records if r.get("conn_state")}
+    assert len(states) > 0, "conn: 缺少 conn_state"
+    print(f"  [PASS] conn: {len(records)} 条, protos={protos}, states={states}")
+
+
+def verify_dns(records):
+    """DNS 日志验证：query, qtype, rcode"""
+    assert len(records) > 0, "dns: 无消息到达 Kafka"
+
+    queries = [r.get("query") for r in records if r.get("query")]
+    assert len(queries) > 0, "dns: 缺少 query 字段"
+
+    qtypes = {r.get("qtype_name") for r in records if r.get("qtype_name")}
+    assert len(qtypes) > 0, "dns: 缺少 qtype_name"
+
+    rcode_names = {r.get("rcode_name") for r in records if r.get("rcode_name")}
+    assert "NXDOMAIN" in rcode_names, "dns: 缺少 NXDOMAIN 响应"
+    print(f"  [PASS] dns: {len(records)} 条, qtypes={qtypes}")
+
+
+def verify_ssh(records):
+    """SSH 日志验证：版本号交换"""
+    assert len(records) > 0, "ssh: 无消息到达 Kafka"
+
+    clients = [r.get("client") for r in records if r.get("client")]
+    servers = [r.get("server") for r in records if r.get("server")]
+    assert len(clients) > 0, "ssh: 缺少 client 版本"
+    assert len(servers) > 0, "ssh: 缺少 server 版本"
+    assert all("SSH-" in c for c in clients), "ssh: client 版本格式异常"
+    print(f"  [PASS] ssh: {len(records)} 条, clients={len(clients)}, servers={len(servers)}")
+
+
+def verify_ssl(records):
+    """SSL/TLS 日志验证：版本、密码套件"""
+    assert len(records) > 0, "ssl: 无消息到达 Kafka"
+
+    versions = {r.get("version") for r in records if r.get("version")}
+    assert len(versions) > 0, "ssl: 缺少 version 字段"
+
+    ciphers = [r.get("cipher") for r in records if r.get("cipher")]
+    assert len(ciphers) > 0, "ssl: 缺少 cipher 字段"
+
+    snis = [r.get("server_name") for r in records if r.get("server_name")]
+    print(f"  [PASS] ssl: {len(records)} 条, versions={versions}, sni_count={len(snis)}")
+
+
 # ============================================================
 # Kafka 消息解析
 # ============================================================
@@ -190,13 +248,21 @@ SCENARIO_VERIFIERS = {
     "http_boundary_special_char": verify_boundary_special_char,
     "http_boundary_mixed_encoding": verify_boundary_mixed_encoding,
     "http_http_files": verify_http_files,
+    "conn": verify_conn,
+    "dns": verify_dns,
+    "ssh": verify_ssh,
+    "ssl": verify_ssl,
 }
 
 
 def extract_records(messages):
-    """从 Kafka JSON 消息中提取 http 记录。
-    Kafka 插件 tag_json=T 时输出格式：{"http": {fields...}} 或 {"conn": {fields...}}
+    """从 Kafka JSON 消息中提取记录。
+    Kafka 插件 tag_json=T 时输出格式：{"stream_id": {fields...}}
+    支持的 stream_id: http, conn, dns, ssh, ssl, files, ...
     """
+    # 这些是 Zeek 元数据键，非日志流
+    meta_keys = {"ts", "uid", "kind", "_scenario"}
+
     records = []
     for msg in messages:
         try:
@@ -204,18 +270,20 @@ def extract_records(messages):
             payload = json.loads(raw)
         except (json.JSONDecodeError, UnicodeDecodeError, AttributeError):
             continue
-        
-        # 处理 tag_json 格式
+
+        # 处理 tag_json 格式：找到第一个非元数据的子对象
         if isinstance(payload, dict):
-            # 如果有 "http" 键，提取里面的字段
-            if "http" in payload and isinstance(payload["http"], dict):
-                records.append(payload["http"])
-            # 如果有 "conn" 键（连接日志），暂不处理
-            elif "conn" in payload:
-                pass
-            # 直接是 http 字段（无 tag_json）
-            elif payload.get("method") or payload.get("status_code"):
-                records.append(payload)
+            extracted = False
+            for key, val in payload.items():
+                if isinstance(val, dict) and key not in meta_keys:
+                    records.append(val)
+                    extracted = True
+                    break
+            if not extracted:
+                # 直接是日志字段（无 tag_json）
+                if payload.get("method") or payload.get("status_code") or payload.get("proto") or \
+                   payload.get("query") or payload.get("client") or payload.get("version"):
+                    records.append(payload)
     
     return records
 
