@@ -200,8 +200,9 @@ def extract_records(messages):
     records = []
     for msg in messages:
         try:
-            payload = json.loads(msg.value.decode("utf-8"))
-        except (json.JSONDecodeError, UnicodeDecodeError):
+            raw = msg.value.decode("utf-8") if isinstance(msg.value, bytes) else msg.value
+            payload = json.loads(raw)
+        except (json.JSONDecodeError, UnicodeDecodeError, AttributeError):
             continue
         
         # 处理 tag_json 格式
