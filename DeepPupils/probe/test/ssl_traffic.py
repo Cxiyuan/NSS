@@ -47,10 +47,11 @@ def build_client_hello(tls_version=0x0303, sni=None):
 
     extensions = b""
 
-    # SNI extension (0x0000)
+    # SNI extension (0x0000) — RFC 6066 format:
+    # ServerNameList: length + ServerName{name_type(1B) + name_len(2B) + name(NB)}
     if sni:
         sni_b = sni.encode()
-        sni_entry = struct.pack(">H", len(sni_b)) + sni_b
+        sni_entry = struct.pack(">BH", 0x00, len(sni_b)) + sni_b
         sni_list = struct.pack(">H", len(sni_entry)) + sni_entry
         extensions += struct.pack(">HH", 0x0000, len(sni_list)) + sni_list
 
