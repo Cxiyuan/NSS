@@ -268,7 +268,7 @@ jobs:
         run: |
           cd DeepPupils/probe/test/zeek_output
           shopt -s nullglob
-          for json in *.json; do
+          for json in http_*.json; do
             [[ "$json" == *_files.json ]] && continue
             if [ ! -s "$json" ]; then
               echo "[SKIP] $json is empty, skipping validation"
@@ -285,7 +285,7 @@ jobs:
           cd DeepPupils/probe/test/zeek_output
           shopt -s nullglob
           echo "=== Verify http-extend fields exist (column presence) ==="
-          for json in *.json; do
+          for json in http_*.json; do
             [[ "$json" == *_files.json ]] && continue
             if [ ! -s "$json" ]; then
               continue

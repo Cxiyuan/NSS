@@ -1,12 +1,11 @@
 #!/usr/bin/env python3
 """Generate TLS/SSL handshake PCAPs for ssl.log verification.
 
-Crafts TCP sessions with TLS handshake records that Zeek detects
-and logs as ssl.log entries:
-- TLS 1.3 ClientHello with SNI extension
-- TLS 1.2 ClientHello with SNI extension
-- TLS 1.3 full handshake (ClientHello + ServerHello + Certificate)
-- TLS connection with resumed session
+Creates TCP sessions with TLS handshakes that Zeek detects and logs
+as ssl.log entries with version and cipher fields populated.
+
+Each session: TCP handshake → ClientHello → ServerHello → ServerHelloDone → FIN
+Skips Certificate to avoid random bytes confusing Zeek's parser.
 """
 import argparse
 import random
@@ -25,204 +24,153 @@ def random_port():
     return random.randint(49152, 65535)
 
 
-def build_tls_record(content_type, version, payload):
+def tls_record(content_type, version, payload):
     """Build a TLS record layer: content_type(1) + version(2) + length(2) + payload"""
     return struct.pack(">BHH", content_type, version, len(payload)) + payload
 
 
-def build_tls_client_hello(tls_version=0x0303, sni=None, ciphers=None):
+def tls_handshake_msg(msg_type, body):
+    """Build a TLS Handshake message: type(1) + 3-byte-length + body"""
+    return struct.pack(">B", msg_type) + struct.pack(">I", len(body))[1:4] + body
+
+
+def build_client_hello(tls_version=0x0303, sni=None):
     """Build a TLS ClientHello handshake message."""
-    # TLS record layer: Handshake(22), version
-    random_bytes = bytes([random.randint(0, 255) for _ in range(32)])
-    session_id = bytes([random.randint(0, 255) for _ in range(16)])
+    random_bytes = bytes(range(32))
+    session_id = bytes(range(32))
 
-    if ciphers is None:
-        ciphers = [0x1301, 0x1302, 0x1303, 0xc02b, 0xc02f]  # TLS 1.3 + 1.2 ciphers
-
-    cipher_suites = b"".join(struct.pack(">H", c) for c in ciphers)
-    compression = b"\x00"  # null compression
+    # Cipher suites (TLS 1.3 + 1.2)
+    ciphers = struct.pack(">HHHHHH",
+        0x1301, 0x1302, 0x1303,      # TLS 1.3 ciphers
+        0xc02b, 0xc02f, 0xcca8,      # TLS 1.2 ciphers
+    )
 
     extensions = b""
 
-    # SNI extension (type 0)
+    # SNI extension (0x0000)
     if sni:
-        sni_bytes = sni.encode()
-        sni_entry = struct.pack(">H", len(sni_bytes)) + sni_bytes
+        sni_b = sni.encode()
+        sni_entry = struct.pack(">H", len(sni_b)) + sni_b
         sni_list = struct.pack(">H", len(sni_entry)) + sni_entry
-        sni_ext = struct.pack(">HH", 0x0000, len(sni_list)) + sni_list
-        extensions += sni_ext
+        extensions += struct.pack(">HH", 0x0000, len(sni_list)) + sni_list
 
-    # Supported versions extension (type 43) - indicates TLS 1.3 capability
-    if tls_version >= 0x0304:
-        sv_ext = struct.pack(">HHB", 0x002b, 3, 2) + struct.pack(">H", tls_version)
-        # Also add TLS 1.2 as supported
-        sv_ext = struct.pack(">HHB", 0x002b, 5, 4) + struct.pack(">HH", 0x0303, tls_version)
-        extensions += sv_ext
+    # Supported versions (0x002b) — always present
+    versions = [0x0303, tls_version] if tls_version >= 0x0304 else [0x0303]
+    sv_body = struct.pack("B" + "H" * len(versions), len(versions) * 2, *versions)
+    extensions += struct.pack(">HH", 0x002b, len(sv_body)) + sv_body
 
-    # Supported groups extension
-    groups = [0x001d, 0x0017, 0x0018]  # x25519, secp256r1, secp384r1
-    groups_data = struct.pack(">H" + "H" * len(groups), len(groups) * 2, *groups)
-    extensions += struct.pack(">HH", 0x000a, len(groups_data)) + groups_data
+    # Supported groups (0x000a)
+    groups = struct.pack(">HHH", 0x001d, 0x0017, 0x0018)
+    ext_data = struct.pack(">H", len(groups)) + groups
+    extensions += struct.pack(">HH", 0x000a, len(ext_data)) + ext_data
 
-    # Signature algorithms extension
-    sig_algs = [0x0804, 0x0805, 0x0403]  # rsa_pss_rsae_sha256, etc.
-    sig_data = struct.pack(">H" + "H" * len(sig_algs), len(sig_algs) * 2, *sig_algs)
-    extensions += struct.pack(">HH", 0x000d, len(sig_data)) + sig_data
+    # Signature algorithms (0x000d)
+    algs = struct.pack(">HHH", 0x0804, 0x0805, 0x0403)
+    ext_data = struct.pack(">H", len(algs)) + algs
+    extensions += struct.pack(">HH", 0x000d, len(ext_data)) + ext_data
 
-    # ClientHello handshake body
-    hello_version = 0x0303  # legacy version
-    hello_body = struct.pack(">H", hello_version)
-    hello_body += random_bytes
-    hello_body += struct.pack("B", len(session_id)) + session_id
-    hello_body += struct.pack(">H", len(cipher_suites)) + cipher_suites
-    hello_body += struct.pack("B", len(compression)) + compression
-    hello_body += struct.pack(">H", len(extensions)) + extensions
+    # Extended master secret (0x0017)
+    extensions += struct.pack(">HH", 0x0017, 0x0000)
 
-    # Handshake header: type=1 (ClientHello), length
-    handshake_msg = struct.pack(">BI", 0x01, len(hello_body)) + hello_body
+    # Renegotiation info (0xff01)
+    extensions += struct.pack(">HHB", 0xff01, 0x0001, 0x00)
 
-    return build_tls_record(0x16, 0x0301, handshake_msg)
+    body = struct.pack(">H", 0x0303)  # legacy_version = TLS 1.2
+    body += random_bytes
+    body += struct.pack("B", len(session_id)) + session_id
+    body += struct.pack(">H", len(ciphers)) + ciphers
+    body += struct.pack(">H", 0x0100)  # compression: length(1) + null(1)
+    body += struct.pack(">H", len(extensions)) + extensions
+
+    return tls_record(0x16, 0x0301, tls_handshake_msg(0x01, body))
 
 
-def build_tls_server_hello(session_id=None):
-    """Build a TLS 1.2 ServerHello handshake message."""
-    random_bytes = bytes([random.randint(0, 255) for _ in range(32)])
-    if session_id is None:
-        session_id = bytes([random.randint(0, 255) for _ in range(16)])
+def build_server_hello(cipher_suite=0xc02b):
+    """Build a TLS 1.2 ServerHello handshake message.
 
-    hello_version = 0x0303  # TLS 1.2
-    cipher_suite = 0xc02b  # TLS_ECDHE_ECDSA_WITH_AES_128_GCM_SHA256
-    compression = 0x00
+    No Certificate is sent — Zeek can determine version and cipher
+    from ServerHello alone.
+    """
+    random_bytes = bytes(range(32, 64))
+    session_id = bytes(range(32))
 
-    hello_body = struct.pack(">H", hello_version)
-    hello_body += random_bytes
-    hello_body += struct.pack("B", len(session_id)) + session_id
-    hello_body += struct.pack(">H", 2) + struct.pack(">H", cipher_suite)
-    hello_body += struct.pack("B", 1) + struct.pack("B", compression)
+    body = struct.pack(">H", 0x0303)  # server_version = TLS 1.2
+    body += random_bytes
+    body += struct.pack("B", len(session_id)) + session_id
+    body += struct.pack(">H", cipher_suite)
+    body += struct.pack("B", 0x00)  # compression: null
 
-    handshake_msg = struct.pack(">BI", 0x02, len(hello_body)) + hello_body
-    return build_tls_record(0x16, 0x0303, handshake_msg)
+    return tls_record(0x16, 0x0303, tls_handshake_msg(0x02, body))
 
 
-def build_tls_certificate():
-    """Build a basic TLS Certificate handshake message (self-signed dummy)."""
-    # Dummy certificate data
-    cert_data = bytes([random.randint(0, 255) for _ in range(128)])
-
-    # Certificate message body (RFC 5246)
-    cert_body = struct.pack(">I", len(cert_data) + 3)  # total cert chain length
-    cert_body += struct.pack(">I", len(cert_data))  # first cert length
-    cert_body += cert_data  # certificate data
-    # Add extensions (empty for simplicity)
-    cert_body += struct.pack(">H", 0)  # extensions length
-
-    handshake_msg = struct.pack(">BI", 0x0b, len(cert_body)) + cert_body
-    return build_tls_record(0x16, 0x0303, handshake_msg)
+def build_server_hello_done():
+    """Build a TLS ServerHelloDone handshake message (empty body)."""
+    return tls_record(0x16, 0x0303, tls_handshake_msg(0x0e, b""))
 
 
-def build_tls_change_cipher_spec():
-    """Build TLS ChangeCipherSpec message."""
-    return build_tls_record(0x14, 0x0303, b"\x01")
-
-
-def build_tls_finished():
-    """Build TLS Finished handshake message (dummy)."""
-    verify_data = bytes([random.randint(0, 255) for _ in range(12)])
-    handshake_msg = struct.pack(">BI", 0x14, len(verify_data)) + verify_data
-    return build_tls_record(0x16, 0x0303, handshake_msg)
-
-
-def build_tls_handshake(tls_version=0x0303, sni=None, full_handshake=False):
-    """Build packets for a TLS handshake TCP session."""
+def build_tls_session(tls_version=0x0303, sni=None, cipher=0xc02b):
+    """Build a full TCP+TLS session: handshake → ClientHello → ServerHello → FIN."""
     packets = []
     src_ip = random_ip()
     dst_ip = random_ip()
     sport = random_port()
     dport = 443
     seq = random.randint(1000, 99999999)
+    ack_seq = random.randint(1000, 99999999)
 
-    # TCP SYN
+    # --- TCP handshake ---
     packets.append(IP(src=src_ip, dst=dst_ip) / TCP(sport=sport, dport=dport, flags='S', seq=seq))
-    syn_ack_seq = random.randint(1000, 99999999)
-    packets.append(IP(src=dst_ip, dst=src_ip) / TCP(sport=dport, dport=sport, flags='SA', seq=syn_ack_seq, ack=seq + 1))
-    client_seq = seq + 1
-    server_seq = syn_ack_seq + 1
-    packets.append(IP(src=src_ip, dst=dst_ip) / TCP(sport=sport, dport=dport, flags='A', seq=client_seq, ack=server_seq))
+    packets.append(IP(src=dst_ip, dst=src_ip) / TCP(sport=dport, dport=sport, flags='SA', seq=ack_seq, ack=seq + 1))
+    packets.append(IP(src=src_ip, dst=dst_ip) / TCP(sport=sport, dport=dport, flags='A', seq=seq + 1, ack=ack_seq + 1))
 
-    # TLS ClientHello
-    ch = build_tls_client_hello(tls_version=tls_version, sni=sni)
-    packets.append(
-        IP(src=src_ip, dst=dst_ip) / TCP(sport=sport, dport=dport, flags='PA', seq=client_seq, ack=server_seq)
-        / Raw(load=ch)
-    )
-    client_seq += len(ch)
+    c_seq = seq + 1
+    s_seq = ack_seq + 1
 
-    # ACK
-    packets.append(IP(src=dst_ip, dst=src_ip) / TCP(sport=dport, dport=sport, flags='A', seq=server_seq, ack=client_seq))
+    # --- ClientHello ---
+    ch = build_client_hello(tls_version=tls_version, sni=sni)
+    packets.append(IP(src=src_ip, dst=dst_ip) / TCP(sport=sport, dport=dport, flags='PA', seq=c_seq, ack=s_seq) / Raw(load=ch))
+    c_seq += len(ch)
 
-    if full_handshake:
-        # ServerHello
-        sh = build_tls_server_hello()
-        server_data = sh
+    # Server ACK of ClientHello
+    packets.append(IP(src=dst_ip, dst=src_ip) / TCP(sport=dport, dport=sport, flags='A', seq=s_seq, ack=c_seq))
 
-        # Certificate
-        cert = build_tls_certificate()
-        server_data += cert
+    # --- ServerHello + ServerHelloDone ---
+    sh = build_server_hello(cipher_suite=cipher)
+    shd = build_server_hello_done()
+    server_data = sh + shd
 
-        # ServerHelloDone
-        sh_done_body = b""
-        sh_done = struct.pack(">BI", 0x0e, 0) + sh_done_body
-        server_data += build_tls_record(0x16, 0x0303, sh_done)
+    packets.append(IP(src=dst_ip, dst=src_ip) / TCP(sport=dport, dport=sport, flags='PA', seq=s_seq, ack=c_seq) / Raw(load=server_data))
+    s_seq += len(server_data)
 
-        packets.append(
-            IP(src=dst_ip, dst=src_ip) / TCP(sport=dport, dport=sport, flags='PA', seq=server_seq, ack=client_seq)
-            / Raw(load=server_data)
-        )
-        server_seq += len(server_data)
+    # Client ACK of server data
+    packets.append(IP(src=src_ip, dst=dst_ip) / TCP(sport=sport, dport=dport, flags='A', seq=c_seq, ack=s_seq))
 
-        # Client ACK + CCS + Finished
-        packets.append(
-            IP(src=src_ip, dst=dst_ip) / TCP(sport=sport, dport=dport, flags='A', seq=client_seq, ack=server_seq))
-        client_data = build_tls_change_cipher_spec() + build_tls_finished()
-        packets.append(
-            IP(src=src_ip, dst=dst_ip) / TCP(sport=sport, dport=dport, flags='PA', seq=client_seq, ack=server_seq)
-            / Raw(load=client_data)
-        )
-        client_seq += len(client_data)
-
-    # FIN
-    packets.append(
-        IP(src=src_ip, dst=dst_ip) / TCP(sport=sport, dport=dport, flags='FA', seq=client_seq, ack=server_seq))
-    packets.append(
-        IP(src=dst_ip, dst=src_ip) / TCP(sport=dport, dport=sport, flags='FA', seq=server_seq, ack=client_seq + 1))
-    packets.append(
-        IP(src=src_ip, dst=dst_ip) / TCP(sport=sport, dport=dport, flags='A', seq=client_seq + 1, ack=server_seq + 1))
+    # --- FIN ---
+    packets.append(IP(src=src_ip, dst=dst_ip) / TCP(sport=sport, dport=dport, flags='FA', seq=c_seq, ack=s_seq))
+    packets.append(IP(src=dst_ip, dst=src_ip) / TCP(sport=dport, dport=sport, flags='FA', seq=s_seq, ack=c_seq + 1))
+    packets.append(IP(src=src_ip, dst=dst_ip) / TCP(sport=sport, dport=dport, flags='A', seq=c_seq + 1, ack=s_seq + 1))
 
     return packets
 
 
-def generate_ssl_pcap(output_file, session_count=3):
-    """Generate PCAP with TLS/SSL handshakes.
-
-    All sessions include full handshake (ClientHello + ServerHello + Certificate)
-    so Zeek's SSL analyzer can produce complete ssl.log entries with version field.
-    """
+def generate_ssl_pcap(output_file):
+    """Generate PCAP with TLS handshakes."""
     packets = []
 
-    # Session 1: TLS 1.3-indicating ClientHello + TLS 1.2 wire handshake, SNI
-    packets.extend(build_tls_handshake(tls_version=0x0304, sni="example.com", full_handshake=True))
+    # Session 1: TLS 1.3 ClientHello + TLS 1.2 ServerHello, SNI=example.com
+    packets.extend(build_tls_session(tls_version=0x0304, sni="example.com"))
 
-    # Session 2: TLS 1.2 ClientHello + full handshake, SNI
-    packets.extend(build_tls_handshake(tls_version=0x0303, sni="google.com", full_handshake=True))
+    # Session 2: TLS 1.2, SNI=google.com
+    packets.extend(build_tls_session(tls_version=0x0303, sni="google.com"))
 
-    # Session 3: TLS 1.2 ClientHello + full handshake, SNI (different server)
-    packets.extend(build_tls_handshake(tls_version=0x0303, sni="github.com", full_handshake=True))
+    # Session 3: TLS 1.2, without SNI
+    packets.extend(build_tls_session(tls_version=0x0303, sni=None))
 
-    # Session 4: TLS 1.3-indicating ClientHello + full handshake, no SNI
-    packets.extend(build_tls_handshake(tls_version=0x0304, sni=None, full_handshake=True))
+    # Session 4: TLS 1.3 ClientHello, without SNI
+    packets.extend(build_tls_session(tls_version=0x0304, sni=None))
 
     wrpcap(output_file, packets)
-    print(f"[+] ssl: {output_file} ({len(packets)} packets, 4 handshakes)")
+    print(f"[+] ssl: {output_file} ({len(packets)} packets)")
 
 
 if __name__ == "__main__":
@@ -230,4 +178,4 @@ if __name__ == "__main__":
     parser.add_argument("-o", "--output", type=str, default="ssl.pcap")
     parser.add_argument("-c", "--count", type=int, default=3)
     args = parser.parse_args()
-    generate_ssl_pcap(args.output, args.count)
+    generate_ssl_pcap(args.output)
