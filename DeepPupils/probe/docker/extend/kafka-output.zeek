@@ -6,6 +6,9 @@
 # 不由 local.zeek 加载，避免默认依赖 Kafka 插件。
 #
 # 依赖：zeek-kafka 插件（通过 Seiso::Kafka 命名空间）
+#
+# ⚠️  &redef 变量必须在顶层（parse time）修改，zeek_init()
+#    事件触发时插件已初始化完毕，redef 不会生效。
 # ============================================================
 
 module Probe;
@@ -16,6 +19,7 @@ export {
     option kafka_brokers = "" &redef;
 
     ## Kafka topic 名称
+    ## （由 run.sh 生成的 .zeek 配置在顶层 redef）
     option kafka_topic = "probe" &redef;
 
     ## 设为 T 时移除默认 ASCII 文件写入器，仅输出到 Kafka
@@ -23,26 +27,28 @@ export {
 }
 
 # ============================================================
-# Kafka 全局配置
+# 顶层 redef（解析时生效）
+# 这些必须放在任何事件处理器之外，否则 Zeek 忽略它们
 # ============================================================
 
-# 仅在 brokes 非空时激活
+redef Kafka::send_all_active_logs = T;
+redef Kafka::tag_json = T;
+redef Kafka::json_timestamps = JSON::TS_ISO8601;
+
+# 注意：Kafka::topic_name 和 Kafka::kafka_conf 由 run.sh
+# 生成的独立 .zeek 配置在顶层设置（需 PROBE_KAFKA_BROKERS 值）
+
+# ============================================================
+# 初始化日志（运行时检查选项）
+# ============================================================
+
 event zeek_init() &priority=20
 {
     if ( Probe::kafka_brokers == "" )
         return;
 
-    # send_all_active_logs = T 确保所有活动日志流发送到 Kafka
-    redef Kafka::send_all_active_logs = T;
-    redef Kafka::topic_name = Probe::kafka_topic;
-    redef Kafka::tag_json = T;
-    redef Kafka::json_timestamps = JSON::TS_ISO8601;
-    redef Kafka::kafka_conf = table(
-        ["metadata.broker.list"] = Probe::kafka_brokers,
-        ["client.id"] = fmt("probe-%s", gethostname())
-    );
-
-    print fmt("[probe] Kafka output enabled: %s topic=%s", Probe::kafka_brokers, Probe::kafka_topic);
+    print fmt("[probe] Kafka output enabled: %s topic=%s",
+              Probe::kafka_brokers, Probe::kafka_topic);
 }
 
 # ============================================================

@@ -77,14 +77,25 @@ done
 
 kafka_scripts=()
 if [ -n "${PROBE_KAFKA_BROKERS:-}" ]; then
+    # kafka-output.zeek 提供顶层 redef（send_all_active_logs, tag_json...）
+    # 以及运行时 Log::remove_filter（当 kafka_only=T）
+    # 必须先加载，这样下面的生成配置才能使用 Kafka::* redef
+    kafka_scripts+=("$EXTEND_DIR/kafka-output.zeek")
+
+    # 生成运行时配置（顶层 redef，解析时生效）
+    # Kafka::topic_name 和 Kafka::kafka_conf 在这里设置而非 kafka-output.zeek
+    # 因为需要 PROBE_KAFKA_BROKERS 的实际值
     cfg=$(mktemp /tmp/kafka-XXXXXX.zeek)
     cat > "$cfg" <<-ZEK
 redef Probe::kafka_brokers = "${PROBE_KAFKA_BROKERS}";
 redef Probe::kafka_topic = "${PROBE_KAFKA_TOPIC:-probe}";
 $(if [ "${PROBE_KAFKA_ONLY:-}" = "true" ]; then echo 'redef Probe::kafka_only = T;'; fi)
+redef Kafka::topic_name = "${PROBE_KAFKA_TOPIC:-probe}";
+redef Kafka::kafka_conf = table(
+    ["metadata.broker.list"] = "${PROBE_KAFKA_BROKERS}",
+    ["client.id"] = "probe-$(hostname 2>/dev/null || echo 'unknown')"
+);
 ZEK
-    # kafka-output.zeek 必须显式加载，不由 local.zeek 管理
-    kafka_scripts+=("$EXTEND_DIR/kafka-output.zeek")
     kafka_scripts+=("$cfg")
     echo "[zeek-run] Kafka output enabled: ${PROBE_KAFKA_BROKERS} topic=${PROBE_KAFKA_TOPIC:-probe}" >&2
 fi
