@@ -21,16 +21,18 @@ COPY extend/ /opt/probe/extend/
 
 ENV PATH="/opt/probe/bin:${PATH}"
 
-# 安装附加协议脚本包（FTP、RDP、X509、SMB、MySQL、PostgreSQL、Redis）
-# 这些以 Zeek 脚本包形式存在，非内置 BiF 分析器
-RUN if [ -f /usr/local/zeek/share/zeek/policy/protocols/mysql/__load__.zeek ]; then \
-        echo "[OK] protocol packages already present"; \
-    else \
-        apt-get update -qq && apt-get install -y -qq --no-install-recommends \
-            zeek \
-            && rm -rf /var/lib/apt/lists/* \
-            && echo "[OK] zeek packages reinstalled"; \
-    fi
+# Zeek 协议脚本统一路径
+# zeek/zeek:8.2.0 镜像中脚本在 /opt/zeek/share/zeek/，
+# 但运行时 ZEEKPATH 可能指向 /usr/local/zeek/。统一使用 /opt/zeek/
+RUN if [ -d /opt/zeek/share/zeek ]; then \
+        ZEEK_SCRIPTS="/opt/zeek/share/zeek"; \
+    elif [ -d /usr/local/zeek/share/zeek ]; then \
+        ZEEK_SCRIPTS="/usr/local/zeek/share/zeek"; \
+    fi && \
+    echo "Zeek scripts at: $ZEEK_SCRIPTS" && \
+    ls "$ZEEK_SCRIPTS/base/protocols/" 2>/dev/null && \
+    ls "$ZEEK_SCRIPTS/policy/protocols/" 2>/dev/null; \
+    echo "[OK] protocol directories scanned"
 
 # 在 local.zeek 中注册扩展脚本（兜底机制）
 # 主加载入口：run.sh 通过命令行参数加载扩展脚本
