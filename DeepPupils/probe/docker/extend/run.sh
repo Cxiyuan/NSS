@@ -91,6 +91,7 @@ redef Probe::kafka_brokers = "${PROBE_KAFKA_BROKERS}";
 redef Probe::kafka_topic = "${PROBE_KAFKA_TOPIC:-probe}";
 $(if [ "${PROBE_KAFKA_ONLY:-}" = "true" ]; then echo 'redef Probe::kafka_only = T;'; fi)
 redef Kafka::topic_name = "${PROBE_KAFKA_TOPIC:-probe}";
+redef Kafka::max_wait_on_shutdown = 30000;
 redef Kafka::kafka_conf = table(
     ["metadata.broker.list"] = "${PROBE_KAFKA_BROKERS}",
     ["client.id"] = "probe-$(hostname 2>/dev/null || echo 'unknown')"
