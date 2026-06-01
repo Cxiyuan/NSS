@@ -35,7 +35,9 @@ docker compose ps
                      (BPF 过滤组播)      (不写本地文件)
 ```
 
-## 输出到 Kafka 的日志类型（共 12 种）
+## 输出到 Kafka 的日志类型
+
+### 内置 Always-on（6 种，无需额外配置）
 
 | stream_id | 日志内容 | 说明 |
 |-----------|---------|------|
@@ -45,13 +47,18 @@ docker compose ps
 | `ssh` | SSH 日志 | 版本号协商 |
 | `ssl` | SSL/TLS 日志 | 版本、密码套件、SNI |
 | `files` | 文件分析日志 | Zeek Files 框架 |
-| `ftp` | FTP 日志 | 文件传输协议 |
-| `rdp` | RDP 日志 | 远程桌面协议 |
-| `x509` | X.509 证书日志 | TLS 证书信息 |
-| `smb` | SMB 日志 | Windows 文件共享 |
-| `mysql` | MySQL 日志 | SQL 查询审计 |
-| `postgresql` | PostgreSQL 日志 | SQL 查询审计 |
-| `redis` | Redis 日志 | 缓存/消息队列协议 |
+
+### 扩展协议（需安装 Zeek 包后启用）
+
+如需 FTP、RDP、MySQL、PostgreSQL、SMB、Redis、X.509 等协议的日志输出，需在 Dockerfile 中安装对应 Zeek 包：
+
+```dockerfile
+RUN zkg refresh && zkg install \
+    zeek/ftp zeek/rdp zeek/mysql zeek/postgresql \
+    zeek/smb zeek/redis zeek/x509
+```
+
+同时在 `kafka-output.zeek` 中添加对应的 `@load` 和 `Log::add_filter`。
 
 ## 验证数据
 

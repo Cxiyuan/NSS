@@ -21,17 +21,6 @@ COPY extend/ /opt/probe/extend/
 
 ENV PATH="/opt/probe/bin:${PATH}"
 
-# 确保 ZEEKPATH 覆盖所有 Zeek 安装位置
-# zeek/zeek:8.2.0 镜像通过官方安装器部署在 /usr/local/zeek/
-# 部分协议脚本包可能缺失，通过 zkg 安装
-# 修复：在 zeek/zeek:8.2.0 镜像中 Zeek 安装在 /usr/local/zeek/
-# 但部分 policy/protocols/ 脚本可能缺失。确认路径并创建必要目录
-RUN echo "=== Zeek install paths ===" && \
-    find /usr/local/zeek -name "__load__.zeek" -path "*/protocols/*" 2>/dev/null | sort && \
-    echo "=== ZEEKPATH ===" && \
-    zeek-config --zeekpath 2>/dev/null || echo 'no zeek-config'; \
-    echo "[OK] Zeek protocol scan complete"
-
 # 在 local.zeek 中注册扩展脚本（兜底机制）
 # 主加载入口：run.sh 通过命令行参数加载扩展脚本
 # 兜  底：local.zeek 中的 @load 在 zeek -r 离线分析等场景生效
