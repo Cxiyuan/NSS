@@ -7,14 +7,6 @@
 #
 # 用法：
 #   bash test_docker_runtime.sh <pcap_file> [image_tag]
-#
-# 流程：
-#   1. 创建隔离 bridge 网络
-#   2. 启动 Kafka（KRaft 模式），轮询就绪
-#   3. 启动 probe 容器（run.sh 入口点 + PROBE_PCAP 离线模式）
-#   4. docker wait 等待 Zeek 完成
-#   5. 消费 Kafka topic 验证日志流
-#   6. 清理
 # ============================================================
 set -euo pipefail
 
@@ -27,7 +19,6 @@ if [ ! -f "$PCAP_FILE" ]; then
 fi
 PCAP_ABS="$(cd "$(dirname "$PCAP_FILE")" && pwd)/$(basename "$PCAP_FILE")"
 
-# 唯一标识符，防并行冲突
 TAG="probe-test-$(date +%s)"
 NET="${TAG}-net"
 KAFKA_CONTAINER="${TAG}-kafka"
@@ -35,6 +26,7 @@ PROBE_CONTAINER="${TAG}-probe"
 TOPIC="probe-test"
 PASS_COUNT=0
 FAIL_COUNT=0
+SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 
 cleanup() {
     echo "[cleanup] removing containers and network..."
@@ -86,12 +78,13 @@ docker run -d --name "$KAFKA_CONTAINER" --network "$NET" \
     -e CLUSTER_ID=probe-test \
     apache/kafka:latest
 
-# 轮询等待 Kafka 就绪（最多 120s）
 echo "[step 2/5] Waiting for Kafka to be ready..."
-KAFKA_READY=0
+KAFKA_READY=1
 for i in $(seq 1 120); do
-    if docker exec "$KAFKA_CONTAINER" sh -c 'nc -z localhost 9092' 2>/dev/null; then
-        KAFKA_READY=1
+    if docker exec "$KAFKA_CONTAINER" \
+        /opt/kafka/bin/kafka-topics.sh --bootstrap-server localhost:9092 --list \
+        >/dev/null 2>&1; then
+        KAFKA_READY=0
         break
     fi
     sleep 1
@@ -110,67 +103,33 @@ docker run -d --name "$PROBE_CONTAINER" --network "$NET" \
     -v "$PCAP_ABS:/pcap/$(basename "$PCAP_FILE"):ro" \
     "$IMAGE"
 
-# docker wait 等待 Zeek 完成（离线模式自动退出）
 echo "[step 3/5] Waiting for Zeek to finish..."
-ZEEK_EXIT=0
-docker wait "$PROBE_CONTAINER" 2>/dev/null || ZEEK_EXIT=$?
+set +e
+docker wait "$PROBE_CONTAINER"
+ZEEK_EXIT=$?
+set -e
 check "Zeek completed (exit code: $ZEEK_EXIT)" "$ZEEK_EXIT"
 
+# Debug: show probe stderr
+echo "--- probe container logs ---"
+docker logs "$PROBE_CONTAINER" 2>&1 || true
+echo "--- end probe logs ---"
+
 # ============================================================
-# 4. 验证 Kafka 中收到日志
+# 4. 验证 Kafka 消息
 # ============================================================
 echo "[step 4/5] Verifying Kafka messages..."
 
-# 用 python consumer 消费 topic
+# 构建包含 kafka_consumer.py 的临时 Python 容器
+# 挂载脚本 + pip install kafka-python → 执行验证
 CONSUMER_OUT=$(docker run --rm --network "$NET" \
     -e TOPIC="$TOPIC" \
-    python:3.11-slim bash -c '
+    -e BROKER="kafka:9092" \
+    -v "$SCRIPT_DIR/kafka_consumer.py:/consumer.py:ro" \
+    python:3.11-alpine sh -c '
 pip install kafka-python -q 2>/dev/null
-python3 -c "
-import json, os
-from kafka import KafkaConsumer
-
-topic = os.environ[\"TOPIC\"]
-c = KafkaConsumer(
-    topic,
-    bootstrap_servers=\"kafka:9092\",
-    auto_offset_reset=\"earliest\",
-    consumer_timeout_ms=15000
-)
-
-streams = {}  # stream_id -> field count
-count = 0
-for msg in c:
-    try:
-        val = json.loads(msg.value)
-        if not isinstance(val, dict):
-            continue
-        for key, sub in val.items():
-            if isinstance(sub, dict):
-                sid = key
-                if sid not in streams:
-                    streams[sid] = {\"records\": 0, \"fields\": set()}
-                streams[sid][\"records\"] += 1
-                streams[sid][\"fields\"].update(sub.keys())
-        count += 1
-    except (json.JSONDecodeError, AttributeError):
-        pass
-c.close()
-
-print(f\"Total Kafka messages consumed: {count}\")
-for sid, info in sorted(streams.items()):
-    print(f\"  stream={sid} records={info[\\\"records\\\"]} fields={len(info[\\\"fields\\\"])}\")
-
-# 验证核心流
-assert \"conn\" in streams, \"Missing conn stream\"
-assert \"http\" in streams, \"Missing http stream\"
-has_proto = any(\"proto\" in info[\"fields\"] for info in streams.values())
-has_method = any(\"method\" in info[\"fields\"] for info in streams.values())
-assert has_proto, \"No proto field found in any stream\"
-assert has_method, \"No method field found in any stream\"
-print(\"\\\\n[VERDICT] Kafka validation PASSED\")
-"
-' 2>&1)
+python3 /consumer.py
+' 2>&1) || true
 
 echo "$CONSUMER_OUT"
 
@@ -181,10 +140,12 @@ else
 fi
 
 # ============================================================
-# 5. 确认无本地 .log 文件（kafka_only 模式）
+# 5. 检查无本地 .log 文件
 # ============================================================
 echo "[step 5/5] Verifying no local log files written..."
-LOG_FILES=$(docker exec "$PROBE_CONTAINER" sh -c 'ls /output/*.log 2>/dev/null' || true)
+set +e
+LOG_FILES=$(docker exec "$PROBE_CONTAINER" sh -c 'ls /output/*.log 2>/dev/null')
+set -e
 if [ -z "$LOG_FILES" ]; then
     check "No local .log files (Kafka-only mode)" "0"
 else
