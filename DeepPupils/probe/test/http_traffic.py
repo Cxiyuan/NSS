@@ -479,7 +479,8 @@ def generate_body_pcap(output_file, session_count=3):
         headers.append(("Content-Type", ct))
         http_req = build_http_request("POST", "/api/upload", headers, body)
 
-        resp_body = random.choice(RESPONSE_BODIES)
+        # 确保至少一个响应体包含 "Welcome"（第0个RESPONSE_BODIES），避免 flaky test
+        resp_body = RESPONSE_BODIES[0] if i == 0 else random.choice(RESPONSE_BODIES)
         packets.extend(build_full_flow(client_ip, server_ip, sport + i, dport, http_req, resp_body, 200, "OK"))
 
     wrpcap(output_file, packets)
