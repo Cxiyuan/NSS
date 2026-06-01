@@ -1,6 +1,29 @@
 version: '3.8'
 
 services:
+  # ============================================================
+  # Kafka（KRaft 模式，无 Zookeeper）
+  # ============================================================
+  kafka:
+    image: apache/kafka:latest
+    container_name: probe-kafka
+    ports:
+      - 9092:9092
+    environment:
+      KAFKA_NODE_ID: 1
+      KAFKA_PROCESS_ROLES: broker,controller
+      KAFKA_LISTENERS: PLAINTEXT://0.0.0.0:9092,CONTROLLER://0.0.0.0:9093
+      # host 网络下 probe 用 localhost:9092 连接
+      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://localhost:9092
+      KAFKA_CONTROLLER_LISTENER_NAMES: CONTROLLER
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: PLAINTEXT:PLAINTEXT,CONTROLLER:PLAINTEXT
+      KAFKA_CONTROLLER_QUORUM_VOTERS: 1@localhost:9093
+      CLUSTER_ID: probe-cluster
+    restart: unless-stopped
+
+  # ============================================================
+  # Probe — Zeek 网络探针
+  # ============================================================
   probe:
     image: ghcr.io/cxiyuan/probe:latest
     container_name: probe
@@ -11,14 +34,12 @@ services:
     volumes:
       - /root/DeepPupils/logs:/output
     working_dir: /output
-    # run.sh 自动加载 extend/filters/*.bpf 中的 BPF 规则
-    # 以及 extend/*.zeek 中的 Zeek 扩展脚本
-    # 参数：监听网卡名（默认 ens192，由 Dockerfile 的 CMD 提供）
-    # 可选环境变量：
-    #   KAFKA_BROKERS=kafka:9092  启用 Kafka 日志输出
-    #   KAFKA_TOPIC=probe         指定 Kafka topic（默认 probe）
+    depends_on:
+      - kafka
     environment:
-      - KAFKA_BROKERS=${KAFKA_BROKERS:-}
-      - KAFKA_TOPIC=${KAFKA_TOPIC:-probe}
+      # PROBE_KAFKA_BROKERS 优先，KAFKA_BROKERS 兜底
+      - PROBE_KAFKA_BROKERS=${PROBE_KAFKA_BROKERS:-${KAFKA_BROKERS:-localhost:9092}}
+      - PROBE_KAFKA_TOPIC=${PROBE_KAFKA_TOPIC:-probe}
+      - PROBE_KAFKA_ONLY=${PROBE_KAFKA_ONLY:-true}
     command: ens192
     restart: unless-stopped
