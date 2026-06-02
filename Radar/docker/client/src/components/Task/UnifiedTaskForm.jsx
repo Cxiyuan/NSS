@@ -8,7 +8,7 @@ export default function UnifiedTaskForm({ onStart }) {
   const [depth, setDepth] = useState(3);
   const [concurrency, setConcurrency] = useState(3);
   const [filters, setFilters] = useState([]);
-  const [searchEngine, setSearchEngine] = useState('google');
+  const [searchEngine, setSearchEngine] = useState('searxng');
   const [searchApiKey, setSearchApiKey] = useState('');
   const [submitting, setSubmitting] = useState(false);
 
@@ -69,15 +69,18 @@ export default function UnifiedTaskForm({ onStart }) {
               <label style={{ display: 'block', fontSize: 13, fontWeight: 500, color: 'var(--color-text-muted)', marginBottom: 4 }}>搜索引擎</label>
               <select value={searchEngine} onChange={e => setSearchEngine(e.target.value)}
                 style={{ width: '100%', padding: '8px 12px', border: '1px solid var(--color-border)', borderRadius: 6, fontSize: 14, background: 'white' }}>
+                <option value="searxng">SearXNG (自建，免费无限)</option>
                 <option value="google">Google</option>
                 <option value="bing">Bing</option>
               </select>
             </div>
-            <div>
-              <label style={{ display: 'block', fontSize: 13, fontWeight: 500, color: 'var(--color-text-muted)', marginBottom: 4 }}>API 密钥</label>
-              <input type="password" value={searchApiKey} onChange={e => setSearchApiKey(e.target.value)}
-                style={{ width: '100%', padding: '8px 12px', border: '1px solid var(--color-border)', borderRadius: 6, fontSize: 14, boxSizing: 'border-box' }} />
-            </div>
+            {searchEngine !== 'searxng' && (
+              <div>
+                <label style={{ display: 'block', fontSize: 13, fontWeight: 500, color: 'var(--color-text-muted)', marginBottom: 4 }}>API 密钥</label>
+                <input type="password" value={searchApiKey} onChange={e => setSearchApiKey(e.target.value)}
+                  style={{ width: '100%', padding: '8px 12px', border: '1px solid var(--color-border)', borderRadius: 6, fontSize: 14, boxSizing: 'border-box' }} />
+              </div>
+            )}
           </div>
         </>
       )}

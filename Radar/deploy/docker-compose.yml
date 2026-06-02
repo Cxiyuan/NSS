@@ -23,6 +23,8 @@ services:
       - GOOGLE_API_KEY=${GOOGLE_API_KEY:-}
       - GOOGLE_CX=${GOOGLE_CX:-}
       - BING_API_KEY=${BING_API_KEY:-}
+      # SearXNG 自建搜索引擎地址（关键词搜索模式，免 API Key）
+      - SEARXNG_BASE_URL=${SEARXNG_BASE_URL:-http://host.docker.internal:4000}
       # 代理（可选，用于反检测）
       - HTTPS_PROXY=${HTTPS_PROXY:-}
 
