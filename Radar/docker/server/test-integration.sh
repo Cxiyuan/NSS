@@ -142,6 +142,10 @@ DEL_GET=$(curl -s -o /dev/null -w '%{http_code}' "$BASE/api/tasks/$TID")
 echo ""
 echo "=== 3. Results API ==="
 
+# Install sqlite3 in container for direct DB access
+echo "  Installing sqlite3 in container..."
+docker exec radar-itest-$$ sh -c "apt-get update -qq && apt-get install -y -qq sqlite3" 2>/dev/null
+
 # Create a task and inject a result via DB directly (no crawler needed)
 INJECT_TID="itest-results-$$"
 docker exec radar-itest-$$ sh -c "
