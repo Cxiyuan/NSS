@@ -104,4 +104,17 @@ if echo "$CMD_STR" | grep -qE '\b(vite|webpack|next|nuxt|ng|vue-cli-service|parc
   block "Frontend build is prohibited"
 fi
 
+# ---- 6. Git commit/push — ensure only Radar + .github files are staged ----
+if echo "$CMD_STR" | grep -qE '^git (commit|push)\b' 2>/dev/null; then
+  # Check all staged files against allowed prefixes
+  while IFS= read -r f; do
+    case "$f" in
+      Radar/*|.github/*|Radar/) ;;
+      *)
+        block "Commit contains non-Radar file: $f. Only Radar/ and .github/ files are allowed."
+        ;;
+    esac
+  done < <(git diff --cached --name-only 2>/dev/null)
+fi
+
 exit 0
