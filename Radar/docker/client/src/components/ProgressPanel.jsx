@@ -1,15 +1,10 @@
-export default function ProgressPanel({ status, stats }) {
-  const { crawled = 0, total = 0, external = 0, depth = 0 } = stats || {};
+import { STATUS_LABELS } from '../lib/constants';
+
+export default function ProgressPanel({ status, stats, showExternal = true }) {
+  const { crawled = 0, total = 0, external = 0, depth = 0, filtered = 0 } = stats || {};
 
   const pct = total > 0 ? Math.round((crawled / total) * 100) : 0;
-  const statusLabel = {
-    pending: '等待中',
-    running: '运行中',
-    paused: '已暂停',
-    completed: '已完成',
-    error: '错误',
-    cancelled: '已取消',
-  }[status] || status;
+  const statusLabel = STATUS_LABELS[status] || status;
 
   const indicatorClass = {
     running: 'progress-panel__indicator--running',
@@ -33,10 +28,9 @@ export default function ProgressPanel({ status, stats }) {
 
       <div className="progress-panel__stats">
         <Stat label="已爬取" value={`${crawled} / ${total}`} />
-        <Stat label="外部链接" value={external} />
-        <Stat label="已过滤" value={stats.filtered || 0} />
+        {showExternal && <Stat label="外部链接" value={external} />}
+        <Stat label="已过滤" value={filtered} />
         <Stat label="深度" value={depth} />
-        <Stat label="进度" value={`${pct}%`} />
       </div>
     </div>
   );

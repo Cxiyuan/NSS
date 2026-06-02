@@ -16,8 +16,8 @@ export default function TaskForm({ type, onSubmit, disabled }) {
     if (type === 'url_crawl') {
       let u = url.trim();
       if (!u) return;
-      // Auto-prepend https:// if no protocol specified
-      if (!u.startsWith('http://') && !u.startsWith('https://')) {
+      // Auto-prepend https:// if no protocol specified (any scheme)
+      if (!u.includes('://')) {
         u = 'https://' + u;
       }
       config.url = u;

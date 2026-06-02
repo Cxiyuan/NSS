@@ -3,10 +3,24 @@ import ProgressPanel from '../components/ProgressPanel';
 import LiveResultStream from '../components/LiveResultStream';
 import ResultTable from '../components/ResultTable';
 import TaskHistory from '../components/TaskHistory';
+import TaskControls from '../components/TaskControls';
+import TaskInfoPanel from '../components/TaskInfoPanel';
+import { useToast } from '../components/ToastContext';
 import { useTaskPage } from '../hooks/useTaskPage';
+import useConfirm from '../hooks/useConfirm';
 
 export default function KeywordSearchPage() {
   const ctx = useTaskPage({ showExternalCount: false, pdfPrefix: 'search-results' });
+  const { confirm, ConfirmDialog } = useConfirm();
+  const addToast = useToast();
+
+  async function handleStatusChange(newStatus) {
+    if (newStatus === 'cancelled') {
+      const ok = await confirm('确定要取消当前任务吗？');
+      if (!ok) return;
+      await ctx.handleCancel();
+    }
+  }
 
   return (
     <div className="page">
@@ -16,14 +30,15 @@ export default function KeywordSearchPage() {
 
         {ctx.taskId && (
           <>
+            <TaskInfoPanel taskConfig={ctx.taskConfig} startTime={ctx.startTime} />
+
             <div className="page__controls">
               <ProgressPanel status={ctx.status} stats={ctx.stats} />
-              {ctx.status === 'running' && <button onClick={ctx.handlePause} className="btn">暂停</button>}
-              {ctx.status === 'paused' && <button onClick={ctx.handleResume} className="btn btn--primary">恢复</button>}
-              {(ctx.status === 'running' || ctx.status === 'paused') && <button onClick={ctx.handleCancel} className="btn btn--danger">取消</button>}
-              {ctx.status === 'completed' && (
-                <button onClick={ctx.handleExportPDF} className="btn btn--primary">导出 PDF</button>
-              )}
+              <TaskControls
+                task={{ id: ctx.taskId, status: ctx.status }}
+                onStatusChange={handleStatusChange}
+                onExport={ctx.handleExportPDF}
+              />
             </div>
 
             {ctx.logs.length > 0 && (
@@ -46,6 +61,8 @@ export default function KeywordSearchPage() {
               page={ctx.page}
               limit={50}
               onPageChange={ctx.handlePageChange}
+              error={ctx.resultsError}
+              loading={ctx.loading}
             />
           </>
         )}
@@ -54,6 +71,8 @@ export default function KeywordSearchPage() {
       <aside className="page__sidebar">
         <TaskHistory onSelect={ctx.handleSelectTask} refreshKey={ctx.listRefreshKey} />
       </aside>
+
+      {ConfirmDialog}
     </div>
   );
 }

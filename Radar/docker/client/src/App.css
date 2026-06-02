@@ -60,11 +60,14 @@ a:hover { text-decoration: underline; }
 .filter-input__row { display: flex; gap: 8px; }
 .filter-input__field { flex: 1; padding: 8px 12px; border: 1px solid var(--color-border); border-radius: 6px; font-size: 14px; }
 .filter-input__field:focus { outline: none; border-color: var(--color-primary); }
+.filter-input__field--error { border-color: var(--color-error); }
+.filter-input__field--error:focus { box-shadow: 0 0 0 3px rgba(220,38,38,0.1); }
 .filter-input__add-btn { padding: 8px 14px; background: var(--color-surface); border: 1px solid var(--color-border); border-radius: 6px; cursor: pointer; font-size: 13px; white-space: nowrap; }
 .filter-input__tags { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 8px; }
 .filter-input__tag { display: inline-flex; align-items: center; gap: 4px; padding: 3px 10px; background: #f1f5f9; border: 1px solid var(--color-border); border-radius: 20px; font-size: 12px; }
 .filter-input__tag-remove { border: none; background: none; cursor: pointer; font-size: 16px; color: var(--color-text-muted); padding: 0 2px; line-height: 1; }
 .filter-input__tag-remove:hover { color: var(--color-error); }
+.filter-input__error { font-size: 12px; color: var(--color-error); margin-top: 4px; }
 
 /* === Progress Panel === */
 .progress-panel { flex: 1; min-width: 260px; background: var(--color-surface); border: 1px solid var(--color-border); border-radius: var(--radius); padding: 16px; box-shadow: var(--shadow); }
@@ -173,6 +176,15 @@ a:hover { text-decoration: underline; }
 .config-field__row span { font-size: 13px; color: var(--color-text-muted); }
 .config-page__save { width: 100%; padding: 12px; background: var(--color-primary); color: white; border: none; border-radius: 6px; font-size: 14px; font-weight: 600; cursor: pointer; transition: background 0.15s; }
 .config-page__save:hover { background: var(--color-primary-hover); }
+.config-page__save:disabled { opacity: 0.6; cursor: not-allowed; }
+
+/* === Config Field Error States === */
+.config-field__input--error { border-color: var(--color-error) !important; }
+.config-field__input--error:focus { box-shadow: 0 0 0 3px rgba(220,38,38,0.1) !important; }
+.config-field__error { display: block; font-size: 12px; color: var(--color-error); margin-top: 4px; }
+
+/* === Task Controls === */
+.task-controls { display: flex; align-items: center; gap: 8px; }
 
 /* === Task Info Panel === */
 .task-info-panel { background: var(--color-surface); border: 1px solid var(--color-border); border-radius: var(--radius); padding: 16px; margin-bottom: 16px; box-shadow: var(--shadow); }
@@ -195,3 +207,63 @@ a:hover { text-decoration: underline; }
 .dashboard-chart__header select { padding: 4px 8px; border: 1px solid var(--color-border); border-radius: 4px; font-size: 12px; background: var(--color-surface); }
 .dashboard-chart__body { min-height: 200px; }
 .dashboard-chart__empty { text-align: center; padding: 40px 0; color: var(--color-text-muted); font-size: 13px; }
+
+/* === Toast Animations === */
+@keyframes slideIn {
+  from { transform: translateX(100%); opacity: 0; }
+  to { transform: translateX(0); opacity: 1; }
+}
+@keyframes slideOut {
+  from { transform: translateX(0); opacity: 1; }
+  to { transform: translateX(100%); opacity: 0; }
+}
+
+/* === Confirm Dialog === */
+.confirm-overlay { position: fixed; inset: 0; z-index: 10000; display: flex; align-items: center; justify-content: center; background-color: rgba(0,0,0,0.35); }
+.confirm-dialog { background-color: #fff; border-radius: 10px; padding: 1.25rem 1.5rem; min-width: 300px; max-width: 420px; box-shadow: 0 8px 30px rgba(0,0,0,0.2); }
+.confirm-dialog__message { margin: 0 0 1.25rem; font-size: 0.95rem; color: #1f2937; }
+.confirm-dialog__actions { display: flex; justify-content: flex-end; gap: 8px; }
+.confirm-dialog__cancel { padding: 0.45rem 1rem; font-size: 0.85rem; font-weight: 600; color: #374151; background-color: #f3f4f6; border: 1px solid #d1d5db; border-radius: 6px; cursor: pointer; }
+.confirm-dialog__confirm { padding: 0.45rem 1rem; font-size: 0.85rem; font-weight: 600; color: #fff; background-color: #dc2626; border: none; border-radius: 6px; cursor: pointer; }
+
+/* === Error Boundary === */
+.error-boundary { display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 2rem; margin: 1rem 0; border-radius: var(--radius); background-color: #fef2f2; border: 1px solid #fecaca; text-align: center; }
+.error-boundary__heading { margin: 0 0 0.5rem; font-size: 1.125rem; color: #991b1b; }
+.error-boundary__message { margin: 0 0 1rem; font-size: 0.875rem; color: #b91c1c; white-space: pre-wrap; word-break: break-word; max-width: 100%; }
+.error-boundary__retry { padding: 0.5rem 1.25rem; font-size: 0.875rem; font-weight: 600; color: #fff; background-color: #dc2626; border: none; border-radius: 6px; cursor: pointer; }
+
+/* === Skeleton Loading === */
+.skeleton { background: linear-gradient(90deg, #e2e8f0 25%, #f1f5f9 50%, #e2e8f0 75%); background-size: 200% 100%; animation: shimmer 1.5s infinite; border-radius: 4px; }
+.skeleton--text { height: 14px; width: 100%; margin-bottom: 8px; }
+.skeleton--text:last-child { width: 60%; }
+.skeleton--block { height: 80px; width: 100%; border-radius: var(--radius); }
+.skeleton--circle { height: 32px; width: 32px; border-radius: 50%; }
+
+@keyframes skeleton-shimmer {
+  0% { background-position: 200% 0; }
+  100% { background-position: -200% 0; }
+}
+
+/* === Responsive Breakpoints === */
+@media (max-width: 900px) {
+  .page { grid-template-columns: 1fr; }
+  .page__sidebar { order: -1; }
+  .app { padding: 0 16px; }
+  .app__header { gap: 16px; flex-wrap: wrap; }
+  .task-form__row { grid-template-columns: 1fr; }
+  .progress-panel__stats { grid-template-columns: repeat(3, 1fr); }
+}
+
+@media (max-width: 600px) {
+  .app { padding: 0 12px; }
+  .app__header { flex-direction: column; align-items: flex-start; gap: 8px; }
+  .app__nav { width: 100%; overflow-x: auto; }
+  .app__tab { flex-shrink: 0; }
+  .page__controls { flex-direction: column; align-items: stretch; }
+  .btn { text-align: center; }
+  .config-field input[type="number"] { width: 100%; }
+  .config-field__row { flex-wrap: wrap; }
+  .dashboard__grid { grid-template-columns: 1fr; }
+  .progress-panel__stats { grid-template-columns: repeat(2, 1fr); }
+  .task-history__config { max-width: 120px; }
+}

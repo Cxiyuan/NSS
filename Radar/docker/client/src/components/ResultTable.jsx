@@ -1,30 +1,29 @@
 import { useState, useCallback, useRef, useEffect } from 'react';
 import ResultDetail from './ResultDetail';
-
-const LINK_TYPE_LABELS = {
-  a: '超链接',
-  img: '图片',
-  link: '资源引用',
-  iframe: '内嵌框架',
-  form: '表单',
-  meta: '页面跳转',
-  script: '脚本',
-  js_dynamic: 'JS动态',
-  css: '样式表',
-  comment: '注释',
-  keyword_match: '关键词匹配',
-};
+import { LINK_TYPE_LABELS } from '../lib/constants';
+import { truncate } from '../lib/utils';
 
 function linkTypeLabel(type) {
   return LINK_TYPE_LABELS[type] || type;
 }
 
-export default function ResultTable({ results, total, page, limit, onPageChange }) {
+function SkeletonRows({ count, columns }) {
+  return Array.from({ length: count }, (_, i) => (
+    <tr key={i}>
+      {Array.from({ length: columns }, (_, j) => (
+        <td key={j}>
+          <div className="skeleton" style={{ height: 16, width: `${50 + (j * 10) % 40}%` }} />
+        </td>
+      ))}
+    </tr>
+  ));
+}
+
+export default function ResultTable({ results, total, page, limit, onPageChange, error, loading }) {
   const [selected, setSelected] = useState(null);
   const wrapperRef = useRef(null);
   const totalPages = Math.ceil(total / limit);
 
-  // Auto-scroll to table top on page change
   useEffect(() => {
     if (wrapperRef.current) {
       wrapperRef.current.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
@@ -50,6 +49,9 @@ export default function ResultTable({ results, total, page, limit, onPageChange 
   return (
     <>
       <div className="result-table-wrapper" ref={wrapperRef}>
+        {error && (
+          <div className="result-table__error">{error}</div>
+        )}
         <table className="result-table">
           <thead>
             <tr>
@@ -57,7 +59,9 @@ export default function ResultTable({ results, total, page, limit, onPageChange 
             </tr>
           </thead>
           <tbody>
-            {results.length === 0 ? (
+            {loading ? (
+              <SkeletonRows count={5} columns={columns.length} />
+            ) : results.length === 0 ? (
               <tr><td colSpan={columns.length} className="result-table__empty">暂无结果</td></tr>
             ) : (
               results.map(r => (
@@ -87,9 +91,4 @@ export default function ResultTable({ results, total, page, limit, onPageChange 
       )}
     </>
   );
-}
-
-function truncate(str, max) {
-  if (!str || str.length <= max) return str;
-  return str.slice(0, max) + '...';
 }

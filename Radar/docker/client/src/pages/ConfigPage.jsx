@@ -1,23 +1,74 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { api } from '../lib/api';
+import { useToast } from '../components/ToastContext';
 
 export default function ConfigPage() {
   const [config, setConfig] = useState(null);
-  const [saved, setSaved] = useState(false);
+  const [saving, setSaving] = useState(false);
+  const [proxyError, setProxyError] = useState('');
+  const dirtyRef = useRef(false);
+  const addToast = useToast();
 
   useEffect(() => {
     api.getConfig().then(setConfig).catch(console.error);
   }, []);
 
+  useEffect(() => {
+    function onBeforeUnload(e) {
+      if (dirtyRef.current) {
+        e.preventDefault();
+        e.returnValue = '';
+      }
+    }
+    window.addEventListener('beforeunload', onBeforeUnload);
+    return () => window.removeEventListener('beforeunload', onBeforeUnload);
+  }, []);
+
+  function handleFieldChange(updater) {
+    dirtyRef.current = true;
+    setConfig(updater);
+  }
+
+  function validateProxyUrl(url) {
+    if (!url || !url.trim()) return '';
+    try {
+      const parsed = new URL(url);
+      if (!['http:', 'https:', 'socks5:'].includes(parsed.protocol)) {
+        return '仅支持 http / https / socks5 协议';
+      }
+      if (!parsed.hostname) return '代理地址格式无效';
+      return '';
+    } catch {
+      return '代理 URL 格式不正确';
+    }
+  }
+
+  function handleProxyUrlChange(e) {
+    const val = e.target.value;
+    handleFieldChange(c => ({
+      ...c,
+      proxy: { ...c.proxy, url: val },
+    }));
+    setProxyError(validateProxyUrl(val));
+  }
+
   async function handleSave(e) {
     e.preventDefault();
+    if (config.proxy.enabled) {
+      const err = validateProxyUrl(config.proxy.url);
+      setProxyError(err);
+      if (err) return;
+    }
+    setSaving(true);
     try {
       const updated = await api.updateConfig(config);
       setConfig(updated);
-      setSaved(true);
-      setTimeout(() => setSaved(false), 2000);
+      dirtyRef.current = false;
+      addToast('配置已保存', 'success');
     } catch (err) {
-      console.error(err);
+      addToast(err.message || '保存失败', 'error');
+    } finally {
+      setSaving(false);
     }
   }
 
@@ -41,7 +92,7 @@ export default function ConfigPage() {
                 <input
                   type="checkbox"
                   checked={config.proxy.enabled}
-                  onChange={e => setConfig(c => ({
+                  onChange={e => handleFieldChange(c => ({
                     ...c,
                     proxy: { ...c.proxy, enabled: e.target.checked },
                   }))}
@@ -56,12 +107,13 @@ export default function ConfigPage() {
                 <input
                   type="text"
                   value={config.proxy.url}
-                  onChange={e => setConfig(c => ({
-                    ...c,
-                    proxy: { ...c.proxy, url: e.target.value },
-                  }))}
+                  onChange={handleProxyUrlChange}
                   placeholder="http://用户名:密码@代理IP:端口"
+                  className={proxyError ? 'config-field__input--error' : ''}
                 />
+                {proxyError && (
+                  <span className="config-field__error">{proxyError}</span>
+                )}
                 <span className="config-field__hint">
                   支持 HTTP/SOCKS5，格式: protocol://user:pass@host:port
                 </span>
@@ -81,7 +133,7 @@ export default function ConfigPage() {
                 <input
                   type="checkbox"
                   checked={config.antiDetect.uaRotation}
-                  onChange={e => setConfig(c => ({
+                  onChange={e => handleFieldChange(c => ({
                     ...c,
                     antiDetect: { ...c.antiDetect, uaRotation: e.target.checked },
                   }))}
@@ -98,7 +150,7 @@ export default function ConfigPage() {
                 <input
                   type="checkbox"
                   checked={config.antiDetect.browserFallback}
-                  onChange={e => setConfig(c => ({
+                  onChange={e => handleFieldChange(c => ({
                     ...c,
                     antiDetect: { ...c.antiDetect, browserFallback: e.target.checked },
                   }))}
@@ -118,7 +170,7 @@ export default function ConfigPage() {
                   min={0}
                   max={10000}
                   value={config.antiDetect.requestDelay.min}
-                  onChange={e => setConfig(c => ({
+                  onChange={e => handleFieldChange(c => ({
                     ...c,
                     antiDetect: {
                       ...c.antiDetect,
@@ -132,7 +184,7 @@ export default function ConfigPage() {
                   min={0}
                   max={30000}
                   value={config.antiDetect.requestDelay.max}
-                  onChange={e => setConfig(c => ({
+                  onChange={e => handleFieldChange(c => ({
                     ...c,
                     antiDetect: {
                       ...c.antiDetect,
@@ -154,7 +206,7 @@ export default function ConfigPage() {
                 min={0}
                 max={10}
                 value={config.antiDetect.maxRetries}
-                onChange={e => setConfig(c => ({
+                onChange={e => handleFieldChange(c => ({
                   ...c,
                   antiDetect: { ...c.antiDetect, maxRetries: Number(e.target.value) },
                 }))}
@@ -165,8 +217,8 @@ export default function ConfigPage() {
             </div>
           </section>
 
-          <button type="submit" className="config-page__save">
-            {saved ? '已保存' : '保存配置'}
+          <button type="submit" className="config-page__save" disabled={saving}>
+            {saving ? '保存中...' : '保存配置'}
           </button>
         </form>
       </div>

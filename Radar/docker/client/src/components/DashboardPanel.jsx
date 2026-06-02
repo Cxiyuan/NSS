@@ -24,15 +24,33 @@ function useChartData(taskId, fetcher, limit) {
   return { data, loading };
 }
 
+function hslColors(count) {
+  const startHue = 220;
+  const step = 360 / Math.max(count, 1);
+  return {
+    background: Array.from({ length: count }, (_, i) =>
+      `hsla(${(startHue + i * step) % 360}, 70%, 55%, 0.8)`
+    ),
+    border: Array.from({ length: count }, (_, i) =>
+      `hsla(${(startHue + i * step) % 360}, 70%, 45%, 1)`
+    ),
+  };
+}
+
 function BarChart({ data, label, valueLabel, loading }) {
   const canvasRef = useRef(null);
   const chartRef = useRef(null);
 
   useEffect(() => {
+    // Destroy previous chart before early return to avoid memory leak
+    if (chartRef.current) {
+      chartRef.current.destroy();
+      chartRef.current = null;
+    }
     if (!canvasRef.current || data.length === 0) return;
-    if (chartRef.current) chartRef.current.destroy();
 
     const ctx = canvasRef.current.getContext('2d');
+    const colors = hslColors(data.length);
     chartRef.current = new Chart(ctx, {
       type: 'bar',
       data: {
@@ -40,15 +58,8 @@ function BarChart({ data, label, valueLabel, loading }) {
         datasets: [{
           label,
           data: data.map(d => d.count),
-          backgroundColor: [
-            'rgba(37, 99, 235, 0.8)',
-            'rgba(59, 130, 246, 0.7)',
-            'rgba(96, 165, 250, 0.6)',
-            'rgba(147, 197, 253, 0.5)',
-            'rgba(191, 219, 254, 0.4)',
-            'rgba(226, 232, 240, 0.3)',
-          ],
-          borderColor: 'rgba(37, 99, 235, 1)',
+          backgroundColor: colors.background,
+          borderColor: colors.border,
           borderWidth: 1,
           borderRadius: 3,
         }],
@@ -58,7 +69,7 @@ function BarChart({ data, label, valueLabel, loading }) {
         maintainAspectRatio: false,
         indexAxis: 'y',
         plugins: {
-          legend: { display: false },
+          legend: { display: true },
           tooltip: {
             callbacks: {
               label: ctx => `${ctx.parsed.x} ${valueLabel}`,
@@ -72,7 +83,12 @@ function BarChart({ data, label, valueLabel, loading }) {
       },
     });
 
-    return () => { if (chartRef.current) chartRef.current.destroy(); };
+    return () => {
+      if (chartRef.current) {
+        chartRef.current.destroy();
+        chartRef.current = null;
+      }
+    };
   }, [data, label, valueLabel]);
 
   return (

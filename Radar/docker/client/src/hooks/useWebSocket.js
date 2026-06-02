@@ -6,19 +6,29 @@ export function useWebSocket(taskId, onMessage) {
   const retryRef = useRef(0);
   const mountedRef = useRef(true);
   const intentionalCloseRef = useRef(false);
+  const latestTaskIdRef = useRef(taskId);
 
   onMessageRef.current = onMessage;
+  latestTaskIdRef.current = taskId;
 
   const connect = useCallback((id) => {
     if (!id || !mountedRef.current) return;
 
-    const protocol = location.protocol === 'https:' ? 'wss:' : 'ws:';
-    const wsUrl = `${protocol}//${location.host}/ws?taskId=${id}`;
+    // Stale check: if this id is no longer the latest, bail
+    if (id !== latestTaskIdRef.current) return;
+
+    const wsUrl = import.meta.env.VITE_WS_URL ||
+      (location.protocol === 'https:' ? 'wss:' : 'ws:') + `//${location.host}/ws?taskId=${id}`;
     const ws = new WebSocket(wsUrl);
     wsRef.current = ws;
 
     ws.onmessage = (event) => {
       try {
+        // Stale check on each message
+        if (id !== latestTaskIdRef.current) {
+          ws.close();
+          return;
+        }
         const data = JSON.parse(event.data);
         onMessageRef.current?.(data);
       } catch {}
@@ -30,6 +40,9 @@ export function useWebSocket(taskId, onMessage) {
       wsRef.current = null;
       if (!mountedRef.current || intentionalCloseRef.current) return;
 
+      // Stale check: don't reconnect if taskId has changed
+      if (id !== latestTaskIdRef.current) return;
+
       // Exponential backoff reconnection: 1s → 2s → 4s → 8s → ... → 30s max
       retryRef.current++;
       const delay = Math.min(1000 * Math.pow(2, retryRef.current - 1), 30000);
@@ -37,6 +50,11 @@ export function useWebSocket(taskId, onMessage) {
     };
 
     ws.onopen = () => {
+      // Stale check: if taskId changed since connect was called, close
+      if (id !== latestTaskIdRef.current) {
+        ws.close();
+        return;
+      }
       retryRef.current = 0; // reset backoff on successful connection
     };
   }, []);

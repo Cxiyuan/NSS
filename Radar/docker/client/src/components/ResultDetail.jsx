@@ -1,18 +1,44 @@
-const LINK_TYPE_LABELS = {
-  a: '超链接', img: '图片', link: '资源引用', iframe: '内嵌框架',
-  form: '表单', meta: '页面跳转', script: '脚本', js_dynamic: 'JS动态',
-  css: '样式表', comment: '注释', keyword_match: '关键词匹配',
-};
+import { useRef, useEffect } from 'react';
+import { LINK_TYPE_LABELS } from '../lib/constants';
 
 export default function ResultDetail({ result, onClose }) {
+  const closeRef = useRef(null);
+
+  // Escape keydown -> onClose
+  useEffect(() => {
+    function handleKeyDown(e) {
+      if (e.key === 'Escape') onClose();
+    }
+    document.addEventListener('keydown', handleKeyDown);
+    return () => document.removeEventListener('keydown', handleKeyDown);
+  }, [onClose]);
+
+  // Auto-focus the close button on mount
+  useEffect(() => {
+    if (closeRef.current) closeRef.current.focus();
+  }, []);
+
+  // Body scroll lock while dialog is open
+  useEffect(() => {
+    const prev = document.body.style.overflow;
+    document.body.style.overflow = 'hidden';
+    return () => { document.body.style.overflow = prev; };
+  }, []);
+
   if (!result) return null;
 
   return (
-    <div className="result-detail-overlay" onClick={onClose}>
+    <div
+      className="result-detail-overlay"
+      onClick={onClose}
+      role="dialog"
+      aria-modal="true"
+      aria-label="链接详情"
+    >
       <div className="result-detail" onClick={e => e.stopPropagation()}>
         <div className="result-detail__header">
           <h3>链接详情</h3>
-          <button onClick={onClose} className="result-detail__close">&times;</button>
+          <button ref={closeRef} onClick={onClose} className="result-detail__close">&times;</button>
         </div>
 
         <dl className="result-detail__fields">
