@@ -44,7 +44,7 @@ for core in ["conn", "http", "dns", "ssh", "ssl"]:
     assert core in streams, f"Missing {core} stream"
 
 # 扩展协议必须存在（由 extra_protocols.py 生成，使用 Zeek 测试集真实字节）
-for ext in ["ftp", "rdp", "smb", "mysql", "postgresql", "redis", "sip", "snmp"]:
+for ext in ["ftp", "rdp", "smb_files", "mysql", "postgresql", "redis", "sip", "snmp"]:
     assert ext in streams, f"Missing {ext} stream — Zeek did not detect this protocol"
     print(f"  [+] {ext} stream present ({streams[ext]['records']} records)")
 
