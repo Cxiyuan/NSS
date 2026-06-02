@@ -28,7 +28,6 @@ docker compose ps
 | `PROBE_KAFKA_ONLY` | `true` | 仅输出到 Kafka，不写本地日志 |
 | `PROBE_INTERFACE` | `ens192` | 监听网卡接口 |
 | `KAFKA_LOG_RETENTION_DAYS` | `15` | Kafka 日志保留天数 |
-| `PROBE_LOG_DIR` | `/var/log/probe` | 日志挂载目录 |
 
 ## 架构
 

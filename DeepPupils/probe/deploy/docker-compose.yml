@@ -42,8 +42,6 @@ services:
     cap_add:
       - NET_ADMIN
       - NET_RAW
-    volumes:
-      - /var/log/probe:/output
     depends_on:
       kafka:
         condition: service_healthy
