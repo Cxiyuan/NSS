@@ -58,6 +58,10 @@ function AppInner() {
     } else if (hashView === 'analytics') {
       dispatch({ type: 'SET_VIEW', payload: 'analytics' });
     } else if (hashView === 'task-workspace') {
+      // #/new — clear current task so UnifiedTaskForm shows
+      if (!hashTaskId && state.activeTaskId) {
+        dispatch({ type: 'CLOSE_TASK' });
+      }
       dispatch({ type: 'SET_VIEW', payload: 'task-workspace' });
     } else if (hashView === 'workspace' && hashTaskId) {
       dispatch({ type: 'SELECT_TASK', payload: { taskId: hashTaskId, subTab: hashSubTab } });
