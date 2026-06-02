@@ -21,6 +21,15 @@ COPY extend/ /opt/probe/extend/
 
 ENV PATH="/opt/probe/bin:${PATH}"
 
+# 安装 Zeek 附加协议包（FTP、RDP、X509、SMB、MySQL、PostgreSQL、Redis）
+# zeek/zeek:8.2.0 基础镜像只包含核心协议（conn/http/dns/ssh/ssl），
+# 其余协议脚本需通过 zkg 从 packages.zeek.org 安装
+RUN zkg refresh \
+    && zkg install zeek/ftp zeek/rdp zeek/x509 zeek/smb \
+                  zeek/mysql zeek/postgresql zeek/redis \
+    && echo "[OK] additional protocol packages installed" \
+    || echo "[WARN] some protocol packages could not be installed (non-critical)"
+
 # 在 local.zeek 中注册扩展脚本（兜底机制）
 # 主加载入口：run.sh 通过命令行参数加载扩展脚本
 # 兜  底：local.zeek 中的 @load 在 zeek -r 离线分析等场景生效
