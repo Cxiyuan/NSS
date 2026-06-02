@@ -43,19 +43,10 @@ for sid, info in sorted(streams.items()):
 for core in ["conn", "http", "dns", "ssh", "ssl"]:
     assert core in streams, f"Missing {core} stream"
 
-# 扩展协议（由 extra_protocols.py 生成）
-# 已通过 CI 验证的协议：postgresql, redis
-# 其余已在生产服务器通过真实流量验证
-for proto in ["ftp", "rdp", "smb", "mysql", "sip", "snmp"]:
-    if proto in streams:
-        print(f"  [+] {proto} stream present ({streams[proto]['records']} records)")
-    else:
-        print(f"  [-] {proto} stream not detected in CI (verified via production)")
-
-# 已通过 CI 验证的协议必须存在
-for verified in ["postgresql", "redis"]:
-    assert verified in streams, f"Missing {verified} stream — expected from synthetic pcap"
-    print(f"  [+] {verified} stream present ({streams[verified]['records']} records)")
+# 扩展协议必须存在（由 extra_protocols.py 生成，使用 Zeek 测试集真实字节）
+for ext in ["ftp", "rdp", "smb", "mysql", "postgresql", "redis", "sip", "snmp"]:
+    assert ext in streams, f"Missing {ext} stream — Zeek did not detect this protocol"
+    print(f"  [+] {ext} stream present ({streams[ext]['records']} records)")
 
 has_proto = any("proto" in info["fields"] for info in streams.values())
 has_method = any("method" in info["fields"] for info in streams.values())
