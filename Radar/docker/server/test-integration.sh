@@ -142,9 +142,9 @@ DEL_GET=$(curl -s -o /dev/null -w '%{http_code}' "$BASE/api/tasks/$TID")
 echo ""
 echo "=== 3. Results API ==="
 
-# Install sqlite3 in container for direct DB access
+# Install sqlite3 in container for direct DB access (Alpine Linux)
 echo "  Installing sqlite3 in container..."
-docker exec radar-itest-$$ sh -c "apt-get update -qq && apt-get install -y -qq sqlite3" 2>/dev/null
+docker exec radar-itest-$$ sh -c "apk add --no-cache sqlite3" 2>&1
 
 # Create a task and inject a result via DB directly (no crawler needed)
 INJECT_TID="itest-results-$$"
@@ -153,7 +153,7 @@ docker exec radar-itest-$$ sh -c "
   sqlite3 /tmp/itest.db \"INSERT INTO results(task_id,url,found_on,link_type,is_external,depth,created_at) VALUES('$INJECT_TID','https://ext1.com/page','https://seed.com','a',1,1,'$(date -u +%Y-%m-%dT%H:%M:%SZ)');\"
   sqlite3 /tmp/itest.db \"INSERT INTO results(task_id,url,found_on,link_type,is_external,depth,created_at) VALUES('$INJECT_TID','https://ext2.com/page','https://seed.com','a',1,1,'$(date -u +%Y-%m-%dT%H:%M:%SZ)');\"
   sqlite3 /tmp/itest.db \"INSERT INTO results(task_id,url,found_on,link_type,is_external,depth,created_at) VALUES('$INJECT_TID','https://same.com/page','https://seed.com','a',0,0,'$(date -u +%Y-%m-%dT%H:%M:%SZ)');\"
-" 2>/dev/null
+"
 
 # GET /api/tasks/:id/results
 RESULTS=$(curl -sf "$BASE/api/tasks/$INJECT_TID/results")
