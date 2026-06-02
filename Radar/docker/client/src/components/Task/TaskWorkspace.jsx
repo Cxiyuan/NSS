@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useMemo } from 'react';
 import { useWorkspace } from '../../contexts/WorkspaceContext';
 import { useHashRouting } from '../../hooks/useHashRouting';
 import { useTaskMonitor } from '../../hooks/useTaskMonitor';
@@ -36,6 +36,39 @@ export default function TaskWorkspace({ task }) {
   const displayTask = taskData || task;
   const displayLabel = displayTask?.config?.url || displayTask?.config?.keywords || '任务';
   const monitor = useTaskMonitor(task?.id);
+
+  // Filter results by filteredDomains (added via RightPanel)
+  const filteredResults = useMemo(() => {
+    if (!state.filteredDomains.length) return monitor.results;
+    return (monitor.results || []).filter(r => {
+      try { const h = new URL(r.url).hostname; return !state.filteredDomains.includes(h); } catch { return true; }
+    });
+  }, [monitor.results, state.filteredDomains]);
+
+  const filteredLiveResults = useMemo(() => {
+    if (!state.filteredDomains.length) return monitor.liveResults;
+    return (monitor.liveResults || []).filter(r => {
+      try { const h = new URL(r.url).hostname; return !state.filteredDomains.includes(h); } catch { return true; }
+    });
+  }, [monitor.liveResults, state.filteredDomains]);
+
+  const filteredResultsTotal = useMemo(() => {
+    if (!state.filteredDomains.length) return monitor.resultsTotal;
+    return filteredResults.length;
+  }, [filteredResults.length, monitor.resultsTotal, state.filteredDomains.length]);
+
+  // Filter analytics data to remove filtered domains
+  const filteredTopDomains = useMemo(() => {
+    if (!state.filteredDomains.length || !monitor.topDomains) return monitor.topDomains;
+    return (monitor.topDomains || []).filter(d => !state.filteredDomains.includes(d.domain));
+  }, [monitor.topDomains, state.filteredDomains]);
+
+  const filteredTopUrls = useMemo(() => {
+    if (!state.filteredDomains.length || !monitor.topUrls) return monitor.topUrls;
+    return (monitor.topUrls || []).filter(u => {
+      try { const h = new URL(u.url).hostname; return !state.filteredDomains.includes(h); } catch { return true; }
+    });
+  }, [monitor.topUrls, state.filteredDomains]);
 
   // Dispatch activity events when monitor status changes
   const prevStatusRef = useRef(monitor.status);
@@ -122,11 +155,17 @@ export default function TaskWorkspace({ task }) {
                   ))}
                 </div>
               )}
-              <LiveResultStream results={monitor.liveResults} />
-              <h3 style={{ marginTop: 16, marginBottom: 8 }}>探测结果 ({monitor.resultsTotal})</h3>
+              {state.filteredDomains.length > 0 && (
+                <div style={{ marginBottom: 8, fontSize: 12, color: 'var(--color-text-muted)' }}>
+                  已过滤 {state.filteredDomains.join(', ')} 的域名结果
+                  （原始 {monitor.resultsTotal} 条，过滤后 {filteredResultsTotal} 条）
+                </div>
+              )}
+              <LiveResultStream results={filteredLiveResults} />
+              <h3 style={{ marginTop: 16, marginBottom: 8 }}>探测结果 ({filteredResultsTotal})</h3>
               <ResultTable
-                results={monitor.results}
-                total={monitor.resultsTotal}
+                results={filteredResults}
+                total={filteredResultsTotal}
                 page={monitor.page}
                 limit={50}
                 onPageChange={monitor.loadResults}
@@ -136,7 +175,7 @@ export default function TaskWorkspace({ task }) {
         )}
         {activeTab === 'analytics' && (
           task?.id ? (
-            <DashboardPanel topDomains={monitor.topDomains} topUrls={monitor.topUrls} loading={monitor.loading} />
+            <DashboardPanel topDomains={filteredTopDomains} topUrls={filteredTopUrls} loading={monitor.loading} />
           ) : (
             <div className="workspace__placeholder">创建并运行任务后，此处显示外链统计图表</div>
           )

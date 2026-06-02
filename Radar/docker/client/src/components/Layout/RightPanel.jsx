@@ -6,13 +6,14 @@ function getHostname(url) {
   try { return new URL(url).hostname; } catch { return null; }
 }
 
-async function addDomainFilter(taskId, domain) {
+async function addDomainFilter(taskId, domain, dispatch) {
   try {
     await fetch(`/api/tasks/${taskId}/filters`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ domain }),
     });
+    dispatch({ type: 'ADD_FILTERED_DOMAIN', payload: domain });
   } catch (err) {
     console.error('Failed to add filter:', err);
   }
@@ -76,7 +77,7 @@ function PanelBody({ content, state, dispatch }) {
                 <span className="panel-domain-filter__value">{hostname}</span>
               </div>
               <button className="btn btn--primary" style={{ fontSize: 12, padding: '4px 10px' }}
-                onClick={() => addDomainFilter(state.activeTaskId, hostname)}>
+                onClick={() => addDomainFilter(state.activeTaskId, hostname, dispatch)}>
                 + 加入过滤
               </button>
             </div>

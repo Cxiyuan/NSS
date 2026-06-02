@@ -18,6 +18,7 @@ const initialState = {
   paletteOpen: false,
   taskCache: {},
   activityEvents: [],
+  filteredDomains: [],
 };
 
 function workspaceReducer(state, action) {
@@ -138,6 +139,10 @@ function workspaceReducer(state, action) {
 
     case 'ADD_ACTIVITY_EVENT':
       return { ...state, activityEvents: [action.payload, ...state.activityEvents].slice(0, 50) };
+
+    case 'ADD_FILTERED_DOMAIN':
+      if (state.filteredDomains.includes(action.payload)) return state;
+      return { ...state, filteredDomains: [...state.filteredDomains, action.payload] };
 
     default:
       return state;
