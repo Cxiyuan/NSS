@@ -14,10 +14,9 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 
 WORKDIR /opt/probe
 
-COPY . /opt/probe/
-
-# 复制扩展脚本到 Zeek 加载目录
+# 只复制运行时需要的文件，不拷贝 dev/CI 无关文件
 COPY extend/ /opt/probe/extend/
+COPY patch_kafka_do_finish.py /opt/probe/
 
 ENV PATH="/opt/probe/bin:${PATH}"
 
@@ -68,8 +67,8 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     && ldconfig \
     && zeek -N Seiso::Kafka \
     && echo "[OK] zeek-kafka plugin installed" \
-    && apt-get purge -y g++ make cmake pkgconf \
-    && rm -rf /var/lib/apt/lists/* \
+    && apt-get purge -y g++ make cmake pkgconf git librdkafka-dev \
+    && rm -rf /var/lib/apt/lists/* /tmp/zeek-kafka /opt/probe/patch_kafka_do_finish.py \
     || echo "[WARN] zeek-kafka build failed (non-critical)"
 
 # run.sh 是统一的启动入口，自动组装 BPF 过滤规则 + 加载扩展脚本
