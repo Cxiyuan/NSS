@@ -12,6 +12,19 @@ function detectCharset(contentType) {
   return aliases[charset] || charset;
 }
 
+// Detect charset from raw HTML body by scanning <meta charset> tags
+function detectCharsetFromBody(bytes) {
+  // Try decoding as utf-8 first to find meta charset tag
+  const sample = new TextDecoder('utf-8', { fatal: false }).decode(bytes.slice(0, 4096));
+  const metaMatch = sample.match(/<meta[^>]+charset\s*=\s*["']?([a-zA-Z0-9_-]+)["'\s>/]/i)
+    || sample.match(/<meta[^>]+http-equiv\s*=\s*["']?Content-Type["']?[^>]+charset\s*=\s*["']?([a-zA-Z0-9_-]+)["'\s>]/i);
+  if (metaMatch) {
+    const aliases = { 'gb2312': 'gbk', 'gbk': 'gbk', 'gb18030': 'gb18030', 'big5': 'big5', 'shift_jis': 'shift-jis', 'euc-kr': 'euc-kr', 'euc-jp': 'euc-jp', 'iso-8859-1': 'latin1' };
+    return aliases[metaMatch[1].toLowerCase()] || metaMatch[1].toLowerCase();
+  }
+  return null;
+}
+
 // Lightweight title fetch for external links — quick check with short timeout
 async function fetchTitle(url) {
   const controller = new AbortController();
@@ -28,25 +41,47 @@ async function fetchTitle(url) {
     clearTimeout(timer);
     const statusCode = res.status;
     const contentType = res.headers.get('content-type') || '';
-    const encoding = detectCharset(contentType);
+    let encoding = detectCharset(contentType);
     // Read first 64KB to extract <title>
     const reader = res.body.getReader();
     const { value, done } = await reader.read();
     reader.cancel();
     if (done && !value) return { title: '', statusCode };
-    // Decode with detected encoding, fall back to utf-8 if unsupported
-    let text;
-    try {
-      text = new TextDecoder(encoding, { fatal: false }).decode(value);
-    } catch {
-      text = new TextDecoder('utf-8', { fatal: false }).decode(value);
+
+    // Try decoding; fallback chain: header charset → meta tag → utf-8
+    let text = tryDecode(value, encoding);
+    // If header had no charset and result has replacement chars, try meta tag
+    if (!contentType.match(/charset/i) && text.includes('\uFFFD')) {
+      const metaCharset = detectCharsetFromBody(value);
+      if (metaCharset && metaCharset !== encoding) {
+        text = tryDecode(value, metaCharset);
+      }
     }
-    const match = text.match(/<title[^>]*>([^<]+)<\/title>/i);
-    return { title: match ? match[1].trim() : '', statusCode };
+    // If still garbled, try common Chinese encodings
+    if (text.includes('\uFFFD')) {
+      for (const enc of ['gbk', 'gb18030']) {
+        if (enc !== encoding) {
+          const retry = tryDecode(value, enc);
+          if (!retry.includes('\uFFFD')) { text = retry; encoding = enc; break; }
+        }
+      }
+    }
+    // Extract title with flexible regex (handles newlines, extra whitespace)
+    const match = text.match(/<title[^>]*>([\s\S]*?)<\/title>/i);
+    const title = match ? match[1].replace(/\s+/g, ' ').trim() : '';
+    return { title, statusCode };
   } catch (err) {
     clearTimeout(timer);
     const code = err.name === 'AbortError' ? 408 : 0;
     return { title: '', statusCode: code };
+  }
+}
+
+function tryDecode(bytes, encoding) {
+  try {
+    return new TextDecoder(encoding, { fatal: false }).decode(bytes);
+  } catch {
+    return new TextDecoder('utf-8', { fatal: false }).decode(bytes);
   }
 }
 
