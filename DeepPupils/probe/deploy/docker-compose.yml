@@ -20,6 +20,8 @@ services:
       CLUSTER_ID: probe-cluster
       # 日志保留 15 天（15 × 24 = 360 小时），大小不限
       KAFKA_LOG_RETENTION_HOURS: 360
+      # 显式指定数据目录，与 volumes 挂载点一致
+      KAFKA_LOG_DIRS: /var/lib/kafka/data
       KAFKA_LOG_RETENTION_BYTES: -1
     restart: unless-stopped
     volumes:
