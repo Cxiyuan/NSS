@@ -21,14 +21,22 @@ COPY extend/ /opt/probe/extend/
 
 ENV PATH="/opt/probe/bin:${PATH}"
 
-# 安装 Zeek 附加协议包（FTP、RDP、X509、SMB、MySQL、PostgreSQL、Redis）
+# 安装 Zeek 附加协议脚本（FTP、RDP、X509、SMB、MySQL、PostgreSQL、Redis）
 # zeek/zeek:8.2.0 基础镜像只包含核心协议（conn/http/dns/ssh/ssl），
-# 其余协议脚本需通过 zkg 从 packages.zeek.org 安装
-RUN zkg refresh \
-    && zkg install zeek/ftp zeek/rdp zeek/x509 zeek/smb \
-                  zeek/mysql zeek/postgresql zeek/redis \
-    && echo "[OK] additional protocol packages installed" \
-    || echo "[WARN] some protocol packages could not be installed (non-critical)"
+# 其余协议脚本需要从 Zeek 源码仓库下载
+# 一次性下载源码 tarball 并提取 7 个协议目录
+RUN curl -sL -o /tmp/zeek-8.2.0.tar.gz \
+        https://github.com/zeek/zeek/archive/refs/tags/v8.2.0.tar.gz \
+    && mkdir -p /tmp/zeek-src \
+    && tar xzf /tmp/zeek-8.2.0.tar.gz -C /tmp/zeek-src --strip=1 \
+    && for dir in ftp rdp x509 smb mysql postgresql redis; do \
+        cp -r /tmp/zeek-src/scripts/base/protocols/$dir \
+            /usr/local/zeek/share/zeek/base/protocols/$dir; \
+        echo "[OK] installed base/protocols/$dir"; \
+    done \
+    && rm -rf /tmp/zeek-8.2.0.tar.gz /tmp/zeek-src \
+    && echo "[OK] all protocol scripts installed" \
+    || echo "[WARN] protocol script install failed (non-critical)"
 
 # 在 local.zeek 中注册扩展脚本（兜底机制）
 # 主加载入口：run.sh 通过命令行参数加载扩展脚本
