@@ -58,12 +58,14 @@ function normalizeStatus(status) {
   return STATUS[status] || status;
 }
 
-export default function TaskItem({ task, isActive, onSelect, onRetry }) {
+export default function TaskItem({ task, isActive, onSelect, onRetry, onDelete }) {
   const status = useMemo(() => normalizeStatus(task.status), [task.status]);
   const label = useMemo(() => getLabel(task), [task]);
   const timestamp = useMemo(() => getRelativeTime(task.created_at), [task.created_at]);
   const icon = useMemo(() => getTypeIcon(task), [task]);
   const progress = useMemo(() => getProgress(task), [task]);
+
+  const showDelete = (status === 'completed' || status === 'cancelled') && onDelete;
 
   return (
     <div
@@ -92,6 +94,18 @@ export default function TaskItem({ task, isActive, onSelect, onRetry }) {
             title="重试"
           >
             &#x21bb;
+          </button>
+        )}
+        {showDelete && (
+          <button
+            className="task-item__retry-btn"
+            onClick={(e) => {
+              e.stopPropagation();
+              onDelete(task.id);
+            }}
+            title="删除"
+          >
+            &#x2715;
           </button>
         )}
         {status === 'running' && progress > 0 && (

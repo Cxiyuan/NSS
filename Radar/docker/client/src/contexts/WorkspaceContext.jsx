@@ -17,6 +17,7 @@ const initialState = {
   bottomPanelHeight: 240,
   paletteOpen: false,
   taskCache: {},
+  activityEvents: [],
 };
 
 function workspaceReducer(state, action) {
@@ -134,6 +135,9 @@ function workspaceReducer(state, action) {
         ...state,
         paletteOpen: Boolean(action.payload),
       };
+
+    case 'ADD_ACTIVITY_EVENT':
+      return { ...state, activityEvents: [action.payload, ...state.activityEvents].slice(0, 50) };
 
     default:
       return state;

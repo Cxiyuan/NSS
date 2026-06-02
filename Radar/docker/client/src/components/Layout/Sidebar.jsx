@@ -14,8 +14,9 @@ import './Sidebar.css';
  *   onSelectTask – called with a task object when user clicks a task
  *   onNewTask    – called when the "新任务" button is clicked
  *   onRetryTask  – called with a task object when user clicks retry on an error task
+ *   onDeleteTask – called with a task id when user clicks delete on a completed/cancelled task
  */
-export default function Sidebar({ tasks, activeTaskId, onSelectTask, onNewTask, onRetryTask }) {
+export default function Sidebar({ tasks, activeTaskId, onSelectTask, onNewTask, onRetryTask, onDeleteTask }) {
   const { state, dispatch } = useWorkspace();
   const { sidebarCollapsed } = state;
 
@@ -91,6 +92,7 @@ export default function Sidebar({ tasks, activeTaskId, onSelectTask, onNewTask, 
           activeTaskId={activeTaskId}
           onSelect={handleSelect}
           onRetry={onRetryTask}
+          onDelete={onDeleteTask}
         />
       </div>
 

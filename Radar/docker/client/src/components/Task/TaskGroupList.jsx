@@ -42,7 +42,7 @@ function groupTasks(tasks) {
   return map;
 }
 
-export default function TaskGroupList({ tasks = [], activeTaskId, onSelect, onRetry }) {
+export default function TaskGroupList({ tasks = [], activeTaskId, onSelect, onRetry, onDelete }) {
   // Collapse state: keyed by status string
   const [collapsed, setCollapsed] = useState(() => new Set());
 
@@ -96,6 +96,7 @@ export default function TaskGroupList({ tasks = [], activeTaskId, onSelect, onRe
                   isActive={task.id === activeTaskId}
                   onSelect={onSelect}
                   onRetry={onRetry}
+                  onDelete={onDelete}
                 />
               ))}
             </div>

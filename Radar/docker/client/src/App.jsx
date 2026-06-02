@@ -47,6 +47,10 @@ function AppInner() {
     console.log('retry', taskId);
   }, []);
 
+  const handleDeleteTask = useCallback(async (taskId) => {
+    try { await api.deleteTask(taskId); setTaskListKey(k => k + 1); } catch {}
+  }, []);
+
   // Sync hash routing to workspace state
   useEffect(() => {
     if (hashView === 'config') {
@@ -57,10 +61,11 @@ function AppInner() {
       dispatch({ type: 'SET_VIEW', payload: 'task-workspace' });
     } else if (hashView === 'workspace' && hashTaskId) {
       dispatch({ type: 'SELECT_TASK', payload: { taskId: hashTaskId, subTab: hashSubTab } });
+      setTaskListKey(k => k + 1);
     } else {
       dispatch({ type: 'SET_VIEW', payload: 'idle' });
     }
-  }, [hashTaskId, hashView, hashSubTab, dispatch]);
+  }, [hashTaskId, hashView, hashSubTab, dispatch, setTaskListKey]);
 
   return (
     <AppLayout>
@@ -74,6 +79,7 @@ function AppInner() {
         onSelectTask={handleSelectTask}
         onNewTask={() => navigateTo('new')}
         onRetryTask={handleRetryTask}
+        onDeleteTask={handleDeleteTask}
         onNavigateConfig={() => {
           dispatch({ type: 'SET_VIEW', payload: 'config' });
           navigateTo('config');
