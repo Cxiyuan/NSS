@@ -88,3 +88,18 @@ jobs:
           push: true
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
+
+  integration-test:
+    name: 集成验证
+    needs: [docker-build]
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: 运行完整 API 集成测试
+        timeout-minutes: 5
+        run: |
+          IMAGE="${{ env.REGISTRY }}/${{ github.repository }}:sha-${{ github.sha }}"
+          bash Radar/docker/server/test-integration.sh "$IMAGE" 3000
