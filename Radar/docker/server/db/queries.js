@@ -39,6 +39,11 @@ export function createQueries(db) {
       db.prepare('UPDATE tasks SET stats = ?, updated_at = ? WHERE id = ?').run(JSON.stringify(stats), now, id);
     },
 
+    updateTaskConfig(id, config) {
+      const now = new Date().toISOString();
+      db.prepare('UPDATE tasks SET config = ?, updated_at = ? WHERE id = ?').run(JSON.stringify(config), now, id);
+    },
+
     deleteTask(id) {
       db.prepare('DELETE FROM tasks WHERE id = ?').run(id);
     },

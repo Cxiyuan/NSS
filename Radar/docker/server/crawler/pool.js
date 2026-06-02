@@ -63,6 +63,11 @@ export class WorkerPool {
     }
   }
 
+  sendMessage(taskId, msg) {
+    const worker = this.#workers.get(taskId);
+    if (worker) worker.postMessage(msg);
+  }
+
   cancelTask(taskId) {
     const worker = this.#workers.get(taskId);
     if (worker) {

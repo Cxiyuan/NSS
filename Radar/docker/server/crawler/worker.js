@@ -112,17 +112,25 @@ import { AntiDetect } from './anti-detect.js';
 
 let paused = false;
 let cancelled = false;
+let currentFilter = null;
+let currentTaskId = null;
 
 parentPort.on('message', (msg) => {
   if (msg.type === 'pause') paused = true;
   if (msg.type === 'resume') paused = false;
   if (msg.type === 'cancel') cancelled = true;
+  if (msg.type === 'add_filter' && msg.pattern && currentFilter) {
+    currentFilter.addFilter(msg.pattern);
+    parentPort.postMessage({ type: 'log', taskId: currentTaskId, level: 'info', message: `Dynamic filter added: ${msg.pattern}` });
+  }
 });
 
 async function run(taskConfig) {
   const { taskId, type, url, keywords, depth, concurrency, filters, searchApiKey, searchEngine: engine, searchCx, antiDetect: adConfig } = taskConfig;
 
   const filter = FilterEngine.fromJSON(filters || []);
+  currentFilter = filter;
+  currentTaskId = taskId;
   const antiDetect = new AntiDetect(adConfig || {});
   setAntiDetect(antiDetect);
 

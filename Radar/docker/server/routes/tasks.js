@@ -79,5 +79,32 @@ export function createTaskRoutes(queries, pool, getConfig) {
     res.json({ deleted: true });
   });
 
+  router.post('/:id/filters', (req, res) => {
+    const { domain } = req.body;
+    if (!domain || typeof domain !== 'string') {
+      return res.status(400).json({ error: 'domain is required' });
+    }
+    // Send dynamic filter to running worker
+    if (pool) pool.sendMessage(req.params.id, { type: 'add_filter', pattern: domain });
+    // Also store the filter in the task config so it persists
+    const task = queries.getTask(req.params.id);
+    if (task && task.config) {
+      const config = task.config;
+      const filters = Array.isArray(config.filters) ? config.filters : (config.filters?.domains || []);
+      if (!filters.includes(domain)) {
+        filters.push(domain);
+        if (Array.isArray(config.filters)) {
+          config.filters = filters;
+        } else {
+          config.filters = { ...config.filters, domains: filters };
+        }
+        // Update the config in DB (destructure and re-store)
+        const { searchApiKey: _, searchCx: __, ...safeConfig } = config;
+        queries.updateTaskConfig(req.params.id, safeConfig);
+      }
+    }
+    res.json({ status: 'ok', pattern: domain });
+  });
+
   return router;
 }

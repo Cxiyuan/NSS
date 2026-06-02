@@ -73,3 +73,31 @@
   overflow: auto;
   padding: 16px;
 }
+
+.panel-domain-filter {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 0;
+  margin-bottom: 12px;
+  border-bottom: 1px solid var(--color-border);
+}
+
+.panel-domain-filter__info {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.panel-domain-filter__label {
+  font-size: 11px;
+  color: var(--color-text-muted);
+  text-transform: uppercase;
+}
+
+.panel-domain-filter__value {
+  font-size: 13px;
+  font-weight: 500;
+  word-break: break-all;
+}
