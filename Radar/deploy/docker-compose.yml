@@ -1,0 +1,69 @@
+# ============================================
+# Radar Web Crawler — 生产环境部署
+# ============================================
+# 使用方式:
+#   cp .env.production .env
+#   docker compose up -d
+# ============================================
+
+services:
+  radar:
+    image: ghcr.io/cxiyuan/radar-web-crawler:latest
+    container_name: radar
+    restart: unless-stopped
+
+    ports:
+      - "${HOST_PORT:-3000}:3000"
+
+    environment:
+      - PORT=3000
+      - DB_PATH=/data/crawler.db
+      - PUPPETEER_EXECUTABLE_PATH=/usr/bin/chromium-browser
+      # 搜索引擎 API（关键词搜索模式必需）
+      - GOOGLE_API_KEY=${GOOGLE_API_KEY:-}
+      - GOOGLE_CX=${GOOGLE_CX:-}
+      - BING_API_KEY=${BING_API_KEY:-}
+      # 代理（可选，用于反检测）
+      - HTTPS_PROXY=${HTTPS_PROXY:-}
+
+    volumes:
+      # 持久化 SQLite 数据库和配置
+      - radar_data:/data
+
+    # 健康检查
+    healthcheck:
+      test: ["CMD", "curl", "-sf", "http://127.0.0.1:3000/api/tasks"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 20s
+
+    # 资源限制
+    deploy:
+      resources:
+        limits:
+          memory: ${MEMORY_LIMIT:-2G}
+        reservations:
+          memory: 512M
+
+    # 日志
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+    # 安全
+    security_opt:
+      - no-new-privileges:true
+
+    networks:
+      - radar_net
+
+volumes:
+  radar_data:
+    name: radar_data
+
+networks:
+  radar_net:
+    name: radar_net
