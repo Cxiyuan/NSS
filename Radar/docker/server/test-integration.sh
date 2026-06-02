@@ -212,8 +212,8 @@ for i in 1 2 3 4 5; do
 done
 
 # Resume from different page
-HP=$(curl -sf "$BASE/api/tasks/unknown-id/resume")
-echo "$HP" | jq -e '.status == "running"' > /dev/null && ok "Resume unknown task returns running (idempotent)" || fail "Resume unknown"
+HP=$(curl -s "$BASE/api/tasks/unknown-id/resume" 2>&1 || true)
+echo "$HP" | jq -e '.status == "running"' > /dev/null && ok "Resume unknown task returns running (idempotent)" || fail "Resume unknown: $(echo "$HP" | head -c 80)"
 
 echo ""
 echo "============================================"
