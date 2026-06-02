@@ -33,6 +33,19 @@ export {
 @load base/protocols/mysql
 @load base/protocols/postgresql
 @load base/protocols/redis
+@load base/protocols/dhcp
+@load base/protocols/krb
+@load base/protocols/ldap
+@load base/protocols/mqtt
+@load base/protocols/ntp
+@load base/protocols/quic
+@load base/protocols/radius
+@load base/protocols/sip
+@load base/protocols/snmp
+@load base/protocols/syslog
+@load base/protocols/websocket
+@load base/protocols/tunnels
+@load base/files/pe
 
 redef Kafka::tag_json = T;
 redef Kafka::json_timestamps = JSON::TS_ISO8601;
@@ -121,6 +134,26 @@ event zeek_init() &priority=-10
     Log::remove_filter(mysql::LOG, "");
     Log::remove_filter(PostgreSQL::LOG, "");
     Log::remove_filter(Redis::LOG, "");
+    Log::remove_filter(DHCP::LOG, "");
+    Log::remove_filter(KRB::LOG, "");
+    Log::remove_filter(LDAP::LDAP_LOG, "");
+    Log::remove_filter(LDAP::LDAP_SEARCH_LOG, "");
+    Log::remove_filter(MQTT::CONNECT_LOG, "");
+    Log::remove_filter(MQTT::SUBSCRIBE_LOG, "");
+    Log::remove_filter(MQTT::PUBLISH_LOG, "");
+    Log::remove_filter(NTP::LOG, "");
+    Log::remove_filter(QUIC::LOG, "");
+    Log::remove_filter(RADIUS::LOG, "");
+    Log::remove_filter(SIP::LOG, "");
+    Log::remove_filter(SNMP::LOG, "");
+    Log::remove_filter(Syslog::LOG, "");
+    Log::remove_filter(WebSocket::LOG, "");
+    Log::remove_filter(Tunnel::LOG, "");
+    Log::remove_filter(PE::LOG, "");
+    Log::remove_filter(Weird::LOG, "");
+    Log::remove_filter(Notice::LOG, "");
+    Log::remove_filter(OCSP::LOG, "");
+    Log::remove_filter(Analyzer::Logging::LOG, "");
 
     print "[probe] ASCII log output disabled, Kafka-only mode active";
 }
