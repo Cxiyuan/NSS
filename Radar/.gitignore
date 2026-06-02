@@ -3,3 +3,18 @@
 .claude/
 docs/
 CLAUDE.md
+
+# Dependencies
+node_modules/
+
+# Build output
+dist/
+client/dist/
+
+# Python
+__pycache__/
+*.pyc
+
+# Probe test data
+http-pcaps/
+zeek-output/

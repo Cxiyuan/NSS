@@ -8,7 +8,9 @@ export function normalizeUrl(url) {
       u.port = '';
     }
     let result = u.toString();
-    if (result.endsWith('/') && u.pathname === '/') {
+    // Strip trailing slash for ALL paths, not just root
+    // Prevents /page and /page/ from being treated as different URLs
+    if (result.endsWith('/') && result.length > 8) {
       result = result.slice(0, -1);
     }
     return result;

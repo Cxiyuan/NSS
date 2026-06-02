@@ -202,7 +202,7 @@ async function run(taskConfig) {
 
         if (isExt) {
           // Apply filter to external links — skip if it matches a filter pattern
-          if (filter.isFiltered(link.url)) {
+          if (filter.isFiltered(link.url, link.linkType)) {
             filteredCount++;
             post('log', { level: 'info', message: `Filtered external: ${link.url}` });
             continue;
@@ -233,7 +233,7 @@ async function run(taskConfig) {
         const matches = kwds.filter(k => bodyText.includes(k.toLowerCase()));
         if (matches.length > 0) {
           // Apply filter to keyword_match results too
-          if (filter.isFiltered(crawlUrl)) {
+          if (filter.isFiltered(crawlUrl, 'keyword_match')) {
             filteredCount++;
             post('log', { level: 'info', message: `Filtered keyword_match: ${crawlUrl}` });
           } else {
@@ -242,7 +242,7 @@ async function run(taskConfig) {
               foundOn,
               linkType: 'keyword_match',
               depth: currentDepth,
-              isExternal: true,
+              isExternal: false,
               snippet: keywordSnippet(bodyText, kwds),
             };
             newResults.push(kwResult);
@@ -312,5 +312,10 @@ function keywordSnippet(bodyText, kwds) {
 }
 
 parentPort.on('message', (msg) => {
-  if (msg.type === 'start') run(msg.config);
+  if (msg.type === 'start') {
+    run(msg.config).catch(err => {
+      try { parentPort.postMessage({ type: 'log', level: 'error', message: `Worker fatal error: ${err.message}` }); } catch {}
+      try { parentPort.postMessage({ type: 'status', status: 'error' }); } catch {}
+    });
+  }
 });

@@ -1,7 +1,9 @@
 import { useState } from 'react';
 import { useWorkspace } from '../../contexts/WorkspaceContext';
+import { api } from '../../lib/api';
 import UnifiedTaskForm from './UnifiedTaskForm';
 import ContentTabs from './ContentTabs';
+import './TaskWorkspace.css';
 
 const TABS = [
   { id: 'results', label: '结果', icon: '\u{1F4CB}' },
@@ -13,19 +15,23 @@ export default function TaskWorkspace({ task }) {
   const { state, dispatch } = useWorkspace();
   const activeTab = state.activeSubTab || 'results';
 
-  function handleStart(config) {
-    // In Phase 5, this will call API — for now just log
-    console.log('Starting task:', config);
+  async function handleStart(config) {
+    try {
+      const task = await api.createTask(config);
+      dispatch({ type: 'SELECT_TASK', payload: { taskId: task.id, subTab: 'results' } });
+    } catch (err) {
+      console.error('Failed to create task:', err);
+    }
   }
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
+    <div className="workspace">
       {/* Workspace toolbar */}
-      <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 16, paddingBottom: 12, borderBottom: '1px solid var(--color-border)', flexShrink: 0 }}>
-        <span style={{ fontSize: 12, color: 'var(--color-text-muted)' }}>所有任务</span>
-        <span style={{ color: 'var(--color-text-muted)' }}>/</span>
-        <span style={{ fontWeight: 600, fontSize: 14 }}>{task?.config?.url || task?.config?.keywords || '任务'}</span>
-        <span style={{ marginLeft: 'auto', fontSize: 12, padding: '2px 8px', borderRadius: 4, background: '#eff6ff', color: 'var(--color-primary)', fontWeight: 500 }}>
+      <div className="workspace__toolbar">
+        <span className="workspace__breadcrumb">所有任务</span>
+        <span className="workspace__separator">/</span>
+        <span className="workspace__title">{task?.config?.url || task?.config?.keywords || '任务'}</span>
+        <span className="workspace__badge">
           {task?.type === 'url_crawl' ? 'URL 爬取' : '关键词搜索'}
         </span>
       </div>
@@ -34,22 +40,21 @@ export default function TaskWorkspace({ task }) {
       <ContentTabs tabs={TABS} activeTab={activeTab} onChange={(tab) => dispatch({ type: 'SET_SUB_TAB', payload: tab })} />
 
       {/* Tab content */}
-      <div style={{ flex: 1, overflow: 'auto' }}>
+      <div className="workspace__content">
         {activeTab === 'results' && (
-          // If task has not started, show form
           !task?.id ? (
             <UnifiedTaskForm onStart={handleStart} />
           ) : (
             <div>
-              <p style={{ color: 'var(--color-text-muted)' }}>任务监控视图 (Phase 6+)</p>
+              <p className="text-muted">任务监控视图 (Phase 6+)</p>
             </div>
           )
         )}
         {activeTab === 'analytics' && (
-          <div style={{ color: 'var(--color-text-muted)', padding: 40, textAlign: 'center' }}>分析仪表盘 (Phase 9+)</div>
+          <div className="workspace__placeholder">分析仪表盘 (Phase 9+)</div>
         )}
         {activeTab === 'logs' && (
-          <div style={{ color: 'var(--color-text-muted)', padding: 40, textAlign: 'center' }}>日志视图 (Phase 11+)</div>
+          <div className="workspace__placeholder">日志视图 (Phase 11+)</div>
         )}
       </div>
     </div>

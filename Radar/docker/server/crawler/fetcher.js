@@ -15,7 +15,7 @@ export async function fetchAndParse(url, referer = '') {
 
     let response;
     try {
-      response = await fetch(url, { signal, headers, redirect: 'follow' });
+      response = await fetch(url, ad.buildFetchOptions(headers, signal));
     } catch (err) {
       throw new Error(`Failed to fetch ${url}: ${err.message}`);
     }

@@ -3,8 +3,14 @@ import assert from 'node:assert';
 import { normalizeUrl, getDomain, isSameDomain, resolveUrl } from './url.js';
 
 describe('normalizeUrl', () => {
-  it('removes trailing slash', () => {
+  it('removes trailing slash from root', () => {
     assert.strictEqual(normalizeUrl('https://example.com/'), 'https://example.com');
+  });
+  it('removes trailing slash from subpath', () => {
+    assert.strictEqual(normalizeUrl('https://example.com/page/'), 'https://example.com/page');
+  });
+  it('preserves protocol-only URLs (no host)', () => {
+    assert.strictEqual(normalizeUrl('https://'), null);
   });
   it('removes hash fragment', () => {
     assert.strictEqual(normalizeUrl('https://example.com/page#section'), 'https://example.com/page');

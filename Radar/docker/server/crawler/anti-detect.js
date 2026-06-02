@@ -124,9 +124,15 @@ export class AntiDetect {
     throw lastError;
   }
 
-  // Build fetch options (proxy support via container-level HTTPS_PROXY env var)
+  // Build fetch options with proxy support
   buildFetchOptions(headers, signal) {
-    return { headers, signal, redirect: 'follow' };
+    const opts = { headers, signal, redirect: 'follow' };
+    // If proxy is configured in settings and HTTPS_PROXY is not already set
+    if (this.config.proxy && !process.env.HTTPS_PROXY && !process.env.HTTP_PROXY) {
+      process.env.HTTPS_PROXY = this.config.proxy;
+      process.env.HTTP_PROXY = this.config.proxy;
+    }
+    return opts;
   }
 
   toJSON() {

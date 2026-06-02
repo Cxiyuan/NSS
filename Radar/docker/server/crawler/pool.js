@@ -6,6 +6,7 @@ const __dirname = dirname(fileURLToPath(import.meta.url));
 
 export class WorkerPool {
   #workers = new Map();
+  #paused = new Set();
   #maxWorkers;
   #onMessage;
 
@@ -15,8 +16,9 @@ export class WorkerPool {
   }
 
   startTask(taskId, config) {
-    // Respect maxWorkers cap — refuse new task if at capacity
-    if (this.#workers.size >= this.#maxWorkers) {
+    // Respect maxWorkers cap — paused workers don't count towards limit
+    const activeCount = this.#workers.size - this.#paused.size;
+    if (activeCount >= this.#maxWorkers) {
       return null;
     }
 
@@ -33,10 +35,12 @@ export class WorkerPool {
         this.#onMessage(taskId, { type: 'status', status: 'error' });
       }
       this.#workers.delete(taskId);
+      this.#paused.delete(taskId);
     });
 
     worker.on('exit', (code) => {
       this.#workers.delete(taskId);
+      this.#paused.delete(taskId);
     });
 
     worker.postMessage({ type: 'start', config });
@@ -45,22 +49,30 @@ export class WorkerPool {
 
   pauseTask(taskId) {
     const worker = this.#workers.get(taskId);
-    if (worker) worker.postMessage({ type: 'pause' });
+    if (worker) {
+      this.#paused.add(taskId);
+      worker.postMessage({ type: 'pause' });
+    }
   }
 
   resumeTask(taskId) {
     const worker = this.#workers.get(taskId);
-    if (worker) worker.postMessage({ type: 'resume' });
+    if (worker) {
+      this.#paused.delete(taskId);
+      worker.postMessage({ type: 'resume' });
+    }
   }
 
   cancelTask(taskId) {
     const worker = this.#workers.get(taskId);
     if (worker) {
+      this.#paused.delete(taskId);
       worker.postMessage({ type: 'cancel' });
       setTimeout(() => {
         if (this.#workers.has(taskId)) {
           worker.terminate();
           this.#workers.delete(taskId);
+          this.#paused.delete(taskId);
         }
       }, 5000);
     }
@@ -71,6 +83,6 @@ export class WorkerPool {
   }
 
   get activeWorkers() {
-    return this.#workers.size;
+    return this.#workers.size - this.#paused.size;
   }
 }

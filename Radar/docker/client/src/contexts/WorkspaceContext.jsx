@@ -12,6 +12,7 @@ const initialState = {
   rightPanelOpen: false,
   rightPanelPinned: false,
   sidebarCollapsed: false,
+  mobileSidebarOpen: false,
   bottomPanelOpen: false,
   bottomPanelHeight: 240,
   paletteOpen: false,
@@ -120,6 +121,12 @@ function workspaceReducer(state, action) {
       return {
         ...state,
         bottomPanelOpen: !state.bottomPanelOpen,
+      };
+
+    case 'SET_MOBILE_SIDEBAR':
+      return {
+        ...state,
+        mobileSidebarOpen: !!action.payload,
       };
 
     case 'SET_PALETTE':

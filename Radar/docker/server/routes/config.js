@@ -58,21 +58,24 @@ export function createConfigRoutes(dataDir) {
 
   // PUT /api/config
   router.put('/', (req, res) => {
+    if (!req.body || typeof req.body !== 'object' || Array.isArray(req.body)) {
+      return res.status(400).json({ error: 'Request body must be a JSON object' });
+    }
     const { proxy, antiDetect } = req.body;
 
-    if (proxy) {
+    if (proxy && typeof proxy === 'object' && !Array.isArray(proxy)) {
       globalConfig.proxy = {
         enabled: !!proxy.enabled,
         url: proxy.url || globalConfig.proxy.url,
       };
     }
 
-    if (antiDetect) {
+    if (antiDetect && typeof antiDetect === 'object' && !Array.isArray(antiDetect)) {
       globalConfig.antiDetect = {
         uaRotation: antiDetect.uaRotation ?? globalConfig.antiDetect.uaRotation,
         requestDelay: {
-          min: antiDetect.requestDelay?.min ?? globalConfig.antiDetect.requestDelay.min,
-          max: antiDetect.requestDelay?.max ?? globalConfig.antiDetect.requestDelay.max,
+          min: (antiDetect.requestDelay && typeof antiDetect.requestDelay === 'object' ? antiDetect.requestDelay.min : undefined) ?? globalConfig.antiDetect.requestDelay.min,
+          max: (antiDetect.requestDelay && typeof antiDetect.requestDelay === 'object' ? antiDetect.requestDelay.max : undefined) ?? globalConfig.antiDetect.requestDelay.max,
         },
         maxRetries: antiDetect.maxRetries ?? globalConfig.antiDetect.maxRetries,
         browserFallback: antiDetect.browserFallback ?? globalConfig.antiDetect.browserFallback,

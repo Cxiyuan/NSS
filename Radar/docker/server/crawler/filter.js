@@ -1,5 +1,6 @@
 export class FilterEngine {
   #patterns = [];
+  #excludedTypes = [];
 
   addFilter(pattern) {
     if (!this.#patterns.includes(pattern)) {
@@ -11,26 +12,32 @@ export class FilterEngine {
     this.#patterns = this.#patterns.filter(p => p !== pattern);
   }
 
-  isFiltered(url) {
+  setExcludedTypes(types) {
+    this.#excludedTypes = [...types];
+  }
+
+  isFiltered(url, linkType) {
+    // 1. Check domain patterns (existing logic)
+    let domainFiltered = false;
     try {
-      // Use full hostname instead of getDomain() — preserves subdomains
-      // so *.sceea.cn correctly matches www.sceea.cn
       const hostname = new URL(url).hostname;
-      if (!hostname) return false;
-      return this.#patterns.some(pattern => {
-        const regex = FilterEngine.#patternToRegex(pattern);
-        return regex.test(hostname);
-      });
-    } catch {
-      return false;
-    }
+      if (hostname) {
+        domainFiltered = this.#patterns.some(pattern => {
+          const regex = FilterEngine.#patternToRegex(pattern);
+          return regex.test(hostname);
+        });
+      }
+    } catch {}
+
+    // 2. Check link type exclusion (new)
+    const typeFiltered = linkType && this.#excludedTypes.length > 0 && this.#excludedTypes.includes(linkType);
+
+    return !!(domainFiltered || typeFiltered);
   }
 
   static #patternToRegex(pattern) {
     if (pattern.startsWith('*.')) {
       const base = pattern.slice(2).replace(/\./g, '\\.');
-      // Match any subdomain depth (including bare domain):
-      // e.g. *.sceea.cn matches sceea.cn, www.sceea.cn, deep.sub.sceea.cn
       return new RegExp('(?:^.+\\.)?' + base + '$');
     }
     if (pattern.startsWith('*')) {
@@ -42,12 +49,26 @@ export class FilterEngine {
   }
 
   toJSON() {
-    return this.#patterns;
+    return {
+      domains: this.#patterns,
+      types: this.#excludedTypes,
+    };
   }
 
   static fromJSON(json) {
     const f = new FilterEngine();
-    for (const p of json) f.addFilter(p);
+    if (Array.isArray(json)) {
+      // Old format: ['qq.com', '*gov.cn']
+      for (const p of json) f.addFilter(p);
+    } else if (json && typeof json === 'object') {
+      // New format: { domains: ['qq.com'], types: ['a', 'img'] }
+      if (Array.isArray(json.domains)) {
+        for (const p of json.domains) f.addFilter(p);
+      }
+      if (Array.isArray(json.types)) {
+        f.setExcludedTypes(json.types);
+      }
+    }
     return f;
   }
 }

@@ -108,6 +108,15 @@
   display: none;
 }
 
+/* ---- Mobile backdrop ---- */
+
+.sidebar__mobile-backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.3);
+  z-index: 99;
+}
+
 /* ---- Footer / Nav items ---- */
 
 .sidebar__footer {

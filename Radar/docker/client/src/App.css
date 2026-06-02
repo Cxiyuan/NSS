@@ -266,6 +266,18 @@ a:hover { text-decoration: underline; }
   100% { background-position: -200% 0; }
 }
 
+/* === Utility Classes === */
+.flex-row { display: flex; align-items: center; gap: 8px; }
+.flex-between { display: flex; align-items: center; justify-content: space-between; }
+.text-center { text-align: center; }
+.text-muted { color: var(--color-text-muted); }
+.gap-sm { gap: 8px; }
+.gap-md { gap: 16px; }
+.detail-row__dt { font-size: 11px; text-transform: uppercase; color: var(--color-text-muted); margin-top: 12px; margin-bottom: 2px; }
+.detail-row__dd { font-size: 13px; margin: 0; word-break: break-all; }
+.detail-snippet { font-size: 12px; color: var(--color-text-muted); background: #f8fafc; padding: 8px; border-radius: 4px; max-height: 120px; overflow: auto; white-space: pre-wrap; }
+.detail-tag { display: inline-block; padding: 1px 6px; border-radius: 3px; font-size: 11px; background: #f1f5f9; }
+
 /* === Responsive Breakpoints === */
 @media (max-width: 900px) {
   .page { grid-template-columns: 1fr; }

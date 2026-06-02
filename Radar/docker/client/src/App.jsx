@@ -1,6 +1,7 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useCallback } from 'react';
 import { WorkspaceProvider, useWorkspace } from './contexts/WorkspaceContext';
 import { useHashRouting } from './hooks/useHashRouting';
+import { api } from './lib/api';
 import AppLayout from './components/Layout/AppLayout';
 import Sidebar from './components/Layout/Sidebar';
 import Header from './components/Layout/Header';
@@ -21,8 +22,31 @@ function AppInner() {
   const { state, dispatch } = useWorkspace();
   const { taskId: hashTaskId, view: hashView, subTab: hashSubTab, navigateTo } = useHashRouting();
 
-  // Demo tasks for sidebar development — will be replaced by API
-  const [tasks] = useState([]);
+  // Load task list from API
+  const [tasks, setTasks] = useState([]);
+  const [tasksLoading, setTasksLoading] = useState(true);
+  const [taskListKey, setTaskListKey] = useState(0);
+
+  useEffect(() => {
+    let cancelled = false;
+    setTasksLoading(true);
+    api.listTasks(50, 0)
+      .then(data => { if (!cancelled) setTasks(data || []); })
+      .catch(() => { if (!cancelled) setTasks([]); })
+      .finally(() => { if (!cancelled) setTasksLoading(false); });
+    return () => { cancelled = true; };
+  }, [taskListKey]);
+
+  // Refresh task list when a task is selected (newly created from TaskWorkspace)
+  const handleSelectTask = useCallback((task) => {
+    dispatch({ type: 'SELECT_TASK', payload: { taskId: task.id } });
+    navigateTo('task', task.id, 'results');
+    setTaskListKey(k => k + 1);
+  }, [dispatch, navigateTo]);
+
+  const handleRetryTask = useCallback((taskId) => {
+    console.log('retry', taskId);
+  }, []);
 
   // Sync hash routing to workspace state
   useEffect(() => {
@@ -46,12 +70,9 @@ function AppInner() {
       <Sidebar
         tasks={tasks}
         activeTaskId={state.activeTaskId}
-        onSelectTask={(task) => {
-          dispatch({ type: 'SELECT_TASK', payload: { taskId: task.id } });
-          navigateTo('task', task.id, 'results');
-        }}
+        onSelectTask={handleSelectTask}
         onNewTask={() => navigateTo('idle')}
-        onRetryTask={(taskId) => console.log('retry', taskId)}
+        onRetryTask={handleRetryTask}
         onNavigateConfig={() => {
           dispatch({ type: 'SET_VIEW', payload: 'config' });
           navigateTo('config');

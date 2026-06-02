@@ -66,4 +66,51 @@ describe('FilterEngine', () => {
       assert.ok(f2.isFiltered('https://beijing.gov.cn'));
     });
   });
+
+  describe('link type filtering', () => {
+    it('filters by excluded link type', () => {
+      const f = new FilterEngine();
+      f.setExcludedTypes(['img', 'script']);
+      assert.ok(f.isFiltered('https://example.com/img.png', 'img'));
+      assert.ok(f.isFiltered('https://example.com/app.js', 'script'));
+      assert.strictEqual(f.isFiltered('https://example.com/page', 'a'), false);
+    });
+
+    it('domain filter and type filter can work together', () => {
+      const f = new FilterEngine();
+      f.addFilter('qq.com');
+      f.setExcludedTypes(['img']);
+      // Domain filtered
+      assert.ok(f.isFiltered('https://qq.com/page', 'a'));
+      // Type filtered
+      assert.ok(f.isFiltered('https://other.com/img.png', 'img'));
+      // Neither
+      assert.strictEqual(f.isFiltered('https://other.com/page', 'a'), false);
+    });
+
+    it('no type filter when excludedTypes is empty', () => {
+      const f = new FilterEngine();
+      assert.strictEqual(f.isFiltered('https://example.com/img.png', 'img'), false);
+    });
+
+    it('serializes and deserializes new format correctly', () => {
+      const f = new FilterEngine();
+      f.addFilter('*.qq.com');
+      f.setExcludedTypes(['img', 'css']);
+      const json = f.toJSON();
+      assert.ok(json.domains.includes('*.qq.com'));
+      assert.ok(json.types.includes('img'));
+      const f2 = FilterEngine.fromJSON(json);
+      assert.ok(f2.isFiltered('https://news.qq.com/page', 'a'));
+      assert.ok(f2.isFiltered('https://example.com/img.png', 'img'));
+    });
+
+    it('backward compatible: old array format still works', () => {
+      const f = FilterEngine.fromJSON(['qq.com', '*gov.cn']);
+      assert.ok(f.isFiltered('https://qq.com/page'));
+      assert.strictEqual(f.isFiltered('https://example.com'), false);
+      // linkType param works even without type filter
+      assert.strictEqual(f.isFiltered('https://example.com/img.png', 'img'), false);
+    });
+  });
 });

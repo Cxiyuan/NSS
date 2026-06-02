@@ -44,7 +44,21 @@
       "main"
       "bottom";
   }
-  .app-layout > .app-sidebar { display: none; }
+  .app-layout > .app-sidebar {
+    display: none;
+    position: fixed;
+    top: var(--header-height, 56px);
+    left: 0;
+    bottom: 0;
+    width: var(--sidebar-width, 280px);
+    z-index: 100;
+    background: var(--color-surface);
+    box-shadow: 4px 0 12px rgba(0,0,0,0.15);
+  }
+  .app-layout > .app-sidebar.sidebar--mobile-open {
+    display: flex;
+    flex-direction: column;
+  }
   .header__hamburger { display: block !important; }
   .app-main { padding: 12px !important; }
 }

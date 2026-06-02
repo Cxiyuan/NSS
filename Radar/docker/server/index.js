@@ -86,16 +86,16 @@ server.listen(PORT, () => {
   });
 });
 
-process.on('SIGTERM', () => {
+let shuttingDown = false;
+function shutdown() {
+  if (shuttingDown) return;
+  shuttingDown = true;
+  console.log('Shutting down gracefully...');
   server.close(() => {
     db.close();
     process.exit(0);
   });
-});
+}
 
-process.on('SIGINT', () => {
-  server.close(() => {
-    db.close();
-    process.exit(0);
-  });
-});
+process.on('SIGTERM', shutdown);
+process.on('SIGINT', shutdown);

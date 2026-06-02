@@ -42,10 +42,24 @@ export default function Sidebar({ tasks, activeTaskId, onSelectTask, onNewTask, 
     dispatch({ type: 'SET_VIEW', payload: 'config' });
   }, [dispatch]);
 
+  // Close mobile sidebar on task select
+  const handleSelect = useCallback((task) => {
+    if (state.mobileSidebarOpen) {
+      dispatch({ type: 'SET_MOBILE_SIDEBAR', payload: false });
+    }
+    onSelectTask?.(task);
+  }, [state.mobileSidebarOpen, dispatch, onSelectTask]);
+
   return (
-    <aside
-      className={`app-sidebar sidebar${sidebarCollapsed ? ' sidebar--collapsed' : ''}`}
-    >
+    <>
+      {/* Mobile backdrop overlay */}
+      {state.mobileSidebarOpen && (
+        <div className="sidebar__mobile-backdrop"
+          onClick={() => dispatch({ type: 'SET_MOBILE_SIDEBAR', payload: false })} />
+      )}
+      <aside
+        className={`app-sidebar sidebar${sidebarCollapsed ? ' sidebar--collapsed' : ''}${state.mobileSidebarOpen ? ' sidebar--mobile-open' : ''}`}
+      >
       {/* ---- Header / New Task Button ---- */}
       <div className="sidebar__header">
         <button
@@ -75,7 +89,7 @@ export default function Sidebar({ tasks, activeTaskId, onSelectTask, onNewTask, 
         <TaskGroupList
           tasks={filteredTasks}
           activeTaskId={activeTaskId}
-          onSelect={onSelectTask}
+          onSelect={handleSelect}
           onRetry={onRetryTask}
         />
       </div>
@@ -85,10 +99,7 @@ export default function Sidebar({ tasks, activeTaskId, onSelectTask, onNewTask, 
         <div className="sidebar__nav-item" onClick={() => {
           dispatch({ type: 'SET_VIEW', payload: 'analytics' });
           window.location.hash = '#/analytics';
-        }}
-          style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '8px 12px', borderRadius: 6, cursor: 'pointer', fontSize: 13, color: 'var(--color-text-muted)' }}
-          onMouseEnter={e => { e.currentTarget.style.background = '#f1f5f9'; e.currentTarget.style.color = 'var(--color-text)'; }}
-          onMouseLeave={e => { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.color = 'var(--color-text-muted)'; }}>
+        }}>
           <span>📊</span>
           {!state.sidebarCollapsed && <span>全局分析</span>}
         </div>
@@ -102,5 +113,6 @@ export default function Sidebar({ tasks, activeTaskId, onSelectTask, onNewTask, 
         </button>
       </div>
     </aside>
+    </>
   );
 }
