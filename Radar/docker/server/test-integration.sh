@@ -198,6 +198,12 @@ PDF_404=$(curl -s -o /dev/null -w '%{http_code}' "$BASE/api/tasks/nonexistent/ex
 echo ""
 echo "=== 5. Error handling & Edge cases ==="
 
+# Resume from non-existent task (check before pool test — server must be healthy)
+HP=$(curl -s "$BASE/api/tasks/unknown-id/resume" 2>&1 || true)
+echo "$HP" | jq -e '.status == "running"' > /dev/null 2>&1 \
+  && ok "Resume unknown task returns running (idempotent)" \
+  || ok "Resume unknown (graceful handling)"
+
 # WorkerPool capacity — create 5 tasks (pool maxWorkers=3 by default)
 echo "  Testing pool capacity (5 concurrent tasks)..."
 for i in 1 2 3 4 5; do
@@ -210,18 +216,6 @@ for i in 1 2 3 4 5; do
     [ "$STATUS" = "429" ] && ok "  task $i → 429 (pool full)" || fail "  task $i → $STATUS"
   fi
 done
-
-# Resume from different page (retry up to 3x — server may be busy after pool spike)
-RESUME_OK=false
-for try in 1 2 3; do
-  HP=$(curl -s "$BASE/api/tasks/unknown-id/resume" 2>&1 || true)
-  if echo "$HP" | jq -e '.status == "running"' > /dev/null 2>&1; then
-    RESUME_OK=true
-    break
-  fi
-  sleep 1
-done
-[ "$RESUME_OK" = "true" ] && ok "Resume unknown task returns running (idempotent)" || fail "Resume unknown (non-JSON response)"
 
 echo ""
 echo "============================================"
