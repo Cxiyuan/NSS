@@ -1,0 +1,50 @@
+/* === App Layout Grid === */
+
+.app-layout {
+  display: grid;
+  height: 100vh;
+  overflow: hidden;
+  grid-template-columns: var(--sidebar-width, 280px) 1fr;
+  grid-template-rows: var(--header-height, 56px) 1fr auto;
+  grid-template-areas:
+    "header header"
+    "sidebar main"
+    "sidebar bottom";
+  background: var(--color-bg);
+}
+
+.app-layout > .app-header  { grid-area: header; }
+.app-layout > .app-sidebar { grid-area: sidebar; overflow: hidden; }
+.app-layout > .app-main    { grid-area: main; overflow: hidden; display: flex; flex-direction: column; }
+.app-layout > .app-bottom  { grid-area: bottom; }
+
+/* ---- Responsive: sidebar icon mode at 1024px ---- */
+
+@media (max-width: 1024px) {
+  .app-layout {
+    grid-template-columns: var(--sidebar-collapsed-width, 64px) 1fr;
+  }
+  .app-sidebar .task-item__label,
+  .app-sidebar .task-item__timestamp,
+  .app-sidebar .sidebar__search,
+  .app-sidebar .task-group__header-label,
+  .app-sidebar .sidebar__new-btn-label {
+    display: none;
+  }
+  .app-main { padding: 16px !important; }
+}
+
+/* ---- Responsive: collapse sidebar below 768px ---- */
+
+@media (max-width: 768px) {
+  .app-layout {
+    grid-template-columns: 1fr;
+    grid-template-areas:
+      "header"
+      "main"
+      "bottom";
+  }
+  .app-layout > .app-sidebar { display: none; }
+  .header__hamburger { display: block !important; }
+  .app-main { padding: 12px !important; }
+}

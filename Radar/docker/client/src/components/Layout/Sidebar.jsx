@@ -1,0 +1,106 @@
+import { useState, useMemo, useCallback } from 'react';
+import { useWorkspace } from '../../contexts/WorkspaceContext';
+import TaskGroupList from '../Task/TaskGroupList';
+import './Sidebar.css';
+
+/**
+ * Sidebar — the app's primary navigation sidebar.
+ *
+ * Renders inside the grid area `app-sidebar` (set by AppLayout).
+ *
+ * Props:
+ *   tasks        – full task list (unsorted, unfiltered)
+ *   activeTaskId – currently selected task id (or null)
+ *   onSelectTask – called with a task object when user clicks a task
+ *   onNewTask    – called when the "新任务" button is clicked
+ *   onRetryTask  – called with a task object when user clicks retry on an error task
+ */
+export default function Sidebar({ tasks, activeTaskId, onSelectTask, onNewTask, onRetryTask }) {
+  const { state, dispatch } = useWorkspace();
+  const { sidebarCollapsed } = state;
+
+  const [searchQuery, setSearchQuery] = useState('');
+
+  /** Filter tasks in real-time by matching label text (URL or keywords). */
+  const filteredTasks = useMemo(() => {
+    if (!searchQuery.trim()) return tasks || [];
+    const q = searchQuery.trim().toLowerCase();
+    return (tasks || []).filter((task) => {
+      const label =
+        task.type === 'url_crawl'
+          ? task.config?.url || ''
+          : task.config?.keywords || '';
+      return label.toLowerCase().includes(q);
+    });
+  }, [tasks, searchQuery]);
+
+  const handleSearchChange = useCallback((e) => {
+    setSearchQuery(e.target.value);
+  }, []);
+
+  const handleConfigClick = useCallback(() => {
+    dispatch({ type: 'SET_VIEW', payload: 'config' });
+  }, [dispatch]);
+
+  return (
+    <aside
+      className={`app-sidebar sidebar${sidebarCollapsed ? ' sidebar--collapsed' : ''}`}
+    >
+      {/* ---- Header / New Task Button ---- */}
+      <div className="sidebar__header">
+        <button
+          className="sidebar__new-btn"
+          onClick={onNewTask}
+          title="新任务"
+        >
+          <span className="sidebar__new-btn-label">+ 新任务</span>
+          <span hidden={!sidebarCollapsed} aria-hidden={!sidebarCollapsed}>
+            +
+          </span>
+        </button>
+      </div>
+
+      {/* ---- Search Filter ---- */}
+      <div className="sidebar__search">
+        <input
+          type="text"
+          placeholder="搜索任务..."
+          value={searchQuery}
+          onChange={handleSearchChange}
+        />
+      </div>
+
+      {/* ---- Task List ---- */}
+      <div className="sidebar__task-list">
+        <TaskGroupList
+          tasks={filteredTasks}
+          activeTaskId={activeTaskId}
+          onSelect={onSelectTask}
+          onRetry={onRetryTask}
+        />
+      </div>
+
+      {/* ---- Analytics Nav Item ---- */}
+      <div className="sidebar__footer">
+        <div className="sidebar__nav-item" onClick={() => {
+          dispatch({ type: 'SET_VIEW', payload: 'analytics' });
+          window.location.hash = '#/analytics';
+        }}
+          style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '8px 12px', borderRadius: 6, cursor: 'pointer', fontSize: 13, color: 'var(--color-text-muted)' }}
+          onMouseEnter={e => { e.currentTarget.style.background = '#f1f5f9'; e.currentTarget.style.color = 'var(--color-text)'; }}
+          onMouseLeave={e => { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.color = 'var(--color-text-muted)'; }}>
+          <span>📊</span>
+          {!state.sidebarCollapsed && <span>全局分析</span>}
+        </div>
+      </div>
+
+      {/* ---- Footer / Nav Items ---- */}
+      <div className="sidebar__footer">
+        <button className="sidebar__nav-item" onClick={handleConfigClick} title="配置">
+          <span className="sidebar__nav-item-icon">&#x2699;</span>
+          <span className="sidebar__nav-item-label">配置</span>
+        </button>
+      </div>
+    </aside>
+  );
+}

@@ -1,77 +1,28 @@
-import { useRef, useEffect } from 'react';
 import { LINK_TYPE_LABELS } from '../lib/constants';
 
-export default function ResultDetail({ result, onClose }) {
-  const closeRef = useRef(null);
-
-  // Escape keydown -> onClose
-  useEffect(() => {
-    function handleKeyDown(e) {
-      if (e.key === 'Escape') onClose();
-    }
-    document.addEventListener('keydown', handleKeyDown);
-    return () => document.removeEventListener('keydown', handleKeyDown);
-  }, [onClose]);
-
-  // Auto-focus the close button on mount
-  useEffect(() => {
-    if (closeRef.current) closeRef.current.focus();
-  }, []);
-
-  // Body scroll lock while dialog is open
-  useEffect(() => {
-    const prev = document.body.style.overflow;
-    document.body.style.overflow = 'hidden';
-    return () => { document.body.style.overflow = prev; };
-  }, []);
-
+export default function ResultDetail({ result }) {
   if (!result) return null;
 
   return (
-    <div
-      className="result-detail-overlay"
-      onClick={onClose}
-      role="dialog"
-      aria-modal="true"
-      aria-label="链接详情"
-    >
-      <div className="result-detail" onClick={e => e.stopPropagation()}>
-        <div className="result-detail__header">
-          <h3>链接详情</h3>
-          <button ref={closeRef} onClick={onClose} className="result-detail__close">&times;</button>
-        </div>
-
-        <dl className="result-detail__fields">
-          <dt>URL</dt>
-          <dd><a href={result.url} target="_blank" rel="noreferrer">{result.url}</a></dd>
-
-          <dt>来源页面</dt>
-          <dd>{result.found_on}</dd>
-
-          <dt>链接类型</dt>
-          <dd><span className={`link-type link-type--${result.link_type}`}>{LINK_TYPE_LABELS[result.link_type] || result.link_type}</span></dd>
-
-          <dt>深度</dt>
-          <dd>{result.depth}</dd>
-
-          <dt>状态</dt>
-          <dd>{result.status_code ? `HTTP ${result.status_code}` : '—'}</dd>
-
-          {result.page_title && (
-            <>
-              <dt>页面标题</dt>
-              <dd>{result.page_title}</dd>
-            </>
-          )}
-
-          {result.snippet && (
-            <>
-              <dt>摘要</dt>
-              <dd className="result-detail__snippet">{result.snippet}</dd>
-            </>
-          )}
-        </dl>
-      </div>
+    <div>
+      <dl style={{ margin: 0 }}>
+        <Row dt="URL" dd={<a href={result.url} target="_blank" rel="noreferrer" style={{ color: 'var(--color-primary)', wordBreak: 'break-all' }}>{result.url}</a>} />
+        <Row dt="来源页面" dd={result.found_on || '—'} />
+        <Row dt="链接类型" dd={<span style={{ padding: '1px 6px', borderRadius: 3, fontSize: 11, background: '#f1f5f9' }}>{LINK_TYPE_LABELS[result.link_type] || result.link_type}</span>} />
+        <Row dt="深度" dd={result.depth ?? '—'} />
+        <Row dt="状态" dd={result.status_code ? `HTTP ${result.status_code}` : '—'} />
+        {result.page_title && <Row dt="页面标题" dd={result.page_title} />}
+        {result.snippet && <Row dt="摘要" dd={<div style={{ fontSize: 12, color: 'var(--color-text-muted)', background: '#f8fafc', padding: 8, borderRadius: 4, maxHeight: 120, overflow: 'auto', whiteSpace: 'pre-wrap' }}>{result.snippet}</div>} />}
+      </dl>
     </div>
+  );
+}
+
+function Row({ dt, dd }) {
+  return (
+    <>
+      <dt style={{ fontSize: 11, textTransform: 'uppercase', color: 'var(--color-text-muted)', marginTop: 12, marginBottom: 2 }}>{dt}</dt>
+      <dd style={{ fontSize: 13, margin: 0, wordBreak: 'break-all' }}>{dd}</dd>
+    </>
   );
 }

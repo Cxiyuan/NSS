@@ -13,6 +13,28 @@
   --color-muted: #94a3b8;
   --radius: 8px;
   --shadow: 0 1px 3px rgba(0,0,0,0.08), 0 1px 2px rgba(0,0,0,0.06);
+  /* === Layout Variables === */
+  --header-height: 56px;
+  --sidebar-width: 280px;
+  --sidebar-collapsed-width: 64px;
+  --right-panel-width: 40%;
+  --right-panel-overlay-width: 420px;
+  --bottom-panel-bar-height: 32px;
+  --bottom-panel-max-height: 240px;
+  --space-xs: 4px;
+  --space-sm: 8px;
+  --space-md: 16px;
+  --space-lg: 24px;
+  --space-xl: 32px;
+  --shadow-lg: 0 4px 12px rgba(0,0,0,0.1);
+  --z-header: 50;
+  --z-sidebar-overlay: 40;
+  --z-right-panel: 30;
+  --z-bottom-panel: 20;
+  --z-modal: 110;
+  --z-palette: 200;
+  --z-toast: 9999;
+  --font-mono: 'SF Mono', 'Fira Code', 'Cascadia Code', monospace;
 }
 
 /* === Reset === */
