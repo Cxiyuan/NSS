@@ -89,13 +89,13 @@ async function run(taskConfig) {
   }
 
   // enqueue adds a URL to the crawl queue.
-  // Filter is checked at enqueue time — matching URLs are skipped entirely.
+  // Filter is applied only to crawled links (depth > 0) — the seed/search URL is always allowed.
   function enqueue(u, currentDepth, foundOn) {
     const normalized = normalizeUrl(u);
     if (!normalized) return false;
     if (visited.has(normalized)) return false;
-    // Apply filter to all enqueued URLs — prevents crawling unwanted domains
-    if (filter.isFiltered(normalized)) {
+    // Apply filter only to links found during crawling (depth > 0), not to seed/search URLs
+    if (currentDepth > 0 && filter.isFiltered(normalized)) {
       filteredCount++;
       post('log', { level: 'info', message: `Filtered enqueue: ${normalized}` });
       return false;
