@@ -40,8 +40,12 @@ jobs:
         with:
           node-version: 22
 
-      - name: 安装依赖
+      - name: 安装服务端依赖
         run: npm install
+
+      - name: 安装客户端依赖
+        run: npm install
+        working-directory: Radar/docker/client
 
       - name: 运行后端单元测试
         run: npm test
