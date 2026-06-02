@@ -1,0 +1,21 @@
+# Git
+.git
+.gitignore
+
+# CI
+.github/
+
+# Docs
+docs/
+*.md
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Tests (not needed in production image)
+server/**/*.test.js
+
+# Local dev
+.env
+data/
