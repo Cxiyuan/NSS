@@ -112,5 +112,5 @@ jobs:
         timeout-minutes: 5
         run: |
           SHORT_SHA="${GITHUB_SHA:0:7}"
-          IMAGE="${{ env.IMAGE_NAME }}:sha-${SHORT_SHA}"
+          IMAGE="${{ env.IMAGE_NAME }}:${SHORT_SHA}"
           bash Radar/docker/server/test-integration.sh "$IMAGE" 3000

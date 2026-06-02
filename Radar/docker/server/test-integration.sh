@@ -25,7 +25,7 @@ fail() { FAIL=$((FAIL+1)); echo "  ✗ $1"; }
 # Start container
 echo "=== Starting container ==="
 echo "  Pulling $IMAGE..."
-docker pull "$IMAGE" 2>&1 || { echo "  ✗ Failed to pull image"; exit 1; }
+docker pull "$IMAGE" 2>&1 || { echo "  ✗ Failed to pull image: $?"; exit 1; }
 echo "  Starting container..."
 docker run -d --name radar-itest-$$ \
   -p "$PORT:3000" \
