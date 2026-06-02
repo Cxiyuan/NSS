@@ -68,7 +68,8 @@ export default function TaskWorkspace({ task }) {
   async function handleStart(config) {
     try {
       const taskData = await api.createTask(config);
-      dispatch({ type: 'SELECT_TASK', payload: { taskId: taskData.id, subTab: 'results' } });
+      // navigateTo 触发 hashchange → sync effect dispatch SELECT_TASK
+      // 不直接 dispatch，避免 SELECT_TASK 执行两次
       navigateTo('workspace', taskData.id, 'results');
     } catch (err) {
       console.error('Failed to create task:', err);
@@ -92,7 +93,7 @@ export default function TaskWorkspace({ task }) {
 
       {/* Sub-tabs */}
       <ContentTabs tabs={TABS} activeTab={activeTab} onChange={(tab) => {
-            dispatch({ type: 'SET_SUB_TAB', payload: tab });
+            // navigateTo 触发 hashchange → sync effect 处理 subTab 切换
             if (state.activeTaskId) navigateTo('workspace', state.activeTaskId, tab);
           }} />
 

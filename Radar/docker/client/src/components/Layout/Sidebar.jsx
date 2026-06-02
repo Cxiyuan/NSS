@@ -99,7 +99,6 @@ export default function Sidebar({ tasks, activeTaskId, onSelectTask, onNewTask, 
       {/* ---- Analytics Nav Item ---- */}
       <div className="sidebar__footer">
         <div className="sidebar__nav-item" onClick={() => {
-          dispatch({ type: 'SET_VIEW', payload: 'analytics' });
           window.location.hash = '#/analytics';
         }}>
           <span>📊</span>

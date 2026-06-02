@@ -39,8 +39,8 @@ function AppInner() {
 
   // Refresh task list when a task is selected (newly created from TaskWorkspace)
   const handleSelectTask = useCallback((task) => {
+    // navigateTo 触发 hashchange → sync effect 处理 SELECT_TASK + 刷新任务列表
     navigateTo('workspace', task.id, 'results');
-    setTaskListKey(k => k + 1);
   }, [navigateTo]);
 
   const handleRetryTask = useCallback((taskId) => {
@@ -84,10 +84,8 @@ function AppInner() {
         onNewTask={() => navigateTo('new')}
         onRetryTask={handleRetryTask}
         onDeleteTask={handleDeleteTask}
-        onNavigateConfig={() => {
-          dispatch({ type: 'SET_VIEW', payload: 'config' });
-          navigateTo('config');
-        }}
+        // onNavigateConfig is unused by Sidebar — config nav handled internally
+        onNavigateConfig={() => {}}
       />
 
       {/* -------- Main Content -------- */}
