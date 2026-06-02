@@ -32,9 +32,9 @@ function workspaceReducer(state, action) {
         nextCache[state.activeTaskId] = { ...prev, activeSubTab: state.activeSubTab };
       }
 
-      // Restore from cache or fall back to provided subTab
+      // Use explicit subTab from URL first; fall back to cached value or 'results'
       const cached = nextCache[taskId];
-      const activeSubTab = (cached && cached.activeSubTab) || subTab || 'results';
+      const activeSubTab = subTab || (cached && cached.activeSubTab) || 'results';
 
       // Enforce max cache size — evict oldest entry if we are adding a new key
       const keys = Object.keys(nextCache);
