@@ -40,17 +40,13 @@ for sid, info in sorted(streams.items()):
     print(f"  stream={sid} records={info['records']} fields={len(info['fields'])}")
 
 # 核心协议必须存在
-for core in ["conn", "http", "dns"]:
+for core in ["conn", "http", "dns", "ssh", "ssl"]:
     assert core in streams, f"Missing {core} stream"
 
-# 扩展协议（由 extra_protocols.py 生成，非强制）
+# 扩展协议必须存在（由 extra_protocols.py 生成测试流量）
 for proto in ["ftp", "rdp", "smb", "mysql", "postgresql", "redis", "sip", "snmp"]:
-    if proto in streams:
-        print(f"  [+] {proto} stream present ({streams[proto]['records']} records)")
-    else:
-        print(f"  [-] {proto} stream not found")
-
-assert len(streams) >= 5, f"Too few streams: {len(streams)}"
+    assert proto in streams, f"Missing {proto} stream — Zeek did not detect this protocol"
+    print(f"  [+] {proto} stream present ({streams[proto]['records']} records)")
 
 has_proto = any("proto" in info["fields"] for info in streams.values())
 has_method = any("method" in info["fields"] for info in streams.values())
