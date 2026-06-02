@@ -25,6 +25,13 @@ export {
 # 加载扩展协议脚本（确保日志流可用）
 # 所有协议均在 base/protocols/ 中，由基础镜像提供
 # ============================================================
+# 默认写入器设为 NONE：新创建的日志流不自动挂 ASCII 写入器
+# 必须放在 @load 之前，确保后续协议脚本的 Log::create_stream 使用 NONE
+# 已存在的核心流（conn/http/dns/ssh/ssl 等）仍需要 Log::remove_filter
+# ============================================================
+redef Log::default_writer = Log::WRITER_NONE;
+
+# ============================================================
 
 @load base/protocols/ftp
 @load base/protocols/rdp
