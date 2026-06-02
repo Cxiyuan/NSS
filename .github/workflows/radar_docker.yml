@@ -7,6 +7,7 @@ on:
   push:
     paths:
       - 'Radar/docker/**'
+      - 'Radar/deploy/**'
       - '.github/workflows/radar_docker.yml'
     branches:
       - main
@@ -14,6 +15,7 @@ on:
   pull_request:
     paths:
       - 'Radar/docker/**'
+      - 'Radar/deploy/**'
       - '.github/workflows/radar_docker.yml'
     branches:
       - main
@@ -52,6 +54,17 @@ jobs:
 
       - name: 构建前端（语法检查）
         run: npm run build:client
+
+      - name: 验证部署配置文件
+        run: |
+          test -f Radar/deploy/.env.production || { echo ".env.production missing"; exit 1; }
+          test -f Radar/deploy/docker-compose.yml || { echo "docker-compose.yml missing"; exit 1; }
+          echo "✓ 部署配置文件存在"
+          # 验证 .env.production 必需的变量
+          source Radar/deploy/.env.production
+          [ -z "${SEARXNG_BASE_URL:-}" ] && { echo "SEARXNG_BASE_URL not set"; exit 1; }
+          [ -z "${MEMORY_LIMIT:-}" ] && { echo "MEMORY_LIMIT not set"; exit 1; }
+          echo "✓ 环境变量定义完整"
 
   docker-build:
     name: 构建并推送 Docker 镜像

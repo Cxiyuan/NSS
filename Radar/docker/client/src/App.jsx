@@ -39,10 +39,9 @@ function AppInner() {
 
   // Refresh task list when a task is selected (newly created from TaskWorkspace)
   const handleSelectTask = useCallback((task) => {
-    dispatch({ type: 'SELECT_TASK', payload: { taskId: task.id } });
-    navigateTo('task', task.id, 'results');
+    navigateTo('workspace', task.id, 'results');
     setTaskListKey(k => k + 1);
-  }, [dispatch, navigateTo]);
+  }, [navigateTo]);
 
   const handleRetryTask = useCallback((taskId) => {
     console.log('retry', taskId);

@@ -15,8 +15,8 @@ export default function CommandPaletteOverlay({ onClose }) {
   }, [onClose]);
 
   const actions = [
-    { id: 'new-url', label: '新建 URL 爬取任务', icon: '🔗', keywords: 'new url crawl', action: () => { window.location.hash = '#/'; onClose(); } },
-    { id: 'new-keyword', label: '新建关键词搜索任务', icon: '🔍', keywords: 'new keyword search', action: () => { window.location.hash = '#/'; onClose(); } },
+    { id: 'new-url', label: '新建 URL 爬取任务', icon: '🔗', keywords: 'new url crawl', action: () => { window.location.hash = '#/new'; onClose(); } },
+    { id: 'new-keyword', label: '新建关键词搜索任务', icon: '🔍', keywords: 'new keyword search', action: () => { window.location.hash = '#/new'; onClose(); } },
     { id: 'config', label: '打开配置页面', icon: '⚙', keywords: 'config settings', action: () => { window.location.hash = '#/config'; onClose(); } },
     { id: 'analytics', label: '查看全局分析', icon: '📊', keywords: 'analytics dashboard stats', action: () => { window.location.hash = '#/analytics'; onClose(); } },
   ];

@@ -39,8 +39,8 @@ export default function Sidebar({ tasks, activeTaskId, onSelectTask, onNewTask, 
   }, []);
 
   const handleConfigClick = useCallback(() => {
-    dispatch({ type: 'SET_VIEW', payload: 'config' });
-  }, [dispatch]);
+    window.location.hash = '#/config';
+  }, []);
 
   // Close mobile sidebar on task select
   const handleSelect = useCallback((task) => {

@@ -29,7 +29,7 @@ export default function Header({ onNewTask }) {
 
       {/* Logo + app name */}
       <span className="header__logo"
-        onClick={() => { dispatch({ type: 'CLOSE_TASK' }); window.location.hash = '#'; }}>
+        onClick={() => { window.location.hash = '#'; }}>
         雷达
       </span>
 
@@ -44,7 +44,7 @@ export default function Header({ onNewTask }) {
 
       {/* Right group */}
       <div className="header__actions">
-        <button onClick={() => { dispatch({ type: 'SET_VIEW', payload: 'config' }); window.location.hash = '#/config'; }}
+        <button onClick={() => { window.location.hash = '#/config'; }}
           className="header__gear"
           title="配置">
           ⚙

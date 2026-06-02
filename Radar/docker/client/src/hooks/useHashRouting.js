@@ -16,11 +16,14 @@ function parseHash(hash) {
   // #/task/<taskId>[/<subTab>]
   const taskMatch = clean.match(/^\/task\/([^/]+)(?:\/([^/]+))?$/);
   if (taskMatch) {
+    if (!taskMatch[1] || taskMatch[1].trim() === '') {
+      return { taskId: null, view: 'idle', subTab: null };
+    }
     const subTab = taskMatch[2] || 'results';
     // Only allow recognised sub-tab values
     const validSubTabs = ['results', 'analytics', 'logs'];
     return {
-      taskId: taskMatch[1],
+      taskId: decodeURIComponent(taskMatch[1]),
       view: 'workspace',
       subTab: validSubTabs.includes(subTab) ? subTab : 'results',
     };
@@ -47,7 +50,7 @@ function parseHash(hash) {
  */
 function buildHash(view, ...args) {
   switch (view) {
-    case 'task': {
+    case 'workspace': {
       const [taskId, subTab] = args;
       const base = `#/task/${encodeURIComponent(taskId)}`;
       return subTab ? `${base}/${subTab}` : base;

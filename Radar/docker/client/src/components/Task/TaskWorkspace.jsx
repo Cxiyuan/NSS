@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { useWorkspace } from '../../contexts/WorkspaceContext';
+import { useHashRouting } from '../../hooks/useHashRouting';
 import { api } from '../../lib/api';
 import UnifiedTaskForm from './UnifiedTaskForm';
 import ContentTabs from './ContentTabs';
@@ -13,12 +14,14 @@ const TABS = [
 
 export default function TaskWorkspace({ task }) {
   const { state, dispatch } = useWorkspace();
+  const { navigateTo } = useHashRouting();
   const activeTab = state.activeSubTab || 'results';
 
   async function handleStart(config) {
     try {
-      const task = await api.createTask(config);
-      dispatch({ type: 'SELECT_TASK', payload: { taskId: task.id, subTab: 'results' } });
+      const taskData = await api.createTask(config);
+      dispatch({ type: 'SELECT_TASK', payload: { taskId: taskData.id, subTab: 'results' } });
+      navigateTo('workspace', taskData.id, 'results');
     } catch (err) {
       console.error('Failed to create task:', err);
     }
@@ -37,7 +40,10 @@ export default function TaskWorkspace({ task }) {
       </div>
 
       {/* Sub-tabs */}
-      <ContentTabs tabs={TABS} activeTab={activeTab} onChange={(tab) => dispatch({ type: 'SET_SUB_TAB', payload: tab })} />
+      <ContentTabs tabs={TABS} activeTab={activeTab} onChange={(tab) => {
+            dispatch({ type: 'SET_SUB_TAB', payload: tab });
+            if (state.activeTaskId) navigateTo('workspace', state.activeTaskId, tab);
+          }} />
 
       {/* Tab content */}
       <div className="workspace__content">
