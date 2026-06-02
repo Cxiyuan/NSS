@@ -1,12 +1,12 @@
 import { useState, useEffect } from 'react';
 import { api } from '../lib/api';
 
-export default function TaskHistory({ onSelect, onDelete }) {
+export default function TaskHistory({ onSelect, onDelete, refreshKey }) {
   const [tasks, setTasks] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
 
-  useEffect(() => {
+  function loadTasks() {
     setLoading(true);
     setError(null);
     api.listTasks(50, 0)
@@ -18,7 +18,11 @@ export default function TaskHistory({ onSelect, onDelete }) {
         setError(err.message || '加载失败');
         setLoading(false);
       });
-  }, []);
+  }
+
+  useEffect(() => {
+    loadTasks();
+  }, [refreshKey]);
 
   function handleDelete(id) {
     api.deleteTask(id).then(() => {

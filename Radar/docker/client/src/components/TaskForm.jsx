@@ -14,8 +14,13 @@ export default function TaskForm({ type, onSubmit, disabled }) {
     e.preventDefault();
     const config = { type, depth: Number(depth), concurrency: Number(concurrency), filters };
     if (type === 'url_crawl') {
-      config.url = url.trim();
-      if (!config.url) return;
+      let u = url.trim();
+      if (!u) return;
+      // Auto-prepend https:// if no protocol specified
+      if (!u.startsWith('http://') && !u.startsWith('https://')) {
+        u = 'https://' + u;
+      }
+      config.url = u;
     } else {
       config.keywords = keywords.trim();
       if (!config.keywords) return;

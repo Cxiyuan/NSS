@@ -47,7 +47,7 @@ export default function FilterInput({ filters = [], onChange }) {
           value={input}
           onChange={handleChange}
           onKeyDown={handleKeyDown}
-          placeholder="e.g. qq.com, *.qq.com, *gov.cn"
+          placeholder="输入域名 如 qq.com, *.qq.com, *gov.cn"
           className="filter-input__field"
         />
         <button type="button" onClick={addFilter} className="filter-input__add-btn">

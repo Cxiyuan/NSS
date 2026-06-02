@@ -53,6 +53,7 @@ import { fetchWithBrowser } from './browser.js';
 import { extractLinks } from './link-extractor.js';
 import { FilterEngine } from './filter.js';
 import { isSameDomain, getDomain, normalizeUrl } from '../utils/url.js';
+import { parseKeywords } from '../utils/keywords.js';
 import { AntiDetect } from './anti-detect.js';
 
 let paused = false;
@@ -75,18 +76,30 @@ async function run(taskConfig) {
   const queue = [];
   let crawled = 0;
   let filteredCount = 0;
+  let resultsPosted = 0;
+  const pendingTitleFetches = [];
 
   function post(type, data) {
     if (parentPort) parentPort.postMessage({ type, taskId, ...data });
   }
 
+  function postResult(result) {
+    resultsPosted++;
+    post('result', { result });
+  }
+
   // enqueue adds a URL to the crawl queue.
-  // Same-domain URLs are always accepted (needed for crawl depth);
-  // filter check is done separately before posting results.
+  // Filter is checked at enqueue time — matching URLs are skipped entirely.
   function enqueue(u, currentDepth, foundOn) {
     const normalized = normalizeUrl(u);
     if (!normalized) return false;
     if (visited.has(normalized)) return false;
+    // Apply filter to all enqueued URLs — prevents crawling unwanted domains
+    if (filter.isFiltered(normalized)) {
+      filteredCount++;
+      post('log', { level: 'info', message: `Filtered enqueue: ${normalized}` });
+      return false;
+    }
     visited.add(normalized);
     queue.push({ url: normalized, depth: currentDepth, foundOn: foundOn || '' });
     return true;
@@ -97,8 +110,13 @@ async function run(taskConfig) {
     try {
       const searchResults = await search(keywords, searchApiKey, searchCx);
       post('log', { level: 'info', message: `Search returned ${searchResults.length} results` });
+      if (searchResults.length === 0) {
+        post('log', { level: 'error', message: 'Search returned no results. Check keywords or API key.' });
+        post('status', { status: 'error' });
+        return;
+      }
       for (const r of searchResults) {
-        enqueue(r.url, 0, `search: ${keywords}`, true);
+        enqueue(r.url, 0, `search: ${keywords}`);
       }
     } catch (err) {
       post('log', { level: 'error', message: `Search API error: ${err.message}` });
@@ -106,7 +124,7 @@ async function run(taskConfig) {
       return;
     }
   } else {
-    enqueue(url, 0, '(seed)', true);
+    enqueue(url, 0, '(seed)');
   }
 
   post('status', { status: 'running' });
@@ -190,24 +208,17 @@ async function run(taskConfig) {
             continue;
           }
           // External links: always record, never enqueue
-          newResults.push({
+          const extResult = {
             url: link.url,
             foundOn: crawlUrl,
             linkType: link.linkType,
             depth: currentDepth + 1,
             isExternal: true,
-          });
-          post('result', {
-            result: {
-              url: link.url,
-              foundOn: crawlUrl,
-              linkType: link.linkType,
-              depth: currentDepth + 1,
-              pageTitle: title,
-              isExternal: true,
-              statusCode: 0,
-            },
-          });
+            pageTitle: title,
+            statusCode: 0,
+          };
+          newResults.push(extResult);
+          postResult(extResult);
         } else if (currentDepth < (depth || 3)) {
           // Same-domain links: enqueue for crawling depth only, never post as results
           // Result list shows only external links that passed the filter
@@ -216,7 +227,8 @@ async function run(taskConfig) {
       }
 
       if (type === 'keyword_search' && keywords) {
-        const kwds = keywords.split(/\s+/).filter(Boolean);
+        // Parse keywords: quoted phrases are treated as atomic, space-separated words as individual
+        const kwds = parseKeywords(keywords);
         const bodyText = html.replace(/<[^>]+>/g, ' ').toLowerCase();
         const matches = kwds.filter(k => bodyText.includes(k.toLowerCase()));
         if (matches.length > 0) {
@@ -225,34 +237,40 @@ async function run(taskConfig) {
             filteredCount++;
             post('log', { level: 'info', message: `Filtered keyword_match: ${crawlUrl}` });
           } else {
-            newResults.push({
+            const kwResult = {
               url: crawlUrl,
               foundOn,
               linkType: 'keyword_match',
               depth: currentDepth,
               isExternal: true,
-              snippet: bodyText.substring(0, 300),
-            });
+              snippet: keywordSnippet(bodyText, kwds),
+            };
+            newResults.push(kwResult);
+            postResult(kwResult);
           }
         }
       }
 
-      // Fire-and-forget: fetch titles/status for external links in background
+      // Collect title fetches — will be awaited before task completion
       if (newResults.length > 0) {
-        fetchTitles(newResults).then(updated => {
+        const titlePromise = fetchTitles(newResults).then(updated => {
           for (const r of updated) {
             if (r.pageTitle || r.statusCode) {
               post('result_title', { url: r.url, pageTitle: r.pageTitle, statusCode: r.statusCode });
             }
           }
-        }).catch(() => {});
+        });
+        pendingTitleFetches.push(titlePromise);
       }
       return newResults;
     }));
 
     crawled += batch.length;
-    post('progress', { crawled, total: visited.size, depth: Math.min(depth || 3, queue.length > 0 ? 1 : 0), filtered: filteredCount });
+    post('progress', { crawled, total: resultsPosted, depth: Math.min(depth || 3, queue.length > 0 ? 1 : 0), filtered: filteredCount });
   }
+
+  // Wait for all in-flight title fetches to finish before declaring done
+  await Promise.allSettled(pendingTitleFetches);
 
   if (cancelled) {
     post('status', { status: 'cancelled' });
@@ -263,6 +281,34 @@ async function run(taskConfig) {
 
 function sleep(ms) {
   return new Promise(resolve => setTimeout(resolve, ms));
+}
+
+// Build a snippet around the first keyword match, showing context (150 chars each side)
+function keywordSnippet(bodyText, kwds) {
+  const contextLen = 150;
+  const maxLen = contextLen * 2;
+
+  // Find first occurrence of any keyword
+  let firstIdx = -1;
+  for (const k of kwds) {
+    const idx = bodyText.indexOf(k);
+    if (idx !== -1 && (firstIdx === -1 || idx < firstIdx)) {
+      firstIdx = idx;
+    }
+  }
+
+  if (firstIdx === -1) {
+    return bodyText.substring(0, maxLen);
+  }
+
+  const start = Math.max(0, firstIdx - contextLen);
+  const end = Math.min(bodyText.length, firstIdx + contextLen);
+
+  let snippet = bodyText.substring(start, end).trim();
+  if (start > 0) snippet = '...' + snippet;
+  if (end < bodyText.length) snippet = snippet + '...';
+
+  return snippet;
 }
 
 parentPort.on('message', (msg) => {

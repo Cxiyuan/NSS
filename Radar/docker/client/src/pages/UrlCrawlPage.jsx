@@ -68,7 +68,7 @@ export default function UrlCrawlPage() {
       </div>
 
       <aside className="page__sidebar">
-        <TaskHistory onSelect={ctx.handleSelectTask} />
+        <TaskHistory onSelect={ctx.handleSelectTask} refreshKey={ctx.listRefreshKey} />
       </aside>
     </div>
   );

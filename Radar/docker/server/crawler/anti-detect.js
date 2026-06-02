@@ -55,7 +55,7 @@ export class AntiDetect {
     this.config = {
       uaRotation: config.uaRotation !== false,
       requestDelay: config.requestDelay || { min: 800, max: 2500 },
-      maxRetries: config.maxRetries || 3,
+      maxRetries: config.maxRetries ?? 3,
       browserFallback: config.browserFallback !== false,
       proxy: config.proxy || null,
     };

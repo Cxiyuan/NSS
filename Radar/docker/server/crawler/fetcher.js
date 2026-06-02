@@ -10,17 +10,13 @@ export function setAntiDetect(instance) {
 export async function fetchAndParse(url, referer = '') {
   const ad = antiDetect || new AntiDetect();
   const headers = ad.buildHeaders(referer);
-  const controller = new AbortController();
-  const timeout = setTimeout(() => controller.abort(), 15000);
-
   const result = await ad.withRetry(async (attempt) => {
-    const signal = attempt === 0 ? controller.signal : AbortSignal.timeout(15000);
+    const signal = AbortSignal.timeout(15000);
 
     let response;
     try {
       response = await fetch(url, { signal, headers, redirect: 'follow' });
     } catch (err) {
-      clearTimeout(timeout);
       throw new Error(`Failed to fetch ${url}: ${err.message}`);
     }
 
@@ -43,6 +39,5 @@ export async function fetchAndParse(url, referer = '') {
     return { html, title };
   });
 
-  clearTimeout(timeout);
   return result;
 }

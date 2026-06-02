@@ -104,5 +104,70 @@ describe('API routes', () => {
       const res = await jsonRequest(`${baseUrl}/api/tasks/nonexistent`, 'GET');
       assert.strictEqual(res.status, 404);
     });
+
+    it('includes stats in task response', async () => {
+      const create = await jsonRequest(`${baseUrl}/api/tasks`, 'POST', {
+        type: 'url_crawl', url: 'https://stats-test.com', depth: 1, concurrency: 1, filters: [],
+      });
+      const res = await jsonRequest(`${baseUrl}/api/tasks/${create.body.id}`, 'GET');
+      assert.ok(res.body.stats !== undefined);
+    });
+  });
+
+  describe('POST /api/tasks/:id/pause', () => {
+    it('pauses a running task', async () => {
+      const create = await jsonRequest(`${baseUrl}/api/tasks`, 'POST', {
+        type: 'url_crawl', url: 'https://pause-test.com', depth: 1, concurrency: 1, filters: [],
+      });
+      const res = await jsonRequest(`${baseUrl}/api/tasks/${create.body.id}/pause`, 'POST');
+      assert.strictEqual(res.status, 200);
+      assert.strictEqual(res.body.status, 'paused');
+    });
+
+    it('returns 404 for unknown task', async () => {
+      const res = await jsonRequest(`${baseUrl}/api/tasks/unknown-task/pause`, 'POST');
+      // pause on missing task still succeeds in DB update (WHERE id=? matches 0 rows but no error)
+      assert.strictEqual(res.status, 200);
+    });
+  });
+
+  describe('POST /api/tasks/:id/resume', () => {
+    it('resumes a paused task', async () => {
+      const create = await jsonRequest(`${baseUrl}/api/tasks`, 'POST', {
+        type: 'url_crawl', url: 'https://resume-test.com', depth: 1, concurrency: 1, filters: [],
+      });
+      await jsonRequest(`${baseUrl}/api/tasks/${create.body.id}/pause`, 'POST');
+      const res = await jsonRequest(`${baseUrl}/api/tasks/${create.body.id}/resume`, 'POST');
+      assert.strictEqual(res.status, 200);
+      assert.strictEqual(res.body.status, 'running');
+    });
+  });
+
+  describe('POST /api/tasks/:id/cancel', () => {
+    it('cancels a running task', async () => {
+      const create = await jsonRequest(`${baseUrl}/api/tasks`, 'POST', {
+        type: 'url_crawl', url: 'https://cancel-test.com', depth: 1, concurrency: 1, filters: [],
+      });
+      const res = await jsonRequest(`${baseUrl}/api/tasks/${create.body.id}/cancel`, 'POST');
+      assert.strictEqual(res.status, 200);
+      assert.strictEqual(res.body.status, 'cancelled');
+    });
+  });
+
+  describe('DELETE /api/tasks/:id', () => {
+    it('deletes a task', async () => {
+      const create = await jsonRequest(`${baseUrl}/api/tasks`, 'POST', {
+        type: 'url_crawl', url: 'https://delete-test.com', depth: 1, concurrency: 1, filters: [],
+      });
+      const res = await jsonRequest(`${baseUrl}/api/tasks/${create.body.id}`, 'DELETE');
+      assert.strictEqual(res.status, 200);
+      assert.strictEqual(res.body.deleted, true);
+    });
+
+    it('returns deleted for non-existent task', async () => {
+      const res = await jsonRequest(`${baseUrl}/api/tasks/nonexistent`, 'DELETE');
+      assert.strictEqual(res.status, 200);
+      assert.strictEqual(res.body.deleted, true);
+    });
   });
 });

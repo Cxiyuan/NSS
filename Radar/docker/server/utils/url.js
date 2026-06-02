@@ -17,14 +17,36 @@ export function normalizeUrl(url) {
   }
 }
 
+// Known two-part TLDs (public suffix list subset) — used by getDomain
+// to correctly identify registrable domains vs subdomains
+const TWO_PART_TLDS = new Set([
+  'co.uk', 'ac.uk', 'gov.uk', 'org.uk', 'net.uk', 'me.uk', 'ltd.uk', 'plc.uk', 'sch.uk',
+  'com.cn', 'net.cn', 'org.cn', 'gov.cn', 'edu.cn', 'ac.cn',
+  'com.au', 'net.au', 'org.au', 'edu.au', 'gov.au',
+  'co.jp', 'ne.jp', 'or.jp', 'ac.jp', 'go.jp', 'ed.jp',
+  'co.kr', 'or.kr', 'ne.kr', 'go.kr', 'ac.kr',
+  'co.nz', 'net.nz', 'org.nz',
+  'co.in', 'net.in', 'org.in', 'ac.in', 'gov.in',
+  'com.br', 'org.br', 'net.br', 'gov.br',
+  'com.mx', 'org.mx', 'gob.mx',
+  'com.ar', 'net.ar', 'org.ar', 'gov.ar',
+  'co.il', 'org.il', 'ac.il', 'gov.il',
+  'com.sg', 'edu.sg', 'gov.sg', 'org.sg',
+  'com.hk', 'edu.hk', 'gov.hk', 'org.hk', 'net.hk',
+  'co.th', 'or.th', 'ac.th', 'go.th', 'net.th',
+  'co.za', 'ac.za', 'gov.za', 'org.za', 'net.za',
+  'com.tw', 'edu.tw', 'gov.tw', 'org.tw', 'net.tw',
+  'co.ve', 'com.ve', 'edu.ve', 'gob.ve', 'org.ve', 'net.ve',
+]);
+
 export function getDomain(url) {
   try {
     const hostname = new URL(url).hostname;
     const parts = hostname.split('.');
     if (parts.length <= 2) return parts.join('.');
-    const tld = parts[parts.length - 1];
-    const sld = parts[parts.length - 2];
-    if (sld.length <= 3 && tld.length <= 3 && parts.length >= 3) {
+    // Check if the last two parts form a known two-part TLD (e.g. co.uk)
+    const lastTwo = parts.slice(-2).join('.');
+    if (TWO_PART_TLDS.has(lastTwo) && parts.length >= 3) {
       return parts.slice(-3).join('.');
     }
     return parts.slice(-2).join('.');

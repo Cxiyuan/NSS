@@ -22,6 +22,7 @@ export function useTaskPage({ showExternalCount = true, pdfPrefix = 'crawl-resul
   const [logs, setLogs] = useState([]);
   const [taskConfig, setTaskConfig] = useState(null);
   const [startTime, setStartTime] = useState(null);
+  const [listRefreshKey, setListRefreshKey] = useState(0);
   const taskIdRef = useRef(null);
   const pageRef = useRef(1);
 
@@ -91,7 +92,6 @@ export function useTaskPage({ showExternalCount = true, pdfPrefix = 'crawl-resul
       }
       setStats(s => ({
         ...s,
-        total: s.total + 1,
         external: showExternalCount ? s.external + (data.result.isExternal ? 1 : 0) : s.external,
       }));
     }
@@ -135,6 +135,7 @@ export function useTaskPage({ showExternalCount = true, pdfPrefix = 'crawl-resul
       setStatus('running');
       taskIdRef.current = task.id;
       loadResults(task.id, 1);
+      setListRefreshKey(k => k + 1); // trigger TaskHistory refresh
     } catch (err) {
       console.error(err);
     }
@@ -185,7 +186,7 @@ export function useTaskPage({ showExternalCount = true, pdfPrefix = 'crawl-resul
     taskId, status, stats,
     liveResults, results, resultsTotal, page, logs,
     taskConfig, startTime,
-    handleSubmit, loadResults, handlePageChange,
+    handleSubmit, loadResults, handlePageChange, listRefreshKey,
     handleExportPDF, handleSelectTask,
     handlePause, handleResume, handleCancel,
   };
