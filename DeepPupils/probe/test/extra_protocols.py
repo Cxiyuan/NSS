@@ -22,6 +22,7 @@ def tcp_session(port, client_after_ack=b"", client_after_server=b"", server_afte
     """
     pkts = []
     src_ip, dst_ip = "10.10.10.1", "10.10.10.2"
+    dport = port
     seq, ack_seq = 1000, 2000
     pkts.append(IP(src=src_ip, dst=dst_ip)/TCP(sport=sport, dport=port, flags='S', seq=seq))
     pkts.append(IP(src=dst_ip, dst=src_ip)/TCP(sport=dport, dport=sport, flags='SA', seq=ack_seq, ack=seq+1))
