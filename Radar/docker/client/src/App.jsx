@@ -54,6 +54,8 @@ function AppInner() {
       dispatch({ type: 'SET_VIEW', payload: 'config' });
     } else if (hashView === 'analytics') {
       dispatch({ type: 'SET_VIEW', payload: 'analytics' });
+    } else if (hashView === 'task-workspace') {
+      dispatch({ type: 'SET_VIEW', payload: 'task-workspace' });
     } else if (hashView === 'workspace' && hashTaskId) {
       dispatch({ type: 'SELECT_TASK', payload: { taskId: hashTaskId, subTab: hashSubTab } });
     } else {
@@ -64,14 +66,14 @@ function AppInner() {
   return (
     <AppLayout>
       {/* -------- Header -------- */}
-      <Header onNewTask={() => navigateTo('idle')} />
+      <Header onNewTask={() => navigateTo('new')} />
 
       {/* -------- Sidebar -------- */}
       <Sidebar
         tasks={tasks}
         activeTaskId={state.activeTaskId}
         onSelectTask={handleSelectTask}
-        onNewTask={() => navigateTo('idle')}
+        onNewTask={() => navigateTo('new')}
         onRetryTask={handleRetryTask}
         onNavigateConfig={() => {
           dispatch({ type: 'SET_VIEW', payload: 'config' });
@@ -93,7 +95,7 @@ function AppInner() {
         )}
 
         {state.activeView === 'idle' && (
-          <EmptyState onNewTask={() => navigateTo('idle')} />
+          <EmptyState onNewTask={() => navigateTo('new')} />
         )}
 
         {state.activeView === 'task-workspace' && (

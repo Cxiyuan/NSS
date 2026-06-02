@@ -26,6 +26,10 @@ function parseHash(hash) {
     };
   }
 
+  if (clean === '/new') {
+    return { taskId: null, view: 'task-workspace', subTab: null };
+  }
+
   if (clean === '/config') {
     return { taskId: null, view: 'config', subTab: null };
   }
@@ -48,6 +52,8 @@ function buildHash(view, ...args) {
       const base = `#/task/${encodeURIComponent(taskId)}`;
       return subTab ? `${base}/${subTab}` : base;
     }
+    case 'new':
+      return '#/new';
     case 'config':
       return '#/config';
     case 'analytics':
