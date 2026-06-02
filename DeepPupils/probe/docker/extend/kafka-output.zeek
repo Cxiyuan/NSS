@@ -111,8 +111,14 @@ event zeek_init() &priority=5
     Log::add_filter(Redis::LOG, [$name="kafka-redis",
         $writer=Log::WRITER_KAFKAWRITER,
         $config=table(["stream_id"]="redis")]);
+    Log::add_filter(SIP::LOG, [$name="kafka-sip",
+        $writer=Log::WRITER_KAFKAWRITER,
+        $config=table(["stream_id"]="sip")]);
+    Log::add_filter(SNMP::LOG, [$name="kafka-snmp",
+        $writer=Log::WRITER_KAFKAWRITER,
+        $config=table(["stream_id"]="snmp")]);
 
-    print fmt("[probe] Kafka output enabled: %s topic=%s (14 streams)",
+    print fmt("[probe] Kafka output enabled: %s topic=%s (16 streams)",
               Probe::kafka_brokers, Probe::kafka_topic);
 }
 
