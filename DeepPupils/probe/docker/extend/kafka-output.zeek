@@ -76,10 +76,13 @@ event zeek_init() &priority=5
     Log::add_filter(X509::LOG, [$name="kafka-x509",
         $writer=Log::WRITER_KAFKAWRITER,
         $config=table(["stream_id"]="x509")]);
-    Log::add_filter(SMB::LOG, [$name="kafka-smb",
+    Log::add_filter(SMB::FILES_LOG, [$name="kafka-smb-files",
         $writer=Log::WRITER_KAFKAWRITER,
-        $config=table(["stream_id"]="smb")]);
-    Log::add_filter(MySQL::LOG, [$name="kafka-mysql",
+        $config=table(["stream_id"]="smb_files")]);
+    Log::add_filter(SMB::MAPPING_LOG, [$name="kafka-smb-mapping",
+        $writer=Log::WRITER_KAFKAWRITER,
+        $config=table(["stream_id"]="smb_mapping")]);
+    Log::add_filter(mysql::LOG, [$name="kafka-mysql",
         $writer=Log::WRITER_KAFKAWRITER,
         $config=table(["stream_id"]="mysql")]);
     Log::add_filter(PostgreSQL::LOG, [$name="kafka-postgresql",
@@ -89,7 +92,7 @@ event zeek_init() &priority=5
         $writer=Log::WRITER_KAFKAWRITER,
         $config=table(["stream_id"]="redis")]);
 
-    print fmt("[probe] Kafka output enabled: %s topic=%s (13 streams)",
+    print fmt("[probe] Kafka output enabled: %s topic=%s (14 streams)",
               Probe::kafka_brokers, Probe::kafka_topic);
 }
 
@@ -113,8 +116,9 @@ event zeek_init() &priority=-10
     Log::remove_filter(FTP::LOG, "");
     Log::remove_filter(RDP::LOG, "");
     Log::remove_filter(X509::LOG, "");
-    Log::remove_filter(SMB::LOG, "");
-    Log::remove_filter(MySQL::LOG, "");
+    Log::remove_filter(SMB::FILES_LOG, "");
+    Log::remove_filter(SMB::MAPPING_LOG, "");
+    Log::remove_filter(mysql::LOG, "");
     Log::remove_filter(PostgreSQL::LOG, "");
     Log::remove_filter(Redis::LOG, "");
 
