@@ -44,35 +44,30 @@ export default function FilterInput({ filters = { domains: [], types: [] }, onCh
   return (
     <div className="filter-input">
       {/* Mode tabs */}
-      <div style={{ display: 'flex', gap: 0, marginBottom: 10, borderBottom: '1px solid var(--color-border)' }}>
-        <button type="button" onClick={() => setMode('domain')}
-          style={{ flex: 1, padding: '6px 12px', border: 'none', background: mode === 'domain' ? 'var(--color-primary)' : 'transparent', color: mode === 'domain' ? 'white' : 'var(--color-text-muted)', borderRadius: '4px 4px 0 0', cursor: 'pointer', fontSize: 12, fontWeight: 600 }}>
+      <div className="filter-mode">
+        <button type="button" className={'filter-mode__tab' + (mode === 'domain' ? ' filter-mode__tab--active' : '')} onClick={() => setMode('domain')}>
           域名过滤 {domains.length > 0 ? `(${domains.length})` : ''}
         </button>
-        <button type="button" onClick={() => setMode('type')}
-          style={{ flex: 1, padding: '6px 12px', border: 'none', background: mode === 'type' ? 'var(--color-primary)' : 'transparent', color: mode === 'type' ? 'white' : 'var(--color-text-muted)', borderRadius: '4px 4px 0 0', cursor: 'pointer', fontSize: 12, fontWeight: 600 }}>
+        <button type="button" className={'filter-mode__tab' + (mode === 'type' ? ' filter-mode__tab--active' : '')} onClick={() => setMode('type')}>
           类型过滤 {selectedTypes.length > 0 ? `(${selectedTypes.length})` : ''}
         </button>
       </div>
 
       {mode === 'domain' ? (
         <div>
-          <textarea value={domainText} onChange={e => handleDomainChange(e.target.value)}
-            placeholder="输入要过滤的域名，每行一个&#10;如: qq.com&#10;    *.qq.com&#10;    *gov.cn"
-            style={{ width: '100%', minHeight: 80, padding: '8px 12px', border: '1px solid var(--color-border)', borderRadius: 6, fontSize: 13, fontFamily: 'var(--font-mono, monospace)', resize: 'vertical', boxSizing: 'border-box' }}
-          />
-          <div style={{ fontSize: 11, color: 'var(--color-text-muted)', marginTop: 4 }}>
+          <textarea className="filter-domain__input" value={domainText} onChange={e => handleDomainChange(e.target.value)}
+            placeholder="输入要过滤的域名，每行一个&#10;如: qq.com&#10;    *.qq.com&#10;    *gov.cn" />
+          <div className="filter-domain__hint">
             支持格式: qq.com（精确域名）, *.qq.com（泛域名）, *gov.cn（后缀通配）
           </div>
         </div>
       ) : (
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 4 }}>
+        <div className="filter-type__grid">
           {Object.entries(LINK_TYPE_LABELS).map(([type, label]) => (
-            <label key={type} style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '4px 0', fontSize: 13, cursor: 'pointer', userSelect: 'none' }}>
+            <label key={type} className="filter-type__item">
               <input type="checkbox" checked={selectedTypes.includes(type)}
-                onChange={() => toggleType(type)}
-                style={{ accentColor: 'var(--color-primary)' }} />
-              {label}
+                onChange={() => toggleType(type)} />
+              <span>{label}</span>
             </label>
           ))}
         </div>
