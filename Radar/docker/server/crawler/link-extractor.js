@@ -11,7 +11,7 @@ export function extractLinks(html, baseUrl) {
   function add(url, foundOn, linkType) {
     const resolved = resolveUrl(url, baseUrl);
     if (!resolved) return;
-    if (resolved.startsWith('mailto:') || resolved.startsWith('javascript:')) return;
+    if (resolved.startsWith('mailto:') || resolved.startsWith('javascript:') || resolved.startsWith('data:')) return;
     if (seen.has(resolved)) return;
     seen.add(resolved);
     results.push({ url: resolved, foundOn, linkType });

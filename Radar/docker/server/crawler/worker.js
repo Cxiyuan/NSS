@@ -1,6 +1,17 @@
 import { parentPort } from 'node:worker_threads';
 import { fetchAndParse, setAntiDetect } from './fetcher.js';
 
+// Detect charset from Content-Type header
+function detectCharset(contentType) {
+  if (!contentType) return 'utf-8';
+  const match = contentType.match(/charset\s*=\s*([^\s;]+)/i);
+  if (!match) return 'utf-8';
+  const charset = match[1].toLowerCase();
+  // Map common aliases to standard TextDecoder names
+  const aliases = { 'gb2312': 'gbk', 'gbk': 'gbk', 'gb18030': 'gb18030', 'big5': 'big5', 'shift_jis': 'shift-jis', 'euc-kr': 'euc-kr', 'euc-jp': 'euc-jp', 'iso-8859-1': 'latin1' };
+  return aliases[charset] || charset;
+}
+
 // Lightweight title fetch for external links — quick check with short timeout
 async function fetchTitle(url) {
   const controller = new AbortController();
@@ -16,12 +27,20 @@ async function fetchTitle(url) {
     });
     clearTimeout(timer);
     const statusCode = res.status;
+    const contentType = res.headers.get('content-type') || '';
+    const encoding = detectCharset(contentType);
     // Read first 64KB to extract <title>
     const reader = res.body.getReader();
     const { value, done } = await reader.read();
     reader.cancel();
     if (done && !value) return { title: '', statusCode };
-    const text = new TextDecoder('utf-8', { fatal: false }).decode(value);
+    // Decode with detected encoding, fall back to utf-8 if unsupported
+    let text;
+    try {
+      text = new TextDecoder(encoding, { fatal: false }).decode(value);
+    } catch {
+      text = new TextDecoder('utf-8', { fatal: false }).decode(value);
+    }
     const match = text.match(/<title[^>]*>([^<]+)<\/title>/i);
     return { title: match ? match[1].trim() : '', statusCode };
   } catch (err) {
@@ -89,17 +108,12 @@ async function run(taskConfig) {
   }
 
   // enqueue adds a URL to the crawl queue.
-  // Filter is applied only to crawled links (depth > 0) — the seed/search URL is always allowed.
+  // Filter is NOT applied here — same-domain links always get crawled.
+  // External links are filter-checked separately before being recorded as results.
   function enqueue(u, currentDepth, foundOn) {
     const normalized = normalizeUrl(u);
     if (!normalized) return false;
     if (visited.has(normalized)) return false;
-    // Apply filter only to links found during crawling (depth > 0), not to seed/search URLs
-    if (currentDepth > 0 && filter.isFiltered(normalized)) {
-      filteredCount++;
-      post('log', { level: 'info', message: `Filtered enqueue: ${normalized}` });
-      return false;
-    }
     visited.add(normalized);
     queue.push({ url: normalized, depth: currentDepth, foundOn: foundOn || '' });
     return true;
