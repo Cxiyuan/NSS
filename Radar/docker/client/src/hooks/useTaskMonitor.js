@@ -89,7 +89,7 @@ export function useTaskMonitor(taskId) {
 
   function handleWSMessage(data) {
     if (data.type === 'progress') {
-      setStats(s => ({ ...s, crawled: data.crawled, total: data.total, depth: data.depth, filtered: data.filtered ?? s.filtered }));
+      setStats(s => ({ ...s, crawled: data.crawled, total: data.total, depth: data.depth, filtered: data.filtered ?? s.filtered, visited: data.visited ?? s.visited }));
     }
     if (data.type === 'status') {
       setStatus(data.status);
@@ -136,6 +136,19 @@ export function useTaskMonitor(taskId) {
     pollTimerRef.current = setInterval(poll, 3000);
     return () => clearInterval(pollTimerRef.current);
   }, [taskId, status, wsConnected]);
+
+  // ---------- Analytics polling (real-time during task, frozen after) ----------
+  const analyticsTimerRef = useRef(null);
+  useEffect(() => {
+    if (!taskId || status === 'completed' || status === 'error' || status === 'cancelled') {
+      return;
+    }
+    // Initial load
+    loadAnalytics();
+    // Periodic refresh every 5s during task execution
+    analyticsTimerRef.current = setInterval(loadAnalytics, 5000);
+    return () => clearInterval(analyticsTimerRef.current);
+  }, [taskId, status]);
 
   // ---------- Data loading ----------
   async function loadResults(p) {

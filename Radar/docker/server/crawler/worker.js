@@ -315,7 +315,7 @@ async function run(taskConfig) {
     }));
 
     crawled += batch.length;
-    post('progress', { crawled, total: resultsPosted, depth: Math.min(depth || 3, queue.length > 0 ? 1 : 0), filtered: filteredCount });
+    post('progress', { crawled, total: resultsPosted, depth: Math.min(depth || 3, queue.length > 0 ? 1 : 0), filtered: filteredCount, visited: visited.size });
   }
 
   // Wait for all in-flight title fetches to finish before declaring done

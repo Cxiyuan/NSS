@@ -79,7 +79,10 @@ export default function TaskWorkspace({ task }) {
     <div className="workspace">
       {/* Workspace toolbar */}
       <div className="workspace__toolbar">
-        <span className="workspace__breadcrumb">所有任务</span>
+        <a className="workspace__breadcrumb" href="#/" onClick={(e) => { e.preventDefault(); navigateTo('idle'); }}
+          style={{ cursor: 'pointer', textDecoration: 'none', color: 'var(--color-primary)' }}>
+          所有任务
+        </a>
         <span className="workspace__separator">/</span>
         <span className="workspace__title">{displayLabel}</span>
         <span className="workspace__badge">

@@ -1,9 +1,12 @@
 import './ProgressPanel.css';
 
 export default function ProgressPanel({ status, stats }) {
-  const { crawled = 0, total = 0, depth = 0, filtered = 0 } = stats || {};
+  const { crawled = 0, total = 0, depth = 0, filtered = 0, visited = 0 } = stats || {};
 
-  const pct = total > 0 ? Math.round((crawled / total) * 100) : 0;
+  // Use visited (total unique URLs discovered) as progress denominator — never exceeds 100%
+  const denominator = visited || total || 1;
+  const pct = Math.min(Math.round((crawled / denominator) * 100), 100);
+
   const statusLabel = {
     pending: '等待中', running: '运行中', paused: '已暂停',
     completed: '已完成', error: '错误', cancelled: '已取消',
@@ -14,6 +17,9 @@ export default function ProgressPanel({ status, stats }) {
     paused: 'pp-indicator--paused',
     completed: 'pp-indicator--completed',
   }[status] || '';
+
+  // Only show visited/total breakdown when both are meaningful
+  const showBreakdown = visited > 0 || total > 0;
 
   return (
     <div className="pp">
@@ -26,9 +32,15 @@ export default function ProgressPanel({ status, stats }) {
           style={{ width: `${pct}%` }} />
       </div>
       <div className="pp__stats">
-        <Stat label="已爬取" value={`${crawled} / ${total}`} />
+        {showBreakdown && (
+          <>
+            <Stat label="爬取页面" value={crawled} />
+            <Stat label="发现结果" value={total} />
+            <Stat label="待爬队列" value={Math.max(0, visited - crawled)} />
+          </>
+        )}
         <Stat label="已过滤" value={filtered} />
-        <Stat label="深度" value={depth} />
+        {depth > 0 && <Stat label="当前深度" value={depth} />}
         <Stat label="进度" value={`${pct}%`} />
       </div>
     </div>
