@@ -36,9 +36,6 @@ services:
   # 过滤组播流量，输出到 Kafka（不写本地文件）
   # ============================================================
   probe:
-    build:
-      context: ../docker
-      dockerfile: Dockerfile
     image: ghcr.io/cxiyuan/probe:latest
     container_name: probe
     network_mode: host

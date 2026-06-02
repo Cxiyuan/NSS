@@ -9,10 +9,13 @@
 cp .env.example .env
 vi .env
 
-# 2. 启动所有服务
+# 2. 拉取最新镜像
+docker compose pull
+
+# 3. 启动所有服务
 docker compose up -d
 
-# 3. 验证运行状态
+# 4. 验证运行状态
 docker compose ps
 ```
 
@@ -22,6 +25,7 @@ docker compose ps
 |------|--------|------|
 | `PROBE_KAFKA_BROKERS` | `localhost:9092` | Kafka broker 地址 |
 | `PROBE_KAFKA_TOPIC` | `probe` | Kafka topic 名称 |
+| `PROBE_KAFKA_ONLY` | `true` | 仅输出到 Kafka，不写本地日志 |
 | `PROBE_INTERFACE` | `ens192` | 监听网卡接口 |
 | `KAFKA_LOG_RETENTION_DAYS` | `15` | Kafka 日志保留天数 |
 | `PROBE_LOG_DIR` | `/var/log/probe` | 日志挂载目录 |
@@ -55,7 +59,8 @@ docker compose ps
 | `ftp` | FTP 日志 | 文件传输协议 |
 | `rdp` | RDP 日志 | 远程桌面协议 |
 | `x509` | X.509 证书日志 | TLS 证书链信息 |
-| `smb` | SMB 日志 | Windows 文件共享 |
+| `smb_files` | SMB 文件操作日志 | Windows 文件共享操作 |
+| `smb_mapping` | SMB 共享映射日志 | SMB 共享路径/类型 |
 | `mysql` | MySQL 日志 | SQL 查询审计 |
 | `postgresql` | PostgreSQL 日志 | SQL 查询审计 |
 | `redis` | Redis 日志 | 缓存/消息队列协议 |
