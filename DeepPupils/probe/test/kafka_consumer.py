@@ -39,18 +39,17 @@ print(f"Total Kafka messages consumed: {count}")
 for sid, info in sorted(streams.items()):
     print(f"  stream={sid} records={info['records']} fields={len(info['fields'])}")
 
-assert "conn" in streams, "Missing conn stream"
-assert "http" in streams, "Missing http stream"
-assert "dns" in streams, "Missing dns stream"
+# 核心协议必须存在
+for core in ["conn", "http", "dns"]:
+    assert core in streams, f"Missing {core} stream"
 
-# 扩展协议（由 extra_protocols.py 生成）
-for proto in ["ftp", "mysql", "postgresql", "redis", "sip"]:
+# 扩展协议（由 extra_protocols.py 生成，非强制）
+for proto in ["ftp", "rdp", "smb", "mysql", "postgresql", "redis", "sip", "snmp"]:
     if proto in streams:
         print(f"  [+] {proto} stream present ({streams[proto]['records']} records)")
     else:
-        print(f"  [-] {proto} stream not found (may need more complete handshake)")
+        print(f"  [-] {proto} stream not found")
 
-# 至少要有 5 个核心协议
 assert len(streams) >= 5, f"Too few streams: {len(streams)}"
 
 has_proto = any("proto" in info["fields"] for info in streams.values())
