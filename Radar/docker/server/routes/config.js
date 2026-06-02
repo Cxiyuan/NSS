@@ -45,6 +45,15 @@ export function getConfig() {
   return JSON.parse(JSON.stringify(globalConfig));
 }
 
+// Return config with sensitive fields masked
+function getSanitizedConfig() {
+  const cfg = getConfig();
+  if (cfg.proxy?.url) {
+    cfg.proxy.url = cfg.proxy.url.replace(/:[^:@]+@/, ':****@');
+  }
+  return cfg;
+}
+
 export function createConfigRoutes(dataDir) {
   // Load persisted config on startup
   if (dataDir) loadConfigFromDisk(dataDir);
@@ -53,7 +62,7 @@ export function createConfigRoutes(dataDir) {
 
   // GET /api/config
   router.get('/', (req, res) => {
-    res.json(getConfig());
+    res.json(getSanitizedConfig());
   });
 
   // PUT /api/config
@@ -85,7 +94,7 @@ export function createConfigRoutes(dataDir) {
     // Persist to disk
     if (dataDir) saveConfigToDisk(dataDir);
 
-    res.json(getConfig());
+    res.json(getSanitizedConfig());
   });
 
   return router;

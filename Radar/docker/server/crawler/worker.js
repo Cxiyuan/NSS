@@ -117,11 +117,17 @@ let currentTaskId = null;
 
 parentPort.on('message', (msg) => {
   if (msg.type === 'pause') paused = true;
-  if (msg.type === 'resume') paused = false;
-  if (msg.type === 'cancel') cancelled = true;
-  if (msg.type === 'add_filter' && msg.pattern && currentFilter) {
+  else if (msg.type === 'resume') paused = false;
+  else if (msg.type === 'cancel') cancelled = true;
+  else if (msg.type === 'add_filter' && msg.pattern && currentFilter) {
     currentFilter.addFilter(msg.pattern);
     parentPort.postMessage({ type: 'log', taskId: currentTaskId, level: 'info', message: `Dynamic filter added: ${msg.pattern}` });
+  }
+  else if (msg.type === 'start') {
+    run(msg.config).catch(err => {
+      try { parentPort.postMessage({ type: 'log', level: 'error', message: `Worker fatal error: ${err.message}` }); } catch {}
+      try { parentPort.postMessage({ type: 'status', status: 'error' }); } catch {}
+    });
   }
 });
 
@@ -368,11 +374,3 @@ function keywordSnippet(bodyText, kwds) {
   return snippet;
 }
 
-parentPort.on('message', (msg) => {
-  if (msg.type === 'start') {
-    run(msg.config).catch(err => {
-      try { parentPort.postMessage({ type: 'log', level: 'error', message: `Worker fatal error: ${err.message}` }); } catch {}
-      try { parentPort.postMessage({ type: 'status', status: 'error' }); } catch {}
-    });
-  }
-});

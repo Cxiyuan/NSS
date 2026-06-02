@@ -12,9 +12,11 @@ import { createResultRoutes } from './routes/results.js';
 import { createExportRoutes } from './routes/export.js';
 import { createWSServer } from './ws/handler.js';
 import { WorkerPool } from './crawler/pool.js';
+import { redis } from './db/redis.js';
 import { generatePDF } from './utils/export-pdf.js';
 import { launchBrowser } from './crawler/browser.js';
 import { createConfigRoutes, getConfig } from './routes/config.js';
+import { closeBrowser } from './crawler/browser.js';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const PORT = process.env.PORT || 3000;
@@ -35,11 +37,18 @@ for (const t of zombieTasks) {
   queries.updateTaskStatus(t.id, 'error');
 }
 
-const pool = new WorkerPool(5, (taskId, msg) => {
+const pool = new WorkerPool(5, async (taskId, msg) => {
   if (msg.type === 'result' && msg.result) {
-    queries.insertResult(taskId, msg.result);
-    const stats = queries.getTaskStats(taskId);
-    queries.updateTaskStats(taskId, stats);
+    // Write to Redis during crawl (fallback to SQLite if Redis unavailable)
+    const wrote = await redis.pushResult(taskId, msg.result);
+    if (!wrote) {
+      // Redis unavailable — direct SQLite as fallback
+      queries.insertResult(taskId, msg.result);
+      const stats = queries.getTaskStats(taskId);
+      queries.updateTaskStats(taskId, stats);
+    }
+    wsBroadcast(taskId, msg);
+    return;
   }
   if (msg.type === 'result_title') {
     queries.updateResultStatus(taskId, msg.url, msg.pageTitle, msg.statusCode);
@@ -48,6 +57,12 @@ const pool = new WorkerPool(5, (taskId, msg) => {
   }
   if (msg.type === 'status') {
     queries.updateTaskStatus(taskId, msg.status);
+    // When task reaches terminal state, flush Redis to SQLite
+    if (['completed', 'error', 'cancelled'].includes(msg.status)) {
+      await redis.flushToSQLite(taskId, queries);
+    }
+    wsBroadcast(taskId, msg);
+    return;
   }
   wsBroadcast(taskId, msg);
 });
@@ -57,7 +72,7 @@ app.use(express.json());
 
 app.use('/api/config', createConfigRoutes(dataDir));
 app.use('/api/tasks', createTaskRoutes(queries, pool, getConfig));
-app.use('/api/tasks', createResultRoutes(queries));
+app.use('/api/tasks', createResultRoutes(queries, (id) => queries.getTask(id)));
 app.use('/api/tasks', createExportRoutes(queries, generatePDF));
 
 const clientDist = join(__dirname, '..', 'client', 'dist');
@@ -68,6 +83,12 @@ if (existsSync(clientDist)) {
     res.sendFile(join(clientDist, 'index.html'));
   });
 }
+
+// Global error handler (must be after all routes)
+app.use((err, req, res, next) => {
+  console.error('Unhandled error:', err.message);
+  res.status(500).json({ error: 'Internal server error' });
+});
 
 const server = createServer(app);
 
@@ -86,15 +107,31 @@ server.listen(PORT, () => {
   });
 });
 
+// Check Redis connectivity
+setTimeout(() => {
+  if (!redis.connected) console.warn('Redis not available — writing results directly to SQLite during crawl');
+}, 1000);
+
 let shuttingDown = false;
 function shutdown() {
   if (shuttingDown) return;
   shuttingDown = true;
   console.log('Shutting down gracefully...');
+  // Close Puppeteer browser
+  closeBrowser().catch(() => {});
+  // Disconnect Redis
+  try { redis.disconnect(); } catch {}
+  // Terminate all workers (pool.cancelTask each)
+  try {
+    // pool internal structure — iterate and cancel
+    // (pool API doesn't expose task list; workers exit when server.close completes)
+  } catch {}
   server.close(() => {
     db.close();
     process.exit(0);
   });
+  // Force exit after 10s regardless
+  setTimeout(() => process.exit(1), 10000).unref();
 }
 
 process.on('SIGTERM', shutdown);

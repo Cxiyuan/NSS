@@ -7,10 +7,27 @@
 # ============================================
 
 services:
+  redis:
+    image: redis:7-alpine
+    container_name: radar-redis
+    restart: unless-stopped
+    volumes:
+      - redis_data:/data
+    networks:
+      - radar_net
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 3s
+      retries: 3
+
   radar:
     image: ghcr.io/cxiyuan/radar-web-crawler:latest
     container_name: radar
     restart: unless-stopped
+    depends_on:
+      redis:
+        condition: service_healthy
 
     ports:
       - "${HOST_PORT:-3000}:3000"
@@ -19,24 +36,23 @@ services:
       - PORT=3000
       - DB_PATH=/data/crawler.db
       - PUPPETEER_EXECUTABLE_PATH=/usr/bin/chromium-browser
+      - REDIS_URL=redis://redis:6379
       # SearXNG 自建搜索引擎地址（关键词搜索默认引擎，免 API Key）
       - SEARXNG_BASE_URL=${SEARXNG_BASE_URL:-http://host.docker.internal:4000}
       # 代理（可选，用于反检测）
       - HTTPS_PROXY=${HTTPS_PROXY:-}
 
     volumes:
-      # 持久化 SQLite 数据库和配置
       - radar_data:/data
 
-    # 健康检查
+    # 健康检查（使用 Node.js 替代 curl，因为 Alpine 无 curl）
     healthcheck:
-      test: ["CMD", "curl", "-sf", "http://127.0.0.1:3000/api/tasks"]
+      test: ["CMD", "node", "-e", "fetch('http://127.0.0.1:3000/api/tasks').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"]
       interval: 30s
       timeout: 10s
       retries: 3
       start_period: 20s
 
-    # 资源限制
     deploy:
       resources:
         limits:
@@ -44,14 +60,12 @@ services:
         reservations:
           memory: 512M
 
-    # 日志
     logging:
       driver: "json-file"
       options:
         max-size: "10m"
         max-file: "3"
 
-    # 安全
     security_opt:
       - no-new-privileges:true
 
@@ -61,6 +75,8 @@ services:
 volumes:
   radar_data:
     name: radar_data
+  redis_data:
+    name: radar_redis_data
 
 networks:
   radar_net:

@@ -1,5 +1,6 @@
 import { Router } from 'express';
 import { v4 as uuid } from 'uuid';
+import { redis } from '../db/redis.js';
 
 export function createTaskRoutes(queries, pool, getConfig) {
   const router = Router();
@@ -16,6 +17,13 @@ export function createTaskRoutes(queries, pool, getConfig) {
     if (type === 'keyword_search' && !keywords) {
       return res.status(400).json({ error: 'keywords is required for keyword_search' });
     }
+
+    // Input validation
+    const d = Number(depth);
+    const c = Number(concurrency);
+    if (isNaN(d) || d < 1 || d > 20) return res.status(400).json({ error: 'depth must be 1-20' });
+    if (isNaN(c) || c < 1 || c > 20) return res.status(400).json({ error: 'concurrency must be 1-20' });
+    if (filters !== undefined && !Array.isArray(filters)) return res.status(400).json({ error: 'filters must be an array' });
 
     const id = uuid();
     // Inject global anti-detect config into task
@@ -86,6 +94,8 @@ export function createTaskRoutes(queries, pool, getConfig) {
     }
     // Send dynamic filter to running worker
     if (pool) pool.sendMessage(req.params.id, { type: 'add_filter', pattern: domain });
+    // Also write to Redis filtered set (for live result filtering)
+    redis.addFilteredDomain(req.params.id, domain).catch(() => {});
     // Also store the filter in the task config so it persists
     const task = queries.getTask(req.params.id);
     if (task && task.config) {
@@ -93,11 +103,7 @@ export function createTaskRoutes(queries, pool, getConfig) {
       const filters = Array.isArray(config.filters) ? config.filters : (config.filters?.domains || []);
       if (!filters.includes(domain)) {
         filters.push(domain);
-        if (Array.isArray(config.filters)) {
-          config.filters = filters;
-        } else {
-          config.filters = { ...config.filters, domains: filters };
-        }
+        config.filters = Array.isArray(config.filters) ? filters : { ...config.filters, domains: filters };
         // Update the config in DB (destructure and re-store)
         const { searchApiKey: _, searchCx: __, ...safeConfig } = config;
         queries.updateTaskConfig(req.params.id, safeConfig);
