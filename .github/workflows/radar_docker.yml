@@ -94,14 +94,23 @@ jobs:
     needs: [docker-build]
     if: github.event_name == 'push' && github.ref == 'refs/heads/main'
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: read
 
     steps:
       - uses: actions/checkout@v4
 
+      - name: 登录 GitHub Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
       - name: 运行完整 API 集成测试
         timeout-minutes: 5
         run: |
-          SHORT_SHA="${{ github.sha }}"
-          SHORT_SHA="${SHORT_SHA:0:7}"
+          SHORT_SHA="${GITHUB_SHA:0:7}"
           IMAGE="${{ env.IMAGE_NAME }}:sha-${SHORT_SHA}"
           bash Radar/docker/server/test-integration.sh "$IMAGE" 3000
