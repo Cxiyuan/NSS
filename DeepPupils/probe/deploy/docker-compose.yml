@@ -18,11 +18,6 @@ services:
       KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: PLAINTEXT:PLAINTEXT,CONTROLLER:PLAINTEXT
       KAFKA_CONTROLLER_QUORUM_VOTERS: 1@localhost:9093
       CLUSTER_ID: probe-cluster
-      # 日志保留 15 天（15 × 24 = 360 小时），大小不限
-      KAFKA_LOG_RETENTION_HOURS: 360
-      # 显式指定数据目录，与 volumes 挂载点一致
-      KAFKA_LOG_DIRS: /var/lib/kafka/data
-      KAFKA_LOG_RETENTION_BYTES: -1
     restart: unless-stopped
     volumes:
       - kafka-data:/var/lib/kafka/data
@@ -38,12 +33,17 @@ services:
   # 过滤组播流量，输出到 Kafka（不写本地文件）
   # ============================================================
   probe:
+    build:
+      context: ../docker
+      dockerfile: Dockerfile
     image: ghcr.io/cxiyuan/probe:latest
     container_name: probe
     network_mode: host
     cap_add:
       - NET_ADMIN
       - NET_RAW
+    volumes:
+      - /var/log/probe:/output
     depends_on:
       kafka:
         condition: service_healthy
