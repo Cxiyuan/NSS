@@ -41,6 +41,18 @@ for sid, info in sorted(streams.items()):
 
 assert "conn" in streams, "Missing conn stream"
 assert "http" in streams, "Missing http stream"
+assert "dns" in streams, "Missing dns stream"
+
+# 扩展协议（由 extra_protocols.py 生成）
+for proto in ["ftp", "mysql", "postgresql", "redis", "sip"]:
+    if proto in streams:
+        print(f"  [+] {proto} stream present ({streams[proto]['records']} records)")
+    else:
+        print(f"  [-] {proto} stream not found (may need more complete handshake)")
+
+# 至少要有 5 个核心协议
+assert len(streams) >= 5, f"Too few streams: {len(streams)}"
+
 has_proto = any("proto" in info["fields"] for info in streams.values())
 has_method = any("method" in info["fields"] for info in streams.values())
 assert has_proto, "No proto field found in any stream"
