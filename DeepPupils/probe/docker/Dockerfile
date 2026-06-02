@@ -29,7 +29,7 @@ RUN curl -sL -o /tmp/zeek-8.2.0.tar.gz \
         https://github.com/zeek/zeek/archive/refs/tags/v8.2.0.tar.gz \
     && mkdir -p /tmp/zeek-src \
     && tar xzf /tmp/zeek-8.2.0.tar.gz -C /tmp/zeek-src --strip=1 \
-    && for dir in ftp rdp x509 smb mysql postgresql redis; do \
+    && for dir in ftp rdp smb mysql postgresql redis; do \
         cp -r /tmp/zeek-src/scripts/base/protocols/$dir \
             /usr/local/zeek/share/zeek/base/protocols/$dir; \
         echo "[OK] installed base/protocols/$dir"; \

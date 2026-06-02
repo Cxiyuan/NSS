@@ -28,7 +28,7 @@ export {
 
 @load base/protocols/ftp
 @load base/protocols/rdp
-@load base/protocols/x509
+# X509::LOG 是 SSL 分析器 BiF 的一部分，无需 @load
 @load base/protocols/smb
 @load base/protocols/mysql
 @load base/protocols/postgresql
