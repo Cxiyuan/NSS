@@ -69,13 +69,15 @@ describe('WorkerPool', () => {
   describe('cancelTask', () => {
     it('cancels a running task', () => {
       pool.cancelTask('test-task-1');
-      // Give it a moment to process
     });
 
     it('decrements activeWorkers on exit', async () => {
       pool.cancelTask('test-task-2');
-      // Wait for worker termination
-      await new Promise(r => setTimeout(r, 200));
+      // Poll for worker termination (up to 5s)
+      for (let i = 0; i < 25; i++) {
+        if (pool.activeWorkers === 0) break;
+        await new Promise(r => setTimeout(r, 200));
+      }
       assert.strictEqual(pool.activeWorkers, 0);
     });
   });

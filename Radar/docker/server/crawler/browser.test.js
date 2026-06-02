@@ -3,11 +3,11 @@ import assert from 'node:assert';
 import { launchBrowser, fetchWithBrowser, closeBrowser } from './browser.js';
 
 describe('browser', () => {
-  before(async function () {
-    if (!process.env.PUPPETEER_EXECUTABLE_PATH || !process.env.CI) {
-      this.skip();
+  before(async () => {
+    // Puppeteer tests only run in CI with PUPPETEER_EXECUTABLE_PATH
+    if (process.env.PUPPETEER_EXECUTABLE_PATH && process.env.CI) {
+      await launchBrowser();
     }
-    await launchBrowser();
   });
 
   after(async () => {
