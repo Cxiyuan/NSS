@@ -46,7 +46,7 @@ export function createTaskRoutes(queries, pool, getConfig) {
     const c = Number(concurrency);
     if (isNaN(d) || d < 1 || d > 20) return res.status(400).json({ error: 'depth must be 1-20' });
     if (isNaN(c) || c < 1 || c > 20) return res.status(400).json({ error: 'concurrency must be 1-20' });
-    if (filters !== undefined && !Array.isArray(filters)) return res.status(400).json({ error: 'filters must be an array' });
+    if (filters !== undefined && typeof filters !== 'object') return res.status(400).json({ error: 'filters must be an array or object' });
 
     const id = uuid();
     // Inject global anti-detect config into task
