@@ -142,17 +142,16 @@ DEL_GET=$(curl -s -o /dev/null -w '%{http_code}' "$BASE/api/tasks/$TID")
 echo ""
 echo "=== 3. Results API ==="
 
-# Install sqlite3 in container for direct DB access (Alpine Linux)
-echo "  Installing sqlite3 in container..."
-docker exec -u root radar-itest-$$ sh -c "apk add --no-cache sqlite" 2>&1
-
-# Create a task and inject a result via DB directly (no crawler needed)
+# Inject test data via Node.js (uses same better-sqlite3 as the server)
+echo "  Injecting test data via better-sqlite3..."
 INJECT_TID="itest-results-$$"
-docker exec radar-itest-$$ sh -c "
-  sqlite3 /tmp/itest.db \"INSERT INTO tasks(id,type,status,config,stats,created_at,updated_at) VALUES('$INJECT_TID','url_crawl','completed','{}','{}','$(date -u +%Y-%m-%dT%H:%M:%SZ)','$(date -u +%Y-%m-%dT%H:%M:%SZ)');\"
-  sqlite3 /tmp/itest.db \"INSERT INTO results(task_id,url,found_on,link_type,is_external,depth,created_at) VALUES('$INJECT_TID','https://ext1.com/page','https://seed.com','a',1,1,'$(date -u +%Y-%m-%dT%H:%M:%SZ)');\"
-  sqlite3 /tmp/itest.db \"INSERT INTO results(task_id,url,found_on,link_type,is_external,depth,created_at) VALUES('$INJECT_TID','https://ext2.com/page','https://seed.com','a',1,1,'$(date -u +%Y-%m-%dT%H:%M:%SZ)');\"
-  sqlite3 /tmp/itest.db \"INSERT INTO results(task_id,url,found_on,link_type,is_external,depth,created_at) VALUES('$INJECT_TID','https://same.com/page','https://seed.com','a',0,0,'$(date -u +%Y-%m-%dT%H:%M:%SZ)');\"
+NOW="$(date -u +%Y-%m-%dT%H:%M:%SZ)"
+docker exec radar-itest-$$ node -e "
+const DB = require('better-sqlite3')('/tmp/itest.db');
+DB.exec(\"INSERT INTO tasks(id,type,status,config,stats,created_at,updated_at) VALUES('$INJECT_TID','url_crawl','completed','{}','{}','$NOW','$NOW')\");
+DB.exec(\"INSERT INTO results(task_id,url,found_on,link_type,is_external,depth,created_at) VALUES('$INJECT_TID','https://ext1.com/page','https://seed.com','a',1,1,'$NOW')\");
+DB.exec(\"INSERT INTO results(task_id,url,found_on,link_type,is_external,depth,created_at) VALUES('$INJECT_TID','https://ext2.com/page','https://seed.com','a',1,1,'$NOW')\");
+DB.exec(\"INSERT INTO results(task_id,url,found_on,link_type,is_external,depth,created_at) VALUES('$INJECT_TID','https://same.com/page','https://seed.com','a',0,0,'$NOW')\");
 "
 
 # GET /api/tasks/:id/results
