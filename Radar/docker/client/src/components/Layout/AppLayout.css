@@ -10,7 +10,7 @@
     "header header"
     "sidebar main"
     "sidebar bottom";
-  background: var(--color-bg);
+  background: var(--color-surface);
 }
 
 .app-layout > .app-header  { grid-area: header; }

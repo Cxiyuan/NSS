@@ -11,7 +11,7 @@
   display: flex;
   gap: 4px;
   margin-bottom: 20px;
-  background: #f1f5f9;
+  background: var(--color-surface-alt);
   border-radius: 6px;
   padding: 3px;
 }
@@ -24,14 +24,14 @@
   font-weight: 600;
   font-size: 13px;
   cursor: pointer;
-  background: transparent;
+  background: var(--color-surface-alt);
   color: var(--color-text-muted);
   transition: background 0.15s, color 0.15s, box-shadow 0.15s;
 }
 
 .task-form__mode-btn--active {
-  background: white;
-  color: var(--color-primary);
+  background: var(--color-primary);
+  color: #0b0e14;
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
 }
 
@@ -55,7 +55,7 @@
   border-radius: 6px;
   font-size: 14px;
   box-sizing: border-box;
-  background: var(--color-surface);
+  background: var(--color-bg);
   color: var(--color-text);
 }
 
@@ -67,7 +67,7 @@
 }
 
 .task-form__select {
-  background: white;
+  background: var(--color-bg);
 }
 
 .task-form__row {
@@ -81,7 +81,7 @@
   width: 100%;
   padding: 10px;
   background: var(--color-primary);
-  color: white;
+  color: #0b0e14;
   border: none;
   border-radius: 6px;
   font-size: 14px;
@@ -98,4 +98,12 @@
 .task-form__submit:disabled {
   opacity: 0.6;
   cursor: not-allowed;
+}
+
+.task-form__mode-btn:focus-visible,
+.task-form__submit:focus-visible,
+.task-form__input:focus-visible,
+.task-form__select:focus-visible {
+  outline: 2px solid var(--color-primary);
+  outline-offset: 2px;
 }

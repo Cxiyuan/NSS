@@ -16,7 +16,7 @@
 
 .workspace__breadcrumb {
   font-size: 12px;
-  color: var(--color-text-muted);
+  color: var(--color-primary);
 }
 
 .workspace__separator {
@@ -37,7 +37,7 @@
   font-size: 12px;
   padding: 2px 8px;
   border-radius: 4px;
-  background: #eff6ff;
+  background: rgba(34, 211, 238, 0.1);
   color: var(--color-primary);
   font-weight: 500;
 }

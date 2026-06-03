@@ -19,20 +19,20 @@
   border-radius: 50%;
   background: var(--color-muted);
 }
-.pp__indicator--running { background: var(--color-primary); animation: pp-pulse 1.5s infinite; }
+.pp__indicator--running { background: var(--color-primary); box-shadow: 0 0 6px rgba(34, 211, 238, 0.5); animation: pp-pulse 1.5s infinite; }
 .pp__indicator--paused { background: var(--color-warning); }
 .pp__indicator--completed { background: var(--color-success); }
 .pp__status { font-size: 13px; font-weight: 600; text-transform: uppercase; }
-.pp__bar-track { height: 6px; background: #e2e8f0; border-radius: 3px; overflow: hidden; margin-bottom: 12px; }
-.pp__bar-fill { height: 100%; background: var(--color-primary); border-radius: 3px; transition: width 0.3s; }
+.pp__bar-track { height: 6px; background: var(--color-muted); border-radius: 3px; overflow: hidden; margin-bottom: 12px; }
+.pp__bar-fill { height: 100%; background: linear-gradient(90deg, var(--color-primary), #06b6d4); border-radius: 3px; transition: width 0.3s; }
 .pp__bar-fill--animated {
-  background: linear-gradient(90deg, var(--color-primary), #60a5fa, var(--color-primary));
+  background: linear-gradient(90deg, var(--color-primary), #06b6d4, var(--color-primary));
   background-size: 200% 100%;
   animation: pp-shimmer 2s infinite;
 }
 .pp__stats { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; }
 .pp__stat { text-align: center; }
-.pp__stat-value { font-size: 18px; font-weight: 700; }
+.pp__stat-value { font-size: 18px; font-weight: 700; color: var(--color-text); }
 .pp__stat-label { font-size: 11px; color: var(--color-text-muted); }
 
 @keyframes pp-pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.4; } }

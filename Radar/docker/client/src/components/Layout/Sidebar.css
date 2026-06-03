@@ -80,7 +80,7 @@
 
 .sidebar__search input:focus {
   border-color: var(--color-primary);
-  box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1);
+  box-shadow: 0 0 0 3px rgba(34, 211, 238, 0.12);
 }
 
 .sidebar__search input::placeholder {
@@ -96,6 +96,15 @@
 .sidebar__task-list {
   flex: 1;
   overflow-y: auto;
+}
+
+.sidebar__task-list::-webkit-scrollbar {
+  width: 4px;
+}
+
+.sidebar__task-list::-webkit-scrollbar-thumb {
+  background: var(--color-muted);
+  border-radius: 2px;
 }
 
 .sidebar--collapsed .sidebar__task-list {
@@ -142,7 +151,7 @@
 }
 
 .sidebar__nav-item:hover {
-  background: #f1f5f9;
+  background: var(--color-surface-alt);
   color: var(--color-text);
 }
 
@@ -190,7 +199,7 @@
 }
 
 .task-group__header:hover {
-  background: #f1f5f9;
+  background: var(--color-surface-alt);
 }
 
 .task-group__header-icon {
@@ -204,7 +213,7 @@
 
 .task-group__header-count {
   margin-left: auto;
-  background: var(--color-border);
+  background: var(--color-muted);
   border-radius: 10px;
   padding: 1px 6px;
   font-size: 10px;
@@ -234,11 +243,11 @@
 }
 
 .task-item:hover {
-  background: #f1f5f9;
+  background: var(--color-surface-alt);
 }
 
 .task-item--active {
-  background: #eff6ff;
+  background: rgba(34, 211, 238, 0.08);
   border-left-color: var(--color-primary);
 }
 
@@ -322,7 +331,7 @@
 }
 
 .task-item__retry-btn:hover {
-  background: #f1f5f9;
+  background: var(--color-surface-alt);
   color: var(--color-primary);
   border-color: var(--color-primary);
 }
@@ -339,7 +348,7 @@
 .task-item__progress-track {
   width: 40px;
   height: 3px;
-  background: #e2e8f0;
+  background: #334155;
   border-radius: 2px;
   overflow: hidden;
   display: inline-block;
