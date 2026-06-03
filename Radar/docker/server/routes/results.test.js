@@ -62,7 +62,7 @@ describe('Results API', () => {
 
     queries.insertResult(taskId, { url: 'https://ext1.com', foundOn: 'https://seed.com', linkType: 'a', isExternal: true, depth: 1 });
     queries.insertResult(taskId, { url: 'https://ext2.com/page', foundOn: 'https://seed.com', linkType: 'script', isExternal: true, depth: 2 });
-    queries.insertResult(taskId, { url: 'https://ext1.com', foundOn: 'https://other.com', linkType: 'img', isExternal: true, depth: 1 });
+    queries.insertResult(taskId, { url: 'https://ext3.com', foundOn: 'https://other.com', linkType: 'img', isExternal: true, depth: 1 });
     queries.insertResult(taskId, { url: 'https://internal.com', foundOn: 'https://seed.com', linkType: 'a', isExternal: false, depth: 0 });
   });
 
