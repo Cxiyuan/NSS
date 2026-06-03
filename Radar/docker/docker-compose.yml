@@ -11,10 +11,6 @@ services:
       - DB_PATH=/data/crawler.db
       - PUPPETEER_EXECUTABLE_PATH=/usr/bin/chromium-browser
       - REDIS_URL=${REDIS_URL:-redis://redis:6379}
-      # 可选：搜索引擎 API 密钥
-      # - GOOGLE_API_KEY=your_key
-      # - GOOGLE_CX=your_cx
-      # - BING_API_KEY=your_key
     volumes:
       - ./data:/data
     restart: unless-stopped

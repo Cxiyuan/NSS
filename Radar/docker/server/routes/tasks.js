@@ -19,7 +19,7 @@ export function createTaskRoutes(queries, pool, getConfig) {
   }
 
   router.post('/', (req, res) => {
-    const { type, url, keywords, depth = 3, concurrency = 3, filters = [], searchEngine, searchApiKey, searchCx } = req.body;
+    const { type, url, keywords, depth = 3, concurrency = 3, filters = [] } = req.body;
 
     if (!type || !['url_crawl', 'keyword_search'].includes(type)) {
       return res.status(400).json({ error: 'type must be url_crawl or keyword_search' });
@@ -55,10 +55,8 @@ export function createTaskRoutes(queries, pool, getConfig) {
     if (globalCfg.proxy?.enabled && globalCfg.proxy.url) {
       antiDetect.proxy = globalCfg.proxy.url;
     }
-    const config = { type, url, keywords, depth, concurrency, filters, searchEngine, searchApiKey, searchCx, antiDetect };
-    // Strip secrets from the config before storing to DB — worker still gets full config
-    const { searchApiKey: _, searchCx: __, ...safeConfig } = config;
-    const task = queries.createTask({ id, type, config: safeConfig });
+    const config = { type, url, keywords, depth, concurrency, filters, antiDetect };
+    const task = queries.createTask({ id, type, config });
 
     if (pool) {
       const worker = pool.startTask(id, { taskId: id, ...config });
@@ -130,9 +128,7 @@ export function createTaskRoutes(queries, pool, getConfig) {
       if (!filters.includes(domain)) {
         filters.push(domain);
         config.filters = Array.isArray(config.filters) ? filters : { ...config.filters, domains: filters };
-        // Update the config in DB (destructure and re-store)
-        const { searchApiKey: _, searchCx: __, ...safeConfig } = config;
-        queries.updateTaskConfig(req.params.id, safeConfig);
+        queries.updateTaskConfig(req.params.id, config);
       }
     }
     res.json({ status: 'ok', pattern: domain });

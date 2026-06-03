@@ -51,18 +51,18 @@ async function fetchTitle(url) {
     // Try decoding; fallback chain: header charset → meta tag → utf-8
     let text = tryDecode(value, encoding);
     // If header had no charset and result has replacement chars, try meta tag
-    if (!contentType.match(/charset/i) && text.includes('\uFFFD')) {
+    if (!contentType.match(/charset/i) && text.includes('�')) {
       const metaCharset = detectCharsetFromBody(value);
       if (metaCharset && metaCharset !== encoding) {
         text = tryDecode(value, metaCharset);
       }
     }
     // If still garbled, try common Chinese encodings
-    if (text.includes('\uFFFD')) {
+    if (text.includes('�')) {
       for (const enc of ['gbk', 'gb18030']) {
         if (enc !== encoding) {
           const retry = tryDecode(value, enc);
-          if (!retry.includes('\uFFFD')) { text = retry; encoding = enc; break; }
+          if (!retry.includes('�')) { text = retry; encoding = enc; break; }
         }
       }
     }
@@ -132,7 +132,7 @@ parentPort.on('message', (msg) => {
 });
 
 async function run(taskConfig) {
-  const { taskId, type, url, keywords, depth, concurrency, filters, searchApiKey, searchEngine: engine, searchCx, antiDetect: adConfig } = taskConfig;
+  const { taskId, type, url, keywords, depth, concurrency, filters, antiDetect: adConfig } = taskConfig;
 
   const filter = FilterEngine.fromJSON(filters || []);
   currentFilter = filter;
@@ -171,12 +171,12 @@ async function run(taskConfig) {
   }
 
   if (type === 'keyword_search') {
-    const { search } = await import('./search.js').then(m => m.searchEngine(engine));
+    const { search } = await import('./search.js').then(m => m.searchEngine('searxng'));
     try {
-      const searchResults = await search(keywords, searchApiKey, searchCx);
+      const searchResults = await search(keywords);
       post('log', { level: 'info', message: `Search returned ${searchResults.length} results` });
       if (searchResults.length === 0) {
-        post('log', { level: 'error', message: 'Search returned no results. Check keywords or API key.' });
+        post('log', { level: 'error', message: 'Search returned no results. Check keywords.' });
         post('status', { status: 'error' });
         return;
       }
@@ -387,4 +387,3 @@ function keywordSnippet(bodyText, kwds) {
 
   return snippet;
 }
-

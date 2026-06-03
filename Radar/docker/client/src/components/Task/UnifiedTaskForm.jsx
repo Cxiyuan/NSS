@@ -9,8 +9,6 @@ export default function UnifiedTaskForm({ onStart }) {
   const [depth, setDepth] = useState(3);
   const [concurrency, setConcurrency] = useState(3);
   const [filters, setFilters] = useState({ domains: [], types: [] });
-  const [searchEngine, setSearchEngine] = useState('searxng');
-  const [searchApiKey, setSearchApiKey] = useState('');
   const [submitting, setSubmitting] = useState(false);
 
   async function handleSubmit(e) {
@@ -26,8 +24,6 @@ export default function UnifiedTaskForm({ onStart }) {
       const kw = keywords.trim();
       if (!kw) return;
       config.keywords = kw;
-      config.searchEngine = searchEngine;
-      config.searchApiKey = searchApiKey.trim();
     }
     setSubmitting(true);
     try {
@@ -64,23 +60,6 @@ export default function UnifiedTaskForm({ onStart }) {
             <input type="text" value={keywords} onChange={e => setKeywords(e.target.value)}
               placeholder="输入搜索关键词，引号包裹精确短语"
               className="task-form__input" required />
-          </div>
-          <div className="task-form__row">
-            <div className="task-form__field">
-              <label className="task-form__label">搜索引擎</label>
-              <select value={searchEngine} onChange={e => setSearchEngine(e.target.value)} className="task-form__select">
-                <option value="searxng">SearXNG (自建，免费无限)</option>
-                <option value="google">Google</option>
-                <option value="bing">Bing</option>
-              </select>
-            </div>
-            {searchEngine !== 'searxng' && (
-              <div className="task-form__field">
-                <label className="task-form__label">API 密钥</label>
-                <input type="password" value={searchApiKey} onChange={e => setSearchApiKey(e.target.value)}
-                  className="task-form__input" />
-              </div>
-            )}
           </div>
         </>
       )}

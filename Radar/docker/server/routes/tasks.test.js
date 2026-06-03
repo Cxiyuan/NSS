@@ -93,7 +93,6 @@ describe('API routes', () => {
     it('returns task by id', async () => {
       const create = await jsonRequest(`${baseUrl}/api/tasks`, 'POST', {
         type: 'keyword_search', keywords: 'test', depth: 2, concurrency: 2, filters: [],
-        searchEngine: 'google', searchApiKey: 'key123',
       });
       const res = await jsonRequest(`${baseUrl}/api/tasks/${create.body.id}`, 'GET');
       assert.strictEqual(res.status, 200);
