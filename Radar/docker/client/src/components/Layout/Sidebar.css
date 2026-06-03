@@ -80,7 +80,7 @@
 
 .sidebar__search input:focus {
   border-color: var(--color-primary);
-  box-shadow: 0 0 0 3px rgba(34, 211, 238, 0.12);
+  box-shadow: 0 0 0 3px rgba(8, 145, 178, 0.1);
 }
 
 .sidebar__search input::placeholder {
@@ -247,7 +247,7 @@
 }
 
 .task-item--active {
-  background: rgba(34, 211, 238, 0.08);
+  background: rgba(8, 145, 178, 0.08);
   border-left-color: var(--color-primary);
 }
 

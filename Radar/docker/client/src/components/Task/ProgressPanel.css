@@ -19,14 +19,14 @@
   border-radius: 50%;
   background: var(--color-muted);
 }
-.pp__indicator--running { background: var(--color-primary); box-shadow: 0 0 6px rgba(34, 211, 238, 0.5); animation: pp-pulse 1.5s infinite; }
+.pp__indicator--running { background: var(--color-primary); box-shadow: 0 0 6px rgba(8, 145, 178, 0.4); animation: pp-pulse 1.5s infinite; }
 .pp__indicator--paused { background: var(--color-warning); }
 .pp__indicator--completed { background: var(--color-success); }
 .pp__status { font-size: 13px; font-weight: 600; text-transform: uppercase; }
 .pp__bar-track { height: 6px; background: var(--color-muted); border-radius: 3px; overflow: hidden; margin-bottom: 12px; }
-.pp__bar-fill { height: 100%; background: linear-gradient(90deg, var(--color-primary), #06b6d4); border-radius: 3px; transition: width 0.3s; }
+.pp__bar-fill { height: 100%; background: var(--color-primary); border-radius: 3px; transition: width 0.3s; }
 .pp__bar-fill--animated {
-  background: linear-gradient(90deg, var(--color-primary), #06b6d4, var(--color-primary));
+  background: linear-gradient(90deg, var(--color-primary), var(--color-primary-hover), var(--color-primary));
   background-size: 200% 100%;
   animation: pp-shimmer 2s infinite;
 }
