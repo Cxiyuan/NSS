@@ -56,8 +56,11 @@ export default function TaskWorkspace({ task, onTaskCreated }) {
 
   const filteredResultsTotal = useMemo(() => {
     if (!state.filteredDomains.length) return monitor.resultsTotal;
-    return filteredResults.length;
-  }, [filteredResults.length, monitor.resultsTotal, state.filteredDomains.length]);
+    // Estimate total across all pages by ratio of filtered/raw on current page
+    if (!monitor.results || monitor.results.length === 0) return 0;
+    const ratio = filteredResults.length / monitor.results.length;
+    return Math.round(monitor.resultsTotal * ratio);
+  }, [filteredResults.length, monitor.results, monitor.resultsTotal, state.filteredDomains.length]);
 
   // Filter analytics data to remove filtered domains
   const filteredTopDomains = useMemo(() => {
