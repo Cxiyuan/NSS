@@ -1,7 +1,8 @@
 import './ProgressPanel.css';
 
-export default function ProgressPanel({ status, stats }) {
+export default function ProgressPanel({ status, stats, visibleTotal }) {
   const { crawled = 0, total = 0, depth = 0, filtered = 0, visited = 0 } = stats || {};
+  const displayTotal = visibleTotal !== undefined ? visibleTotal : total;
 
   // Use visited (total unique URLs discovered) as progress denominator — never exceeds 100%
   const denominator = visited || total || 1;
@@ -35,7 +36,10 @@ export default function ProgressPanel({ status, stats }) {
         {showBreakdown && (
           <>
             <Stat label="爬取页面" value={crawled} />
-            <Stat label="发现结果" value={total} />
+            <Stat label="发现结果" value={displayTotal} />
+            {displayTotal !== total && (
+              <Stat label="已过滤域名" value={total - displayTotal} />
+            )}
             <Stat label="待爬队列" value={Math.max(0, visited - crawled)} />
           </>
         )}

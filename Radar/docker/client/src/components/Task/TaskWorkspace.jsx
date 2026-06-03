@@ -151,7 +151,7 @@ export default function TaskWorkspace({ task, onTaskCreated }) {
           ) : (
             <div>
               <div style={{ display: 'flex', gap: 12, marginBottom: 16, flexWrap: 'wrap', alignItems: 'center' }}>
-                <ProgressPanel status={monitor.status} stats={monitor.stats} />
+                <ProgressPanel status={monitor.status} stats={monitor.stats} visibleTotal={filteredResultsTotal} />
                 <TaskControls
                   status={monitor.status}
                   onPause={monitor.pause}
