@@ -144,7 +144,7 @@ echo "=== 3. Results API ==="
 
 # Install sqlite3 in container for direct DB access (Alpine Linux)
 echo "  Installing sqlite3 in container..."
-docker exec radar-itest-$$ sh -c "apk add --no-cache sqlite" 2>&1
+docker exec -u root radar-itest-$$ sh -c "apk add --no-cache sqlite" 2>&1
 
 # Create a task and inject a result via DB directly (no crawler needed)
 INJECT_TID="itest-results-$$"
