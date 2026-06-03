@@ -30,7 +30,7 @@ export default function TaskWorkspace({ task, onTaskCreated }) {
   useEffect(() => {
     if (!task?.id) { setTaskData(null); return; }
     let cancelled = false;
-    api.getTask(task.id).then(data => { if (!cancelled) setTaskData(data); }).catch(() => { if (!cancelled && task?.id) toast.addToast('获取任务数据失败', 'error'); });
+    api.getTask(task.id).then(data => { if (!cancelled) setTaskData(data); }).catch(() => { if (!cancelled && task?.id) toast('获取任务数据失败', 'error'); });
     return () => { cancelled = true; };
   }, [task?.id]);
 
@@ -107,17 +107,17 @@ export default function TaskWorkspace({ task, onTaskCreated }) {
       const url = URL.createObjectURL(blob);
       const a = document.createElement('a'); a.href = url; a.download = `radar-export-${task.id}.pdf`; a.click();
       URL.revokeObjectURL(url);
-    } catch (err) { toast.addToast('PDF 导出失败: ' + err.message, 'error'); }
+    } catch (err) { toast('PDF 导出失败: ' + err.message, 'error'); }
   }
 
   async function handleStart(config) {
     try {
       const taskData = await api.createTask(config);
-      if (!taskData?.id) { toast.addToast('任务创建返回数据异常', 'error'); return; }
+      if (!taskData?.id) { toast('任务创建返回数据异常', 'error'); return; }
       navigateTo('workspace', taskData.id, 'results');
       onTaskCreated?.();
     } catch (err) {
-      toast.addToast(err.message || '任务创建失败', 'error');
+      toast(err.message || '任务创建失败', 'error');
     }
   }
 

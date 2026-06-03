@@ -69,8 +69,8 @@ function PanelBody({ content, state, dispatch }) {
     try {
       await api.addFilter(state.activeTaskId, hostname);
       dispatch({ type: 'ADD_FILTERED_DOMAIN', payload: hostname });
-      toast.addToast('已过滤 ' + hostname, 'success');
-    } catch (err) { toast.addToast('添加过滤条件失败: ' + err.message, 'error'); }
+      toast('已过滤 ' + hostname, 'success');
+    } catch (err) { toast('添加过滤条件失败: ' + err.message, 'error'); }
   };
   if (content.type === 'result') {
     return (
