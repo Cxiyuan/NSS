@@ -24,6 +24,9 @@ export function initDB(db) {
       page_title  TEXT,
       status_code INTEGER DEFAULT 0,
       snippet     TEXT,
+      risk_level  TEXT DEFAULT 'clean',
+      risk_tags   TEXT DEFAULT '',
+      icp         TEXT DEFAULT '',
       created_at  TEXT NOT NULL
     );
 
@@ -47,5 +50,12 @@ export function initDB(db) {
   const cols = db.pragma('table_info(results)').map(c => c.name);
   if (!cols.includes('status_code')) {
     db.exec('ALTER TABLE results ADD COLUMN status_code INTEGER DEFAULT 0');
+  }
+
+  // Migration: add risk columns if missing
+  if (!cols.includes('risk_level')) {
+    db.exec("ALTER TABLE results ADD COLUMN risk_level TEXT DEFAULT 'clean'");
+    db.exec("ALTER TABLE results ADD COLUMN risk_tags TEXT DEFAULT ''");
+    db.exec("ALTER TABLE results ADD COLUMN icp TEXT DEFAULT ''");
   }
 }

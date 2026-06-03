@@ -11,6 +11,7 @@ services:
       - DB_PATH=/data/crawler.db
       - PUPPETEER_EXECUTABLE_PATH=/usr/bin/chromium-browser
       - REDIS_URL=${REDIS_URL:-redis://redis:6379}
+      - ICP_QUERY_URL=http://icp-query:16181
     volumes:
       - ./data:/data
     restart: unless-stopped
@@ -25,6 +26,15 @@ services:
     restart: unless-stopped
     volumes:
       - redis_data:/data
+    networks:
+      - radar_net
+
+  icp-query:
+    image: yiminger/ymicp:latest
+    container_name: radar-icp
+    restart: unless-stopped
+    environment:
+      - ICP_QUERY_PORT=16181
     networks:
       - radar_net
 

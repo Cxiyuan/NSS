@@ -106,6 +106,7 @@ async function fetchTitles(results, concurrency = 3) {
 import { fetchWithBrowser } from './browser.js';
 import { extractLinks } from './link-extractor.js';
 import { FilterEngine } from './filter.js';
+import { detect } from './detector.js';
 import { isSameDomain, getDomain, normalizeUrl } from '../utils/url.js';
 import { parseKeywords } from '../utils/keywords.js';
 import { AntiDetect } from './anti-detect.js';
@@ -285,6 +286,12 @@ async function run(taskConfig) {
             pageTitle: title,
             statusCode: 0,
           };
+          // Add detection tags in background (non-blocking)
+          detect(link.url, html).then(tags => {
+            if (tags.length > 0) {
+              post('result_tags', { url: link.url, tags });
+            }
+          });
           newResults.push(extResult);
           postResult(extResult);
         } else if (currentDepth < (depth || 3)) {

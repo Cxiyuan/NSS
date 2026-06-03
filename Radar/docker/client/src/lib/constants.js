@@ -32,6 +32,16 @@ export const STATUS_COLORS = {
   paused: '#8b5cf6',
 };
 
+export const RISK_LABELS = {
+  'free-tld': { label: '免费域名', color: '#f59e0b', icon: '⚠' },
+  'bare-ip': { label: 'IP直连', color: '#f59e0b', icon: '⚠' },
+  'porn:1': { label: '涉黄', color: '#dc2626', icon: '🔴' },
+  'gambling:1': { label: '涉赌', color: '#dc2626', icon: '🔴' },
+  'drugs:1': { label: '涉毒', color: '#dc2626', icon: '🔴' },
+  'blackhat:1': { label: '黑产', color: '#dc2626', icon: '🔴' },
+  'no-icp': { label: '未备案', color: '#f59e0b', icon: '⚠' },
+};
+
 export const EMPTY_STATS = {
   crawled: 0,
   total: 0,

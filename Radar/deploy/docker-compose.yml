@@ -39,6 +39,8 @@ services:
       - REDIS_URL=redis://redis:6379
       # SearXNG 自建搜索引擎地址（关键词搜索默认引擎，免 API Key）
       - SEARXNG_BASE_URL=${SEARXNG_BASE_URL:-http://host.docker.internal:4000}
+      # ICP 备案查询（自建 ICP_Query 容器，可选）
+      - ICP_QUERY_URL=http://icp-query:16181
       # 代理（可选，用于反检测）
       - HTTPS_PROXY=${HTTPS_PROXY:-}
 
@@ -69,6 +71,13 @@ services:
     security_opt:
       - no-new-privileges:true
 
+    networks:
+      - radar_net
+
+  icp-query:
+    image: yiminger/ymicp:latest
+    container_name: radar-icp
+    restart: unless-stopped
     networks:
       - radar_net
 

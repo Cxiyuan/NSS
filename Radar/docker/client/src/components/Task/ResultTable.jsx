@@ -1,6 +1,6 @@
 import { useRef, useEffect } from 'react';
 import { useWorkspace } from '../../contexts/WorkspaceContext';
-import { LINK_TYPE_LABELS } from '../../lib/constants';
+import { LINK_TYPE_LABELS, RISK_LABELS } from '../../lib/constants';
 
 function truncate(str, max) {
   if (!str || str.length <= max) return str;
@@ -37,6 +37,20 @@ export default function ResultTable({ results = [], total = 0, page = 1, limit =
     )},
     { key: 'found_on', label: '来源页面', render: r => truncate(r.found_on, 40) },
     { key: 'link_type', label: '类型', render: r => <span className={`link-type link-type--${r.link_type}`}>{LINK_TYPE_LABELS[r.link_type] || r.link_type}</span> },
+    { key: 'risk', label: '检测', render: r => {
+      const tags = [];
+      if (r.risk_level && r.risk_level !== 'clean') tags.push(r.risk_level);
+      if (r.risk_tags) {
+        r.risk_tags.split(',').forEach(t => {
+          const info = RISK_LABELS[t.trim()];
+          if (info) tags.push(info.label);
+        });
+      }
+      if (tags.length === 0) return <span style={{ color: 'var(--color-text-muted)', fontSize: 11 }}>—</span>;
+      return tags.map(t => (
+        <span key={t} style={{ display: 'inline-block', padding: '1px 6px', borderRadius: 3, fontSize: 11, background: '#fef2f2', color: '#dc2626', marginRight: 3 }}>{t}</span>
+      ));
+    }},
     { key: 'depth', label: '深度', render: r => r.depth },
   ];
 
