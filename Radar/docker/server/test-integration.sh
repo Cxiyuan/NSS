@@ -194,19 +194,19 @@ sleep 1
 
 # WorkerPool capacity — verify 429 works at some point
 echo "  Testing pool capacity..."
-SUCCESS=0; FAIL=0
+SUCCESS=0; POOL_FAIL=0
 for i in 1 2 3 4 5 6 7 8; do
   STATUS=$(curl -s -o /dev/null -w '%{http_code}' -X POST "$BASE/api/tasks" \
     -H 'Content-Type: application/json' \
     -d "{\"type\":\"url_crawl\",\"url\":\"https://pool-test-$i.com\",\"depth\":1,\"concurrency\":1,\"filters\":[]}")
   if [ "$STATUS" = "201" ]; then SUCCESS=$((SUCCESS+1));
-  elif [ "$STATUS" = "429" ]; then FAIL=$((FAIL+1));
+  elif [ "$STATUS" = "429" ]; then POOL_FAIL=$((POOL_FAIL+1));
   fi
 done
-if [ "$SUCCESS" -ge 1 ] && [ "$FAIL" -ge 1 ]; then
-  ok "Pool capacity: $SUCCESS tasks accepted, $FAIL got 429 when full"
+if [ "$SUCCESS" -ge 1 ] && [ "$POOL_FAIL" -ge 1 ]; then
+  ok "Pool capacity: $SUCCESS tasks accepted, $POOL_FAIL got 429 when full"
 else
-  fail "Pool behavior unexpected: $SUCCESS accepted, $FAIL got 429"
+  fail "Pool behavior unexpected: $SUCCESS accepted, $POOL_FAIL got 429"
 fi
 
 echo ""
