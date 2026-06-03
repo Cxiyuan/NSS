@@ -1,4 +1,8 @@
 export function createQueries(db) {
+  const insertResultStmt = db.prepare(
+    'INSERT OR IGNORE INTO results (task_id, url, found_on, link_type, is_external, depth, page_title, status_code, snippet, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)'
+  );
+
   return {
     createTask({ id, type, config }) {
       const now = new Date().toISOString();
@@ -50,9 +54,7 @@ export function createQueries(db) {
 
     insertResult(taskId, { url, foundOn, linkType, isExternal, depth, pageTitle, statusCode, snippet }) {
       const now = new Date().toISOString();
-      return db.prepare(
-        'INSERT INTO results (task_id, url, found_on, link_type, is_external, depth, page_title, status_code, snippet, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)'
-      ).run(taskId, url, foundOn, linkType, isExternal ? 1 : 0, depth, pageTitle || '', statusCode || 0, snippet || '', now);
+      return insertResultStmt.run(taskId, url, foundOn, linkType, isExternal ? 1 : 0, depth, pageTitle || '', statusCode || 0, snippet || '', now);
     },
 
     updateResultStatus(taskId, url, pageTitle, statusCode) {
@@ -129,6 +131,16 @@ export function createQueries(db) {
         LIMIT ?
       `).all(taskId, limit);
       return rows;
+    },
+
+    // 批量刷新结果（事务包装，用于 Redis flush）
+    flushResults(rows) {
+      const insertBatch = db.transaction((items) => {
+        for (const r of items) {
+          insertResultStmt.run(...r);
+        }
+      });
+      insertBatch(rows);
     },
   };
 }

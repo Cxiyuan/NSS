@@ -16,7 +16,7 @@ import './Sidebar.css';
  *   onRetryTask  – called with a task object when user clicks retry on an error task
  *   onDeleteTask – called with a task id when user clicks delete on a completed/cancelled task
  */
-export default function Sidebar({ tasks, activeTaskId, onSelectTask, onNewTask, onRetryTask, onDeleteTask }) {
+export default function Sidebar({ tasks, error, activeTaskId, onSelectTask, onNewTask, onRetryTask, onDeleteTask }) {
   const { state, dispatch } = useWorkspace();
   const { sidebarCollapsed } = state;
 
@@ -84,6 +84,13 @@ export default function Sidebar({ tasks, activeTaskId, onSelectTask, onNewTask, 
           onChange={handleSearchChange}
         />
       </div>
+
+      {/* ---- Error State ---- */}
+      {error && (
+        <div className="sidebar__error" style={{ padding: '8px 12px', margin: '0 12px 8px', background: '#fef2f2', color: '#b91c1c', borderRadius: 4, fontSize: 12 }}>
+          {error}
+        </div>
+      )}
 
       {/* ---- Task List ---- */}
       <div className="sidebar__task-list">

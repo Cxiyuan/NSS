@@ -1,18 +1,25 @@
 import { useRef, useEffect } from 'react';
 import { useWorkspace } from '../../contexts/WorkspaceContext';
-
-const LINK_TYPE_LABELS = {
-  a: '超链接', img: '图片', link: '资源引用', iframe: '内嵌框架',
-  form: '表单', meta: '页面跳转', script: '脚本', js_dynamic: 'JS动态',
-  css: '样式表', comment: '注释', keyword_match: '关键词匹配',
-};
+import { LINK_TYPE_LABELS } from '../../lib/constants';
 
 function truncate(str, max) {
   if (!str || str.length <= max) return str;
   return str.slice(0, max) + '...';
 }
 
-export default function ResultTable({ results, total, page, limit, onPageChange }) {
+function SkeletonRow({ columns }) {
+  return (
+    <tr className="result-table__row result-table__row--skeleton">
+      {columns.map((c, i) => (
+        <td key={c.key}>
+          <div className="skeleton" style={{ width: i === 0 ? '70%' : i === 1 ? '40%' : '30%', height: 14, borderRadius: 4, background: 'var(--color-border)', opacity: 0.5, animation: 'shimmer 1.5s infinite' }} />
+        </td>
+      ))}
+    </tr>
+  );
+}
+
+export default function ResultTable({ results = [], total = 0, page = 1, limit = 50, onPageChange, onRowClick, error, loading }) {
   const { dispatch } = useWorkspace();
   const wrapperRef = useRef(null);
   const totalPages = Math.ceil(total / limit);
@@ -22,7 +29,7 @@ export default function ResultTable({ results, total, page, limit, onPageChange 
   }, [page]);
 
   const columns = [
-    { key: 'url', label: 'URL', render: r => <a href={r.url} target="_blank" rel="noreferrer" className="result-table__link">{truncate(r.url, 60)}</a> },
+    { key: 'url', label: 'URL', render: r => <a href={r.url} target="_blank" rel="noreferrer" className="result-table__link" onClick={e => e.stopPropagation()}>{truncate(r.url, 60)}</a> },
     { key: 'page_title', label: '标题/状态', render: r => (
       <span className={`result-table__title ${!r.page_title && r.status_code ? 'result-table__title--error' : ''}`}>
         {r.page_title || (r.status_code ? `HTTP ${r.status_code}` : '—')}
@@ -35,13 +42,26 @@ export default function ResultTable({ results, total, page, limit, onPageChange 
 
   return (
     <>
+      {error && (
+        <div className="result-table__error" style={{ padding: '8px 12px', marginBottom: 8, background: '#fef2f2', border: '1px solid #fecaca', borderRadius: 'var(--radius)', color: '#b91c1c', fontSize: 13 }}>
+          {error}
+        </div>
+      )}
       <div className="result-table-wrapper" ref={wrapperRef}>
         <table className="result-table">
           <thead>
             <tr>{columns.map(c => <th key={c.key}>{c.label}</th>)}</tr>
           </thead>
           <tbody>
-            {results.length === 0 ? (
+            {loading ? (
+              <>
+                <SkeletonRow columns={columns} />
+                <SkeletonRow columns={columns} />
+                <SkeletonRow columns={columns} />
+                <SkeletonRow columns={columns} />
+                <SkeletonRow columns={columns} />
+              </>
+            ) : results.length === 0 ? (
               <tr><td colSpan={columns.length} className="result-table__empty">暂无结果</td></tr>
             ) : (
               results.map(r => (

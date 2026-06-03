@@ -1,10 +1,14 @@
+import { domainToASCII } from 'node:url';
+
 export class FilterEngine {
   #patterns = [];
   #excludedTypes = [];
 
   addFilter(pattern) {
-    if (!this.#patterns.includes(pattern)) {
-      this.#patterns.push(pattern);
+    // Normalize IDN domains to punycode to prevent bypass
+    const normalized = pattern.includes('://') ? pattern : domainToASCII(pattern) || pattern;
+    if (!this.#patterns.includes(normalized)) {
+      this.#patterns.push(normalized);
     }
   }
 
@@ -21,10 +25,12 @@ export class FilterEngine {
     let domainFiltered = false;
     try {
       const hostname = new URL(url).hostname;
-      if (hostname) {
+      // Normalize IDN to punycode so filters like '例子.测试' match 'xn--fsq.xn--0zwm56d'
+      const normalizedHost = domainToASCII(hostname) || hostname;
+      if (normalizedHost) {
         domainFiltered = this.#patterns.some(pattern => {
           const regex = FilterEngine.#patternToRegex(pattern);
-          return regex.test(hostname);
+          return regex.test(normalizedHost);
         });
       }
     } catch {}

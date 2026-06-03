@@ -110,10 +110,14 @@ export const redis = {
       const c = getClient();
       if (!connected) return;
       const all = await c.lrange(`radar:task:${taskId}:results`, 0, -1);
-      for (const r of all) {
-        queries.insertResult(taskId, JSON.parse(r));
-      }
-      // Update task stats in SQLite based on Redis count
+      if (all.length === 0) return;
+      // 事务批量插入（INSERT OR IGNORE 去重）
+      const rows = all.map(r => {
+        const result = JSON.parse(r);
+        const now = new Date().toISOString();
+        return [taskId, result.url, result.foundOn || '', result.linkType || '', result.isExternal ? 1 : 0, result.depth || 0, result.pageTitle || '', result.statusCode || 0, result.snippet || '', now];
+      });
+      queries.flushResults(rows);
       const stats = queries.getTaskStats(taskId);
       queries.updateTaskStats(taskId, stats);
       // Clean up Redis keys
@@ -123,4 +127,12 @@ export const redis = {
   },
 
   get connected() { return connected; },
+
+  async disconnect() {
+    if (client) {
+      try { await client.quit(); } catch { client.disconnect(); }
+      client = null;
+      connected = false;
+    }
+  },
 };

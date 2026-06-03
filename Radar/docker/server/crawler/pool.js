@@ -79,7 +79,7 @@ export class WorkerPool {
           this.#workers.delete(taskId);
           this.#paused.delete(taskId);
         }
-      }, 5000);
+      }, 5000).unref();
     }
   }
 
@@ -89,5 +89,13 @@ export class WorkerPool {
 
   get activeWorkers() {
     return this.#workers.size - this.#paused.size;
+  }
+
+  getWorkers() { return Array.from(this.#workers.values()); }
+
+  shutdownAll() {
+    for (const taskId of this.#workers.keys()) {
+      this.cancelTask(taskId);
+    }
   }
 }

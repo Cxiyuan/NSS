@@ -1,4 +1,4 @@
-export default function TaskControls({ status, onPause, onResume, onCancel }) {
+export default function TaskControls({ status, onPause, onResume, onCancel, onExportPDF }) {
   return (
     <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
       {status === 'running' && (
@@ -9,6 +9,9 @@ export default function TaskControls({ status, onPause, onResume, onCancel }) {
       )}
       {(status === 'running' || status === 'paused') && (
         <button onClick={onCancel} className="btn btn--danger">取消</button>
+      )}
+      {status === 'completed' && onExportPDF && (
+        <button onClick={onExportPDF} className="btn btn--primary">导出 PDF</button>
       )}
     </div>
   );

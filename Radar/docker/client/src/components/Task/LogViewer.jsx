@@ -31,7 +31,7 @@ export default function LogViewer({ logs = [] }) {
           <div className="log-viewer__empty">暂无日志</div>
         ) : (
           filtered.map((l, i) => (
-            <div key={i} className={`log-viewer__entry log-viewer__entry--${l.level}`}>
+            <div key={l.id || l._key || i} className={`log-viewer__entry log-viewer__entry--${l.level}`}>
               <span className="log-viewer__level">{l.level.toUpperCase()}</span>
               <span className="log-viewer__msg">{l.message}</span>
             </div>

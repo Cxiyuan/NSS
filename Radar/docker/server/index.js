@@ -35,6 +35,12 @@ const zombieTasks = db.prepare("SELECT id, status FROM tasks WHERE status IN ('r
 for (const t of zombieTasks) {
   console.warn(`Recovering zombie task ${t.id} (${t.status} → error)`);
   queries.updateTaskStatus(t.id, 'error');
+  // Record the reason in task config so the UI can display it
+  const task = queries.getTask(t.id);
+  if (task) {
+    task.config = { ...task.config, error_message: 'Server restarted while task was running — worker lost' };
+    queries.updateTaskConfig(t.id, task.config);
+  }
 }
 
 const pool = new WorkerPool(5, async (taskId, msg) => {
@@ -70,6 +76,27 @@ const pool = new WorkerPool(5, async (taskId, msg) => {
 const app = express();
 app.use(express.json());
 
+// ─── 可选鉴权（通过 RADAR_AUTH_TOKEN 环境变量启用） ───
+function requireAuth(req, res, next) {
+  const token = process.env.RADAR_AUTH_TOKEN;
+  if (!token) return next(); // 未设置 token = 不启用（向后兼容本地使用）
+  const auth = req.headers.authorization || '';
+  if (auth !== `Bearer ${token}`) {
+    return res.status(401).json({ error: 'unauthorized' });
+  }
+  next();
+}
+app.use('/api', requireAuth);
+
+// ─── 健康检查端点（不经鉴权） ────────────
+app.get('/healthz', (req, res) => {
+  res.json({ status: 'ok', uptime: process.uptime() });
+});
+app.get('/readyz', (req, res) => {
+  const ready = db?.open;
+  res.status(ready ? 200 : 503).json({ status: ready ? 'ok' : 'not ready' });
+});
+
 app.use('/api/config', createConfigRoutes(dataDir));
 app.use('/api/tasks', createTaskRoutes(queries, pool, getConfig));
 app.use('/api/tasks', createResultRoutes(queries, (id) => queries.getTask(id)));
@@ -92,7 +119,7 @@ app.use((err, req, res, next) => {
 
 const server = createServer(app);
 
-const { broadcast: wsBroadcast } = createWSServer(server);
+const { wss, broadcast: wsBroadcast } = createWSServer(server);
 
 server.listen(PORT, () => {
   console.log(`Server running at http://localhost:${PORT}`);
@@ -113,25 +140,27 @@ setTimeout(() => {
 }, 1000);
 
 let shuttingDown = false;
-function shutdown() {
+let shutdownTimer = null;
+
+async function shutdown() {
   if (shuttingDown) return;
   shuttingDown = true;
   console.log('Shutting down gracefully...');
-  // Close Puppeteer browser
-  closeBrowser().catch(() => {});
-  // Disconnect Redis
-  try { redis.disconnect(); } catch {}
-  // Terminate all workers (pool.cancelTask each)
-  try {
-    // pool internal structure — iterate and cancel
-    // (pool API doesn't expose task list; workers exit when server.close completes)
-  } catch {}
-  server.close(() => {
-    db.close();
-    process.exit(0);
-  });
-  // Force exit after 10s regardless
-  setTimeout(() => process.exit(1), 10000).unref();
+  server.close();
+  wss.close(); // Stop accepting new WS connections + clear heartbeat timer
+  if (pool) pool.shutdownAll();
+  // Wait for all workers to exit (max 5s)
+  const workers = pool?.getWorkers?.() || [];
+  if (workers.length > 0) {
+    await Promise.race([
+      Promise.all(workers.map(w => new Promise(r => w.once('exit', r)))),
+      new Promise(r => { shutdownTimer = setTimeout(r, 5000); }),
+    ]);
+  }
+  await closeBrowser().catch(() => {});
+  await redis.disconnect().catch(() => {});
+  db.close();
+  process.exit(0);
 }
 
 process.on('SIGTERM', shutdown);

@@ -5,6 +5,15 @@ import { redis } from '../db/redis.js';
 export function createTaskRoutes(queries, pool, getConfig) {
   const router = Router();
 
+  function isBlockedHost(host) {
+    if (!host) return true;
+    if (/^169\.254\./.test(host) || host === '0.0.0.0') return true;
+    if (/^fe80:/i.test(host)) return true;
+    if (/^fe[89ab][0-9a-f]:/i.test(host)) return true;
+    if (/^::ffff:169\.254\./i.test(host)) return true;
+    return false;
+  }
+
   router.post('/', (req, res) => {
     const { type, url, keywords, depth = 3, concurrency = 3, filters = [], searchEngine, searchApiKey, searchCx } = req.body;
 
@@ -13,6 +22,16 @@ export function createTaskRoutes(queries, pool, getConfig) {
     }
     if (type === 'url_crawl' && !url) {
       return res.status(400).json({ error: 'url is required for url_crawl' });
+    }
+    if (type === 'url_crawl' && url) {
+      try {
+        const u = new URL(url);
+        if (isBlockedHost(u.hostname)) {
+          return res.status(400).json({ error: 'url host not allowed (link-local / metadata)' });
+        }
+      } catch {
+        return res.status(400).json({ error: 'url must be a valid URL' });
+      }
     }
     if (type === 'keyword_search' && !keywords) {
       return res.status(400).json({ error: 'keywords is required for keyword_search' });
@@ -91,6 +110,9 @@ export function createTaskRoutes(queries, pool, getConfig) {
     const { domain } = req.body;
     if (!domain || typeof domain !== 'string') {
       return res.status(400).json({ error: 'domain is required' });
+    }
+    if (isBlockedHost(domain)) {
+      return res.status(400).json({ error: 'domain not allowed (link-local / metadata)' });
     }
     // Send dynamic filter to running worker
     if (pool) pool.sendMessage(req.params.id, { type: 'add_filter', pattern: domain });

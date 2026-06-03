@@ -68,7 +68,7 @@ export default function BottomPanel() {
                     {EVENT_ICONS[event.type] || '●'}
                   </span>
                   <span style={{ flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                    {event.label}
+                    {event.label} {event.taskLabel ? `- ${event.taskLabel}` : ''}
                   </span>
                   <span style={{ color: 'var(--color-text-muted)', fontSize: 11, flexShrink: 0 }}>
                     {formatRelativeTime(event.time)}

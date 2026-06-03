@@ -15,7 +15,9 @@
   border: none;
   font-size: 20px;
   cursor: pointer;
-  padding: 4px;
+  padding: 8px;
+  min-width: 44px;
+  min-height: 44px;
   border-radius: 4px;
   color: var(--color-text);
   display: flex;
@@ -94,4 +96,8 @@
 .header__gear:hover {
   background: #f1f5f9;
   color: var(--color-text);
+}
+
+@media (min-width: 769px) {
+  .header__hamburger { display: none; }
 }

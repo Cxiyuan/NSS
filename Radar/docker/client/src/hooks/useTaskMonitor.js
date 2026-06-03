@@ -24,6 +24,7 @@ export function useTaskMonitor(taskId) {
   const [topDomains, setTopDomains] = useState([]);
   const [topUrls, setTopUrls] = useState([]);
   const [loading, setLoading] = useState(false);
+  const [resultsError, setResultsError] = useState(null);
   const [wsConnected, setWsConnected] = useState(false);
   const wsRef = useRef(null);
   const retryRef = useRef(0);
@@ -34,6 +35,14 @@ export function useTaskMonitor(taskId) {
   // ---------- Load task initial state ----------
   useEffect(() => {
     if (!taskId) return;
+    // 切换任务时重置所有状态
+    setStatus('idle');
+    setStats(EMPTY_STATS);
+    setResults([]);
+    setLiveResults([]);
+    setLogs([]);
+    setTopDomains([]);
+    setTopUrls([]);
     let cancelled = false;
     api.getTask(taskId).then(task => {
       if (cancelled) return;
@@ -61,7 +70,11 @@ export function useTaskMonitor(taskId) {
   function connectWS(id) {
     if (!id || !mountedRef.current) return;
     const protocol = location.protocol === 'https:' ? 'wss:' : 'ws:';
-    const wsUrl = `${protocol}//${location.host}/ws?taskId=${id}`;
+    let wsUrl = `${protocol}//${location.host}/ws?taskId=${id}`;
+    try {
+      const t = localStorage.getItem('radar_token');
+      if (t) wsUrl += '&token=' + encodeURIComponent(t);
+    } catch {}
     const ws = new WebSocket(wsUrl);
     wsRef.current = ws;
 
@@ -100,9 +113,15 @@ export function useTaskMonitor(taskId) {
         found_on: data.result.foundOn ?? data.result.found_on,
         link_type: data.result.linkType ?? data.result.link_type,
       };
-      setLiveResults(r => [result, ...r].slice(0, 20));
+      setLiveResults(r => {
+        if (r.some(item => item.url === result.url)) return r;
+        return [result, ...r].slice(0, 20);
+      });
       if (pageRef.current === 1) {
-        setResults(r => [result, ...r]);
+        setResults(r => {
+          if (r.some(item => item.url === result.url)) return r;
+          return [result, ...r];
+        });
         setResultsTotal(t => t + 1);
       }
     }
@@ -115,7 +134,8 @@ export function useTaskMonitor(taskId) {
       ));
     }
     if (data.type === 'log') {
-      setLogs(l => [...l.slice(-99), data]);
+      const entry = { ...data, _key: crypto.randomUUID ? crypto.randomUUID() : String(Date.now()) };
+      setLogs(l => [...l.slice(-99), entry]);
     }
   }
 
@@ -154,13 +174,18 @@ export function useTaskMonitor(taskId) {
   async function loadResults(p) {
     if (!taskId) return;
     setLoading(true);
+    setResultsError(null);
     try {
       const data = await api.getResults(taskId, { page: p, limit: 50 });
+      if (!mountedRef.current) return;
       setResults(data.results || []);
       setResultsTotal(data.total || 0);
       setPage(p);
       pageRef.current = p;
-    } catch {}
+    } catch (err) {
+      setResultsError(err.message || '加载失败');
+    }
+    if (!mountedRef.current) return;
     setLoading(false);
   }
 
@@ -171,6 +196,7 @@ export function useTaskMonitor(taskId) {
         api.getTopDomains(taskId, 10),
         api.getTopUrls(taskId, 10),
       ]);
+      if (!mountedRef.current) return;
       setTopDomains(domains || []);
       setTopUrls(urls || []);
     } catch {}
@@ -194,7 +220,7 @@ export function useTaskMonitor(taskId) {
 
   return {
     taskId, status, stats,
-    liveResults, results, resultsTotal, page,
+    liveResults, results, resultsTotal, resultsError, page,
     logs, topDomains, topUrls, loading,
     loadResults, loadAnalytics,
     pause, resume, cancel,

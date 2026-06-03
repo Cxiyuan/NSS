@@ -28,6 +28,18 @@ export function initDB(db) {
     );
 
     CREATE INDEX IF NOT EXISTS idx_results_task ON results(task_id);
+  `);
+
+  // Deduplicate before creating unique index (migration for existing databases)
+  db.exec(`
+    DELETE FROM results
+    WHERE rowid NOT IN (
+      SELECT MIN(rowid) FROM results GROUP BY task_id, url
+    );
+  `);
+
+  db.exec(`
+    CREATE UNIQUE INDEX IF NOT EXISTS idx_results_task_url ON results(task_id, url);
     CREATE INDEX IF NOT EXISTS idx_results_external ON results(task_id, is_external);
   `);
 

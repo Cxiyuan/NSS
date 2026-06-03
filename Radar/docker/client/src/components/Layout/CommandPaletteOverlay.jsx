@@ -4,6 +4,7 @@ import { useWorkspace } from '../../contexts/WorkspaceContext';
 export default function CommandPaletteOverlay({ onClose }) {
   const { state, dispatch } = useWorkspace();
   const [query, setQuery] = useState('');
+  const [selectedIndex, setSelectedIndex] = useState(0);
   const inputRef = useRef(null);
 
   useEffect(() => { setTimeout(() => inputRef.current?.focus(), 50); }, []);
@@ -21,22 +22,40 @@ export default function CommandPaletteOverlay({ onClose }) {
     { id: 'analytics', label: '查看全局分析', icon: '📊', keywords: 'analytics dashboard stats', action: () => { window.location.hash = '#/analytics'; onClose(); } },
   ];
 
+  // Reset selectedIndex when query changes
+  useEffect(() => { setSelectedIndex(0); }, [query]);
+
   const filtered = query.trim()
-    ? actions.filter(a => a.label.includes(query) || a.keywords.includes(query.toLowerCase()))
+    ? actions.filter(a => a.label.toLowerCase().includes(query.toLowerCase()) || a.keywords.toLowerCase().includes(query.toLowerCase()))
     : actions;
+
+  function handleKeyDown(e) {
+    if (e.key === 'ArrowDown') {
+      e.preventDefault();
+      setSelectedIndex(i => (i + 1) % filtered.length);
+    } else if (e.key === 'ArrowUp') {
+      e.preventDefault();
+      setSelectedIndex(i => (i - 1 + filtered.length) % filtered.length);
+    } else if (e.key === 'Enter') {
+      e.preventDefault();
+      if (filtered[selectedIndex]) {
+        filtered[selectedIndex].action();
+      }
+    }
+  }
 
   return (
     <div onClick={onClose} style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.3)', zIndex: 200, display: 'flex', justifyContent: 'center', paddingTop: '15vh' }}>
-      <div onClick={e => e.stopPropagation()} style={{ background: 'white', borderRadius: 12, boxShadow: '0 20px 60px rgba(0,0,0,0.15)', width: '100%', maxWidth: 520, display: 'flex', flexDirection: 'column', overflow: 'hidden', maxHeight: 400 }}>
+      <div tabIndex={-1} onKeyDown={handleKeyDown} onClick={e => e.stopPropagation()} style={{ background: 'white', borderRadius: 12, boxShadow: '0 20px 60px rgba(0,0,0,0.15)', width: '100%', maxWidth: 520, display: 'flex', flexDirection: 'column', overflow: 'hidden', maxHeight: 400 }}>
         <input ref={inputRef} value={query} onChange={e => setQuery(e.target.value)}
           placeholder="搜索命令..."
           style={{ padding: '14px 16px', border: 'none', fontSize: 15, outline: 'none', width: '100%', boxSizing: 'border-box' }} />
         <div style={{ maxHeight: 300, overflow: 'auto', borderTop: '1px solid var(--color-border)' }}>
-          {filtered.map(action => (
+          {filtered.map((action, i) => (
             <div key={action.id} onClick={action.action}
-              style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '10px 16px', cursor: 'pointer', fontSize: 14, transition: 'background 0.1s' }}
+              style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '10px 16px', cursor: 'pointer', fontSize: 14, transition: 'background 0.1s', background: i === selectedIndex ? '#e2e8f0' : 'transparent' }}
               onMouseEnter={e => e.currentTarget.style.background = '#f1f5f9'}
-              onMouseLeave={e => e.currentTarget.style.background = 'transparent'}>
+              onMouseLeave={e => e.currentTarget.style.background = i === selectedIndex ? '#e2e8f0' : 'transparent'}>
               <span>{action.icon}</span>
               <span>{action.label}</span>
             </div>

@@ -145,6 +145,7 @@ async function run(taskConfig) {
   let crawled = 0;
   let filteredCount = 0;
   let resultsPosted = 0;
+  let maxDepth = 0;
   const pendingTitleFetches = [];
 
   function post(type, data) {
@@ -152,6 +153,7 @@ async function run(taskConfig) {
   }
 
   function postResult(result) {
+    if (cancelled) return; // Don't post more results after cancel
     resultsPosted++;
     post('result', { result });
   }
@@ -206,6 +208,9 @@ async function run(taskConfig) {
     }
 
     // Per-URL delay is handled inside the map callback — no batch-level delay needed
+    const batchDepth = Math.max(...batch.map(item => item.depth), 0);
+    if (batchDepth > maxDepth) maxDepth = batchDepth;
+
     const results = await Promise.allSettled(batch.map(async ({ url: crawlUrl, depth: currentDepth, foundOn }) => {
       if (currentDepth > (depth || 3)) return [];
 
@@ -242,7 +247,7 @@ async function run(taskConfig) {
       const staticLinks = extractLinks(html, crawlUrl);
 
       let dynamicLinks = [];
-      if (!usedBrowser) {
+      if (!usedBrowser && antiDetect.config.browserFallback) {
         try {
           const dynHtml = await fetchWithBrowser(crawlUrl);
           dynamicLinks = extractLinks(dynHtml, crawlUrl);
@@ -329,16 +334,25 @@ async function run(taskConfig) {
     }));
 
     crawled += batch.length;
-    post('progress', { crawled, total: resultsPosted, depth: Math.min(depth || 3, queue.length > 0 ? 1 : 0), filtered: filteredCount, visited: visited.size });
+    post('progress', { crawled, total: resultsPosted, depth: maxDepth, filtered: filteredCount, visited: visited.size });
   }
 
   // Wait for all in-flight title fetches to finish before declaring done
-  await Promise.allSettled(pendingTitleFetches);
+  if (pendingTitleFetches.length > 0) {
+    await Promise.allSettled(pendingTitleFetches);
+  }
 
   if (cancelled) {
     post('status', { status: 'cancelled' });
+  } else if (queue.length === 0) {
+    // Double-check cancelled didn't fire just as the loop exited
+    if (cancelled) {
+      post('status', { status: 'cancelled' });
+    } else {
+      post('status', { status: 'completed' });
+    }
   } else {
-    post('status', { status: 'completed' });
+    post('status', { status: 'error', message: 'Worker stopped unexpectedly' });
   }
 }
 

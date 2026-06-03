@@ -2,6 +2,7 @@ import { useState, useEffect, useRef, useMemo } from 'react';
 import { useWorkspace } from '../../contexts/WorkspaceContext';
 import { useHashRouting } from '../../hooks/useHashRouting';
 import { useTaskMonitor } from '../../hooks/useTaskMonitor';
+import { useToast } from '../ToastContext';
 import { api } from '../../lib/api';
 import UnifiedTaskForm from './UnifiedTaskForm';
 import ContentTabs from './ContentTabs';
@@ -19,7 +20,7 @@ const TABS = [
   { id: 'logs', label: '日志', icon: '\u{1F4DD}' },
 ];
 
-export default function TaskWorkspace({ task }) {
+export default function TaskWorkspace({ task, onTaskCreated }) {
   const { state, dispatch } = useWorkspace();
   const { navigateTo } = useHashRouting();
   const activeTab = state.activeSubTab || 'results';
@@ -29,13 +30,14 @@ export default function TaskWorkspace({ task }) {
   useEffect(() => {
     if (!task?.id) { setTaskData(null); return; }
     let cancelled = false;
-    api.getTask(task.id).then(data => { if (!cancelled) setTaskData(data); }).catch(() => {});
+    api.getTask(task.id).then(data => { if (!cancelled) setTaskData(data); }).catch(() => { if (!cancelled && task?.id) toast.addToast('获取任务数据失败', 'error'); });
     return () => { cancelled = true; };
   }, [task?.id]);
 
   const displayTask = taskData || task;
   const displayLabel = displayTask?.config?.url || displayTask?.config?.keywords || '任务';
   const monitor = useTaskMonitor(task?.id);
+  const toast = useToast();
 
   // Filter results by filteredDomains (added via RightPanel)
   const filteredResults = useMemo(() => {
@@ -90,6 +92,7 @@ export default function TaskWorkspace({ task }) {
             id: `${task.id}-${monitor.status}-${Date.now()}`,
             ...event,
             taskId: task.id,
+            taskLabel: displayLabel,
             time: new Date().toISOString(),
           },
         });
@@ -98,14 +101,23 @@ export default function TaskWorkspace({ task }) {
     prevStatusRef.current = monitor.status;
   }, [monitor.status, task?.id, dispatch]);
 
+  async function handleExport() {
+    try {
+      const blob = await api.getBlob(`/tasks/${task.id}/export/pdf`);
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a'); a.href = url; a.download = `radar-export-${task.id}.pdf`; a.click();
+      URL.revokeObjectURL(url);
+    } catch (err) { toast.addToast('PDF 导出失败: ' + err.message, 'error'); }
+  }
+
   async function handleStart(config) {
     try {
       const taskData = await api.createTask(config);
-      // navigateTo 触发 hashchange → sync effect dispatch SELECT_TASK
-      // 不直接 dispatch，避免 SELECT_TASK 执行两次
+      if (!taskData?.id) { toast.addToast('任务创建返回数据异常', 'error'); return; }
       navigateTo('workspace', taskData.id, 'results');
+      onTaskCreated?.();
     } catch (err) {
-      console.error('Failed to create task:', err);
+      toast.addToast(err.message || '任务创建失败', 'error');
     }
   }
 
@@ -124,11 +136,12 @@ export default function TaskWorkspace({ task }) {
         </span>
       </div>
 
-      {/* Sub-tabs */}
-      <ContentTabs tabs={TABS} activeTab={activeTab} onChange={(tab) => {
-            // navigateTo 触发 hashchange → sync effect 处理 subTab 切换
-            if (state.activeTaskId) navigateTo('workspace', state.activeTaskId, tab);
-          }} />
+      {/* Sub-tabs — only show when a task is selected */}
+      {task?.id && (
+        <ContentTabs tabs={TABS} activeTab={activeTab} onChange={(tab) => {
+              navigateTo('workspace', state.activeTaskId, tab);
+            }} />
+      )}
 
       {/* Tab content */}
       <div className="workspace__content">
@@ -144,6 +157,7 @@ export default function TaskWorkspace({ task }) {
                   onPause={monitor.pause}
                   onResume={monitor.resume}
                   onCancel={monitor.cancel}
+                  onExportPDF={handleExport}
                 />
               </div>
               {monitor.logs.length > 0 && (
@@ -169,6 +183,8 @@ export default function TaskWorkspace({ task }) {
                 page={monitor.page}
                 limit={50}
                 onPageChange={monitor.loadResults}
+                loading={monitor.loading}
+                error={monitor.resultsError}
               />
             </div>
           )

@@ -107,22 +107,6 @@ a:hover { text-decoration: underline; }
 .filter-type__item:hover { background: #f1f5f9; }
 .filter-type__item input { accent-color: var(--color-primary); }
 
-/* === Progress Panel === */
-.progress-panel { flex: 1; min-width: 260px; background: var(--color-surface); border: 1px solid var(--color-border); border-radius: var(--radius); padding: 16px; box-shadow: var(--shadow); }
-.progress-panel__header { display: flex; align-items: center; gap: 8px; margin-bottom: 12px; }
-.progress-panel__indicator { width: 8px; height: 8px; border-radius: 50%; background: var(--color-muted); }
-.progress-panel__indicator--running { background: var(--color-primary); animation: pulse 1.5s infinite; }
-.progress-panel__indicator--paused { background: var(--color-warning); }
-.progress-panel__indicator--completed { background: var(--color-success); }
-.progress-panel__status { font-size: 13px; font-weight: 600; text-transform: uppercase; }
-.progress-panel__bar-track { height: 6px; background: #e2e8f0; border-radius: 3px; overflow: hidden; margin-bottom: 12px; }
-.progress-panel__bar-fill { height: 100%; background: var(--color-primary); border-radius: 3px; transition: width 0.3s; }
-.progress-panel__bar-fill--animated { background: linear-gradient(90deg, var(--color-primary), #60a5fa, var(--color-primary)); background-size: 200% 100%; animation: shimmer 2s infinite; }
-.progress-panel__stats { display: grid; grid-template-columns: repeat(5, 1fr); gap: 8px; }
-.progress-panel__stat { text-align: center; }
-.progress-panel__stat-value { font-size: 18px; font-weight: 700; }
-.progress-panel__stat-label { font-size: 11px; color: var(--color-text-muted); }
-
 @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.4; } }
 @keyframes shimmer { 0% { background-position: 200% 0; } 100% { background-position: -200% 0; } }
 
@@ -301,7 +285,7 @@ a:hover { text-decoration: underline; }
   .app { padding: 0 16px; }
   .app__header { gap: 16px; flex-wrap: wrap; }
   .task-form__row { grid-template-columns: 1fr; }
-  .progress-panel__stats { grid-template-columns: repeat(3, 1fr); }
+
 }
 
 @media (max-width: 600px) {
@@ -314,7 +298,7 @@ a:hover { text-decoration: underline; }
   .config-field input[type="number"] { width: 100%; }
   .config-field__row { flex-wrap: wrap; }
   .dashboard__grid { grid-template-columns: 1fr; }
-  .progress-panel__stats { grid-template-columns: repeat(2, 1fr); }
+
   .task-history__config { max-width: 120px; }
 }
 

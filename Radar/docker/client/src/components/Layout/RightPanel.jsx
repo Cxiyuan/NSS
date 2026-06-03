@@ -1,4 +1,7 @@
+import { useState, useEffect } from 'react';
 import { useWorkspace } from '../../contexts/WorkspaceContext';
+import { useToast } from '../ToastContext';
+import { api } from '../../lib/api';
 import ResultDetail from '../ResultDetail';
 import './RightPanel.css';
 
@@ -6,25 +9,22 @@ function getHostname(url) {
   try { return new URL(url).hostname; } catch { return null; }
 }
 
-async function addDomainFilter(taskId, domain, dispatch) {
-  try {
-    await fetch(`/api/tasks/${taskId}/filters`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ domain }),
-    });
-    dispatch({ type: 'ADD_FILTERED_DOMAIN', payload: domain });
-  } catch (err) {
-    console.error('Failed to add filter:', err);
-  }
-}
-
 export default function RightPanel() {
   const { state, dispatch } = useWorkspace();
+  const [viewportWidth, setViewportWidth] = useState(window.innerWidth);
+
+  useEffect(() => {
+    function handleResize() {
+      setViewportWidth(window.innerWidth);
+    }
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
+
   if (!state.rightPanelContent) return null;
 
   const content = state.rightPanelContent;
-  const isSplit = window.innerWidth >= 1025;
+  const isSplit = viewportWidth >= 1025;
 
   if (!isSplit) {
     // Overlay mode for <1024px
@@ -64,6 +64,14 @@ function PanelHeader({ content, onClose, pinned, onTogglePin }) {
 }
 
 function PanelBody({ content, state, dispatch }) {
+  const toast = useToast();
+  const handleAddFilter = async (hostname) => {
+    try {
+      await api.addFilter(state.activeTaskId, hostname);
+      dispatch({ type: 'ADD_FILTERED_DOMAIN', payload: hostname });
+      toast.addToast('已过滤 ' + hostname, 'success');
+    } catch (err) { toast.addToast('添加过滤条件失败: ' + err.message, 'error'); }
+  };
   if (content.type === 'result') {
     return (
       <div className="panel-body">
@@ -77,7 +85,7 @@ function PanelBody({ content, state, dispatch }) {
                 <span className="panel-domain-filter__value">{hostname}</span>
               </div>
               <button className="btn btn--primary" style={{ fontSize: 12, padding: '4px 10px' }}
-                onClick={() => addDomainFilter(state.activeTaskId, hostname, dispatch)}>
+                onClick={() => handleAddFilter(hostname)}>
                 + 加入过滤
               </button>
             </div>
