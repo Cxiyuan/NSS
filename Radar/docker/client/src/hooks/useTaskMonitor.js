@@ -149,7 +149,7 @@ export function useTaskMonitor(taskId) {
         if (t.status !== status) setStatus(t.status);
         if (t.stats) setStats(s => ({ ...s, ...t.stats }));
       }).catch(() => {
-        // Server unreachable for 3 consecutive polls — mark as error
+        // Server unreachable — mark as error on first failure
         setStatus(s => s === 'running' || s === 'pending' ? 'error' : s);
       });
     }

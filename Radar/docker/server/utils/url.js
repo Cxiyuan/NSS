@@ -1,3 +1,11 @@
+// WHATWG URL returns IPv6 hostnames WITH brackets, e.g. '[fe80::1]'.
+// Strip them for consistent matching across filter, dedup, and stats.
+export function safeHostname(urlOrString) {
+  try {
+    return new URL(urlOrString).hostname.replace(/^\[|\]$/g, '');
+  } catch { return ''; }
+}
+
 export function normalizeUrl(url) {
   try {
     const u = new URL(url);
@@ -43,7 +51,7 @@ const TWO_PART_TLDS = new Set([
 
 export function getDomain(url) {
   try {
-    const hostname = new URL(url).hostname;
+    const hostname = safeHostname(url);
     const parts = hostname.split('.');
     if (parts.length <= 2) return parts.join('.');
     // Check if the last two parts form a known two-part TLD (e.g. co.uk)

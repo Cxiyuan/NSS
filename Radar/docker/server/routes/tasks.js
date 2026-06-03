@@ -7,10 +7,14 @@ export function createTaskRoutes(queries, pool, getConfig) {
 
   function isBlockedHost(host) {
     if (!host) return true;
-    if (/^169\.254\./.test(host) || host === '0.0.0.0') return true;
-    if (/^fe80:/i.test(host)) return true;
-    if (/^fe[89ab][0-9a-f]:/i.test(host)) return true;
-    if (/^::ffff:169\.254\./i.test(host)) return true;
+    // WHATWG URL returns IPv6 hostname WITH brackets, e.g. '[fe80::1]'
+    // Strip them before testing
+    const h = host.replace(/^\[|\]$/g, '');
+    if (/^169\.254\./.test(h) || h === '0.0.0.0') return true;
+    if (/^fe[89ab][0-9a-f]?:/i.test(h)) return true;
+    // IPv4-mapped IPv6: Node normalizes ::ffff:169.254.169.254 → ::ffff:a9fe:a9fe
+    // Block ALL ::ffff: prefixed addresses (they are all IPv4-mapped)
+    if (/^::ffff:/i.test(h)) return true;
     return false;
   }
 

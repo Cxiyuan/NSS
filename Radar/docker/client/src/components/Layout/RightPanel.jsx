@@ -6,7 +6,7 @@ import ResultDetail from '../ResultDetail';
 import './RightPanel.css';
 
 function getHostname(url) {
-  try { return new URL(url).hostname; } catch { return null; }
+  try { return new URL(url).hostname.replace(/^\[|\]$/g, ''); } catch { return null; }
 }
 
 export default function RightPanel() {

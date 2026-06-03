@@ -19,7 +19,7 @@ function SkeletonRow({ columns }) {
   );
 }
 
-export default function ResultTable({ results = [], total = 0, page = 1, limit = 50, onPageChange, onRowClick, error, loading }) {
+export default function ResultTable({ results = [], total = 0, page = 1, limit = 50, onPageChange, error, loading }) {
   const { dispatch } = useWorkspace();
   const wrapperRef = useRef(null);
   const totalPages = Math.ceil(total / limit);

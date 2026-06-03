@@ -1,4 +1,5 @@
 import Redis from 'ioredis';
+import { safeHostname } from '../utils/url.js';
 
 let client = null;
 let connected = false;
@@ -39,7 +40,7 @@ export const redis = {
       const parsed = all.map(r => JSON.parse(r));
       // Filter
       const filteredResults = filtered.length > 0
-        ? parsed.filter(r => { try { const h = new URL(r.url).hostname; return !filtered.includes(h); } catch { return true; } })
+        ? parsed.filter(r => { try { const h = safeHostname(r.url); return !filtered.includes(h); } catch { return true; } })
         : parsed;
       // Paginate
       const offset = (page - 1) * limit;
@@ -63,7 +64,7 @@ export const redis = {
       for (const r of all) {
         const result = JSON.parse(r);
         if (!result.isExternal) continue;
-        const hostname = new URL(result.url).hostname;
+        const hostname = safeHostname(result.url);
         if (filtered.includes(hostname)) continue;
         domains[hostname] = (domains[hostname] || 0) + 1;
       }
@@ -84,7 +85,7 @@ export const redis = {
       for (const r of all) {
         const result = JSON.parse(r);
         if (!result.isExternal) continue;
-        const hostname = new URL(result.url).hostname;
+        const hostname = safeHostname(result.url);
         if (filtered.includes(hostname)) continue;
         counts[result.url] = (counts[result.url] || 0) + 1;
       }

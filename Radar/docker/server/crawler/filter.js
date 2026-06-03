@@ -1,4 +1,5 @@
 import { domainToASCII } from 'node:url';
+import { safeHostname } from '../utils/url.js';
 
 export class FilterEngine {
   #patterns = [];
@@ -24,7 +25,7 @@ export class FilterEngine {
     // 1. Check domain patterns (existing logic)
     let domainFiltered = false;
     try {
-      const hostname = new URL(url).hostname;
+      const hostname = safeHostname(url);
       // Normalize IDN to punycode so filters like '例子.测试' match 'xn--fsq.xn--0zwm56d'
       const normalizedHost = domainToASCII(hostname) || hostname;
       if (normalizedHost) {

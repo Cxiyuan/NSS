@@ -204,13 +204,13 @@ echo "$HP" | jq -e '.status == "running"' > /dev/null 2>&1 \
   && ok "Resume unknown task returns running (idempotent)" \
   || ok "Resume unknown (graceful handling)"
 
-# WorkerPool capacity — create 5 tasks (pool maxWorkers=3 by default)
-echo "  Testing pool capacity (5 concurrent tasks)..."
-for i in 1 2 3 4 5; do
+# WorkerPool capacity — create 6 tasks (pool maxWorkers=5 by default)
+echo "  Testing pool capacity (6 concurrent tasks)..."
+for i in 1 2 3 4 5 6; do
   STATUS=$(curl -s -o /dev/null -w '%{http_code}' -X POST "$BASE/api/tasks" \
     -H 'Content-Type: application/json' \
     -d "{\"type\":\"url_crawl\",\"url\":\"https://pool-test-$i.com\",\"depth\":1,\"concurrency\":1,\"filters\":[]}")
-  if [ "$i" -le 3 ]; then
+  if [ "$i" -le 5 ]; then
     [ "$STATUS" = "201" ] && ok "  task $i → 201" || fail "  task $i → $STATUS"
   else
     [ "$STATUS" = "429" ] && ok "  task $i → 429 (pool full)" || fail "  task $i → $STATUS"

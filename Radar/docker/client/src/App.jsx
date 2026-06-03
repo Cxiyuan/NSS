@@ -55,9 +55,15 @@ function AppInner() {
     navigateTo('workspace', task.id, 'results');
   }, [navigateTo]);
 
-  const handleRetryTask = useCallback((taskId) => {
-    console.log('retry', taskId);
-  }, []);
+  const handleRetryTask = useCallback(async (task) => {
+    if (!task?.config) return;
+    try {
+      const newTask = await api.createTask({ ...task.config, type: task.type });
+      navigateTo('workspace', newTask.id, 'results');
+    } catch (err) {
+      console.error('Retry failed:', err);
+    }
+  }, [navigateTo]);
 
   const handleDeleteTask = useCallback((taskId) => {
     setConfirmDialog({

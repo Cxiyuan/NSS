@@ -43,14 +43,14 @@ export default function TaskWorkspace({ task, onTaskCreated }) {
   const filteredResults = useMemo(() => {
     if (!state.filteredDomains.length) return monitor.results;
     return (monitor.results || []).filter(r => {
-      try { const h = new URL(r.url).hostname; return !state.filteredDomains.includes(h); } catch { return true; }
+      try { const h = new URL(r.url).hostname.replace(/^\[|\]$/g, ''); return !state.filteredDomains.includes(h); } catch { return true; }
     });
   }, [monitor.results, state.filteredDomains]);
 
   const filteredLiveResults = useMemo(() => {
     if (!state.filteredDomains.length) return monitor.liveResults;
     return (monitor.liveResults || []).filter(r => {
-      try { const h = new URL(r.url).hostname; return !state.filteredDomains.includes(h); } catch { return true; }
+      try { const h = new URL(r.url).hostname.replace(/^\[|\]$/g, ''); return !state.filteredDomains.includes(h); } catch { return true; }
     });
   }, [monitor.liveResults, state.filteredDomains]);
 
@@ -68,7 +68,7 @@ export default function TaskWorkspace({ task, onTaskCreated }) {
   const filteredTopUrls = useMemo(() => {
     if (!state.filteredDomains.length || !monitor.topUrls) return monitor.topUrls;
     return (monitor.topUrls || []).filter(u => {
-      try { const h = new URL(u.url).hostname; return !state.filteredDomains.includes(h); } catch { return true; }
+      try { const h = new URL(u.url).hostname.replace(/^\[|\]$/g, ''); return !state.filteredDomains.includes(h); } catch { return true; }
     });
   }, [monitor.topUrls, state.filteredDomains]);
 
