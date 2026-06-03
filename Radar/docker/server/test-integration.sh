@@ -146,7 +146,7 @@ echo "=== 3. Results API ==="
 echo "  Injecting test data via better-sqlite3..."
 INJECT_TID="itest-results-$$"
 NOW="$(date -u +%Y-%m-%dT%H:%M:%SZ)"
-docker exec radar-itest-$$ node -e "
+docker exec -u root radar-itest-$$ node -e "
 const DB = require('better-sqlite3')('/tmp/itest.db');
 DB.exec(\"INSERT INTO tasks(id,type,status,config,stats,created_at,updated_at) VALUES('$INJECT_TID','url_crawl','completed','{}','{}','$NOW','$NOW')\");
 DB.exec(\"INSERT INTO results(task_id,url,found_on,link_type,is_external,depth,created_at) VALUES('$INJECT_TID','https://ext1.com/page','https://seed.com','a',1,1,'$NOW')\");
