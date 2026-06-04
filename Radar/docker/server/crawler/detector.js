@@ -1,27 +1,10 @@
+import { ILLEGAL_PATTERNS } from './keywords.js';
+
 const SUSPICIOUS_TLDS = new Set([
   'tk', 'ml', 'ga', 'cf', 'gq', 'xyz', 'top', 'loan',
   'work', 'click', 'download', 'review', 'stream', 'trade',
   'webcam', 'win', 'bid', 'date', 'men',
 ]);
-
-const ILLEGAL_PATTERNS = {
-  porn: [
-    '成人', '色情', 'av', 'porn', 'xxx', 'hentai',
-    '18禁', '黄色', '情色', 'sex', 'adult',
-  ],
-  gambling: [
-    '赌博', '赌场', '百家乐', '轮盘', '老虎机',
-    'casino', 'poker', 'betting', 'lottery',
-  ],
-  drugs: [
-    '毒品', '冰毒', '大麻', '海洛因', '麻黄碱',
-    'weed', 'cannabis', 'mdma', 'lsd',
-  ],
-  blackhat: [
-    '刷粉', '刷单', '刷赞', '刷票', '代刷',
-    '外挂', '私服', '菠菜', '博彩',
-  ],
-};
 
 function matchContent(text) {
   const tags = [];
@@ -48,6 +31,8 @@ function checkHostReputation(hostname) {
 // ICP cache: domain -> { icp, cachedAt }
 const icpCache = new Map();
 const ICP_CACHE_TTL = 24 * 60 * 60 * 1000; // 24 hours
+const ICP_CACHE_MAX_SIZE = 50000;          // v1.2 fix: 9.2.8 — cap Map size to prevent
+                                          //   unbounded growth when crawling diverse sites
 
 export async function checkICP(hostname) {
   // Check cache first
@@ -59,19 +44,33 @@ export async function checkICP(hostname) {
     const baseUrl = process.env.ICP_QUERY_URL || 'http://127.0.0.1:16181';
     const res = await fetch(`${baseUrl}/query/url?search=${encodeURIComponent(hostname)}`, {
       signal: AbortSignal.timeout(5000),
+      redirect: 'manual', // v1.2.QA: don't follow redirects — attacker-controlled ICP service could redirect to internal addresses
     });
     if (!res.ok) return null;
     const data = await res.json();
     const icp = data?.icp || data?.data?.icp || null;
     icpCache.set(hostname, { icp, cachedAt: Date.now() });
+    // Bound the Map: when over the cap, evict the oldest entries (Map iteration
+    // is insertion-order). This is the lightweight "LRU" — no per-access tracking.
+    if (icpCache.size > ICP_CACHE_MAX_SIZE) {
+      const toRemove = icpCache.size - ICP_CACHE_MAX_SIZE;
+      let i = 0;
+      for (const key of icpCache.keys()) {
+        if (i++ >= toRemove) break;
+        icpCache.delete(key);
+      }
+    }
     return icp;
   } catch {
     return null; // ICP service unavailable
   }
 }
 
-export async function detect(url, html) {
-  const tags = [];
+export async function detect(url, html, preTags = []) {
+  // preTags: caller-supplied tags to merge in front (e.g. from link-extractor
+  //          flagging a hidden link). Used for 'blacklink' category which is
+  //          already detected in the DOM, not in the page text.
+  const tags = [...preTags];
   try {
     const hostname = new URL(url).hostname.replace(/^\[|\]$/g, '');
     // Host reputation

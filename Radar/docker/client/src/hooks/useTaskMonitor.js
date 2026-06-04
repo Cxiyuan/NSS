@@ -1,5 +1,7 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { api } from '../lib/api';
+import { buildWebSocketAuthArgs, buildWebSocketUrlWithTokenFallback } from '../lib/ws-auth';
+import { useTaskIdRef } from '../lib/race-guard';
 
 const EMPTY_STATS = { crawled: 0, total: 0, external: 0, depth: 0, filtered: 0 };
 
@@ -31,6 +33,11 @@ export function useTaskMonitor(taskId) {
   const mountedRef = useRef(true);
   const pageRef = useRef(1);
   const pollTimerRef = useRef(null);
+  // v1.2 fix: 9.2.13 — useTaskIdRef tracks the CURRENT task so in-flight
+  // fetches can detect when the user has switched tasks and discard stale
+  // responses. Without this, the previous task's results briefly pollute
+  // the new task's UI.
+  const taskIdRef = useTaskIdRef(taskId);
 
   // ---------- Load task initial state ----------
   useEffect(() => {
@@ -71,25 +78,43 @@ export function useTaskMonitor(taskId) {
     if (!id || !mountedRef.current) return;
     const protocol = location.protocol === 'https:' ? 'wss:' : 'ws:';
     let wsUrl = `${protocol}//${location.host}/ws?taskId=${id}`;
+    // v1.2 fix: 9.2.4 — use Sec-WebSocket-Protocol for auth, not URL query
+    // string. Tokens in URL appear in server access logs, browser history,
+    // and Referer headers (if same-origin page links out). The protocol
+    // header is never logged.
+    // Server (ws/handler.js) accepts either protocol=`<token>` or `Bearer <token>`
+    // — we send the bare token. Fall back to query string only if browser
+    // doesn't support the protocol header (very old browsers).
+    let authToken = '';
+    try { authToken = localStorage.getItem('radar_token') || ''; } catch {}
+    let ws;
     try {
-      const t = localStorage.getItem('radar_token');
-      if (t) wsUrl += '&token=' + encodeURIComponent(t);
-    } catch {}
-    const ws = new WebSocket(wsUrl);
+      const [u, protocols] = buildWebSocketAuthArgs(wsUrl, authToken);
+      ws = new WebSocket(u, protocols);
+    } catch {
+      // Fallback for older browsers that reject protocol array
+      wsUrl = buildWebSocketUrlWithTokenFallback(wsUrl, authToken);
+      ws = new WebSocket(wsUrl);
+    }
     wsRef.current = ws;
 
     ws.onmessage = (event) => {
       try {
         const data = JSON.parse(event.data);
         handleWSMessage(data);
-      } catch {}
-    };
+      } catch (parseErr) {
+        console.warn('WS message parse error:', parseErr.message, 'raw:', event.data?.slice(0, 200));
+      };
 
     ws.onclose = () => {
       wsRef.current = null;
       setWsConnected(false);
       if (!mountedRef.current) return;
       retryRef.current++;
+      if (retryRef.current > 10) {
+        console.warn('WS max retries (10) reached — giving up for task', id);
+        return;
+      }
       const delay = Math.min(1000 * Math.pow(2, retryRef.current - 1), 30000);
       setTimeout(() => connectWS(id), delay);
     };
@@ -173,30 +198,35 @@ export function useTaskMonitor(taskId) {
   // ---------- Data loading ----------
   async function loadResults(p) {
     if (!taskId) return;
+    // v1.2 fix: 9.2.13 — snapshot the current taskId; if it changes
+    // before the fetch resolves, discard the response.
+    const reqTaskId = taskId;
     setLoading(true);
     setResultsError(null);
     try {
       const data = await api.getResults(taskId, { page: p, limit: 50 });
-      if (!mountedRef.current) return;
+      if (!mountedRef.current || taskIdRef.current !== reqTaskId) return;
       setResults(data.results || []);
       setResultsTotal(data.total || 0);
       setPage(p);
       pageRef.current = p;
     } catch (err) {
+      if (!mountedRef.current || taskIdRef.current !== reqTaskId) return;
       setResultsError(err.message || '加载失败');
     }
-    if (!mountedRef.current) return;
+    if (!mountedRef.current || taskIdRef.current !== reqTaskId) return;
     setLoading(false);
   }
 
   async function loadAnalytics() {
     if (!taskId) return;
+    const reqTaskId = taskId;
     try {
       const [domains, urls] = await Promise.all([
         api.getTopDomains(taskId, 10),
         api.getTopUrls(taskId, 10),
       ]);
-      if (!mountedRef.current) return;
+      if (!mountedRef.current || taskIdRef.current !== reqTaskId) return;
       setTopDomains(domains || []);
       setTopUrls(urls || []);
     } catch {}

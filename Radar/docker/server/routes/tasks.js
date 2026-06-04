@@ -1,22 +1,10 @@
 import { Router } from 'express';
 import { v4 as uuid } from 'uuid';
 import { redis } from '../db/redis.js';
+import { isBlockedHost } from '../utils/ssrf.js';
 
 export function createTaskRoutes(queries, pool, getConfig) {
   const router = Router();
-
-  function isBlockedHost(host) {
-    if (!host) return true;
-    // WHATWG URL returns IPv6 hostname WITH brackets, e.g. '[fe80::1]'
-    // Strip them before testing
-    const h = host.replace(/^\[|\]$/g, '');
-    if (/^169\.254\./.test(h) || h === '0.0.0.0') return true;
-    if (/^fe[89ab][0-9a-f]?:/i.test(h)) return true;
-    // IPv4-mapped IPv6: Node normalizes ::ffff:169.254.169.254 → ::ffff:a9fe:a9fe
-    // Block ALL ::ffff: prefixed addresses (they are all IPv4-mapped)
-    if (/^::ffff:/i.test(h)) return true;
-    return false;
-  }
 
   router.post('/', (req, res) => {
     const { type, url, keywords, depth = 3, concurrency = 3, filters = [] } = req.body;

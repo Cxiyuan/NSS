@@ -1,5 +1,6 @@
 import { domainToASCII } from 'node:url';
 import { safeHostname } from '../utils/url.js';
+import { patternToRegex } from '../utils/filter-regex.js';
 
 export class FilterEngine {
   #patterns = [];
@@ -30,7 +31,7 @@ export class FilterEngine {
       const normalizedHost = domainToASCII(hostname) || hostname;
       if (normalizedHost) {
         domainFiltered = this.#patterns.some(pattern => {
-          const regex = FilterEngine.#patternToRegex(pattern);
+          const regex = patternToRegex(pattern);
           return regex.test(normalizedHost);
         });
       }
@@ -40,19 +41,6 @@ export class FilterEngine {
     const typeFiltered = linkType && this.#excludedTypes.length > 0 && this.#excludedTypes.includes(linkType);
 
     return !!(domainFiltered || typeFiltered);
-  }
-
-  static #patternToRegex(pattern) {
-    if (pattern.startsWith('*.')) {
-      const base = pattern.slice(2).replace(/\./g, '\\.');
-      return new RegExp('(?:^.+\\.)?' + base + '$');
-    }
-    if (pattern.startsWith('*')) {
-      const base = pattern.slice(1).replace(/\./g, '\\.');
-      return new RegExp(`${base}$`);
-    }
-    const exact = pattern.replace(/\./g, '\\.');
-    return new RegExp(`^${exact}$`);
   }
 
   toJSON() {

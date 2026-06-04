@@ -18,7 +18,14 @@ export function createResultRoutes(queries, getTask) {
     }
 
     // Fallback: read from SQLite
-    const data = queries.getResults(req.params.id, { domain: req.query.domain, page: p, limit: l });
+    const data = queries.getResults(req.params.id, {
+      domain: req.query.domain,
+      // v1.2: pass through ICP + risk filters when explicitly set
+      icp: req.query.icp !== undefined ? req.query.icp : null,
+      riskLevel: req.query.riskLevel || null,
+      page: p,
+      limit: l,
+    });
     res.json(data);
   });
 

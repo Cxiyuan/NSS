@@ -7,7 +7,7 @@ import Sidebar from './components/Layout/Sidebar';
 import Header from './components/Layout/Header';
 import EmptyState from './components/Layout/EmptyState';
 import ErrorBoundary from './components/ErrorBoundary';
-import { ToastProvider } from './components/ToastContext';
+import { ToastProvider, useToast } from './components/ToastContext';
 import TaskWorkspace from './components/Task/TaskWorkspace';
 import ResizableDivider from './components/Layout/ResizableDivider';
 import RightPanel from './components/Layout/RightPanel';
@@ -22,6 +22,7 @@ import './components/Layout/Sidebar.css';
 function AppInner() {
   const { state, dispatch } = useWorkspace();
   const { taskId: hashTaskId, view: hashView, subTab: hashSubTab, navigateTo } = useHashRouting();
+  const toast = useToast();  // v1.2 fix: 9.2.14 — surface delete failures
 
   // Load task list from API
   const [tasks, setTasks] = useState([]);
@@ -76,10 +77,17 @@ function AppInner() {
             window.location.hash = '#/';
           }
           setTaskListKey(k => k + 1);
-        } catch {}
+          toast('任务已删除', 'success');  // v1.2 fix: 9.2.14
+        } catch (err) {
+          // v1.2 fix: 9.2.14 — previously the catch block was empty, so
+          // users had no feedback when delete failed (e.g. server 5xx,
+          // network error, auth token expired). Now we show a toast
+          // and the user can retry.
+          toast(`删除失败: ${err.message || '未知错误'}`, 'error');
+        }
       },
     });
-  }, [state.activeTaskId, dispatch]);
+  }, [state.activeTaskId, dispatch, toast]);
 
   const handleTaskCreated = useCallback(() => { setTaskListKey(k => k + 1); }, []);
 

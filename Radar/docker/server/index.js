@@ -13,10 +13,12 @@ import { createExportRoutes } from './routes/export.js';
 import { createWSServer } from './ws/handler.js';
 import { WorkerPool } from './crawler/pool.js';
 import { redis } from './db/redis.js';
+import { createWorkerMessageHandler } from './worker-message-handler.js';
 import { generatePDF } from './utils/export-pdf.js';
 import { launchBrowser } from './crawler/browser.js';
 import { createConfigRoutes, getConfig } from './routes/config.js';
 import { closeBrowser } from './crawler/browser.js';
+import { recoverZombieTasks } from './utils/zombie-recovery.js';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const PORT = process.env.PORT || 3000;
@@ -30,56 +32,40 @@ initDB(db);
 const queries = createQueries(db);
 
 // Recover zombie tasks: on restart, mark any running/paused tasks as error
-// since their workers no longer exist
-const zombieTasks = db.prepare("SELECT id, status FROM tasks WHERE status IN ('running','paused')").all();
-for (const t of zombieTasks) {
-  console.warn(`Recovering zombie task ${t.id} (${t.status} → error)`);
-  queries.updateTaskStatus(t.id, 'error');
-  // Record the reason in task config so the UI can display it
-  const task = queries.getTask(t.id);
-  if (task) {
-    task.config = { ...task.config, error_message: 'Server restarted while task was running — worker lost' };
-    queries.updateTaskConfig(t.id, task.config);
-  }
-}
+// since their workers no longer exist. v1.2 fix: 9.2.11 — extracted to
+// utils/zombie-recovery.js for testability.
+recoverZombieTasks(db, queries);
 
-const pool = new WorkerPool(5, async (taskId, msg) => {
-  if (msg.type === 'result' && msg.result) {
-    // Write to Redis during crawl (fallback to SQLite if Redis unavailable)
-    const wrote = await redis.pushResult(taskId, msg.result);
-    if (!wrote) {
-      // Redis unavailable — direct SQLite as fallback
-      queries.insertResult(taskId, msg.result);
-      const stats = queries.getTaskStats(taskId);
-      queries.updateTaskStats(taskId, stats);
-    }
-    wsBroadcast(taskId, msg);
-    return;
-  }
-  if (msg.type === 'result_title') {
-    queries.updateResultStatus(taskId, msg.url, msg.pageTitle, msg.statusCode);
-    wsBroadcast(taskId, msg);
-    return;
-  }
-  if (msg.type === 'status') {
-    queries.updateTaskStatus(taskId, msg.status);
-    // When task reaches terminal state, flush Redis to SQLite
-    if (['completed', 'error', 'cancelled'].includes(msg.status)) {
-      await redis.flushToSQLite(taskId, queries);
-    }
-    wsBroadcast(taskId, msg);
-    return;
-  }
-  wsBroadcast(taskId, msg);
-});
+// Pool must be created AFTER wss.broadcast is available (see line 95+ for the
+// wss/broadcast setup). Forward-declared here; assigned below once the WSS
+// broadcast function is in scope. v1.2 fix: 9.2.3 — previously the pool was
+// created here with no getBroadcast, leaving WS push as a no-op in production.
+let pool = null;
 
 const app = express();
 app.use(express.json());
 
+// v1.2 fix: 9.2.12 — explicitly reject the placeholder token from
+// .env.production. Without this, an admin who forgot to change the default
+// would silently deploy an open-to-the-world instance.
+const PLACEHOLDER_TOKEN_PREFIX = 'CHANGE-ME-';
+function isPlaceholderToken(t) {
+  return !t || t.startsWith(PLACEHOLDER_TOKEN_PREFIX);
+}
+
 // ─── 可选鉴权（通过 RADAR_AUTH_TOKEN 环境变量启用） ───
 function requireAuth(req, res, next) {
   const token = process.env.RADAR_AUTH_TOKEN;
-  if (!token) return next(); // 未设置 token = 不启用（向后兼容本地使用）
+  if (isPlaceholderToken(token)) {
+    // v1.2: fail-closed when token is unset OR is still the .env.production
+    // placeholder. This prevents an accidental open deployment.
+    if (!token) return next(); // truly empty = local dev mode (intentional)
+    return res.status(503).json({
+      error: 'server_misconfigured',
+      message: 'RADAR_AUTH_TOKEN is set to the .env.production placeholder. ' +
+               'Generate a real token with `openssl rand -hex 32` and update .env.production.',
+    });
+  }
   const auth = req.headers.authorization || '';
   if (auth !== `Bearer ${token}`) {
     return res.status(401).json({ error: 'unauthorized' });
@@ -98,9 +84,6 @@ app.get('/readyz', (req, res) => {
 });
 
 app.use('/api/config', createConfigRoutes(dataDir));
-app.use('/api/tasks', createTaskRoutes(queries, pool, getConfig));
-app.use('/api/tasks', createResultRoutes(queries, (id) => queries.getTask(id)));
-app.use('/api/tasks', createExportRoutes(queries, generatePDF));
 
 const clientDist = join(__dirname, '..', 'client', 'dist');
 if (existsSync(clientDist)) {
@@ -121,8 +104,35 @@ const server = createServer(app);
 
 const { wss, broadcast: wsBroadcast } = createWSServer(server);
 
+// Now that wsBroadcast is in scope, instantiate the worker pool with a
+// lazy getBroadcast that resolves at message-time (handles wss restart).
+// v1.2 fix: 9.2.3 — previously the pool was created before wss, so
+// getBroadcast defaulted to a no-op in production and WS push was dead code.
+pool = new WorkerPool(5, createWorkerMessageHandler({
+  queries,
+  redis,
+  getBroadcast: () => wsBroadcast,
+}));
+
+// Routes that need the pool (e.g. POST /api/tasks to start a crawl) must be
+// mounted after pool is created.
+app.use('/api/tasks', createTaskRoutes(queries, pool, getConfig));
+app.use('/api/tasks', createResultRoutes(queries, (id) => queries.getTask(id)));
+app.use('/api/tasks', createExportRoutes(queries, generatePDF));
+
 server.listen(PORT, () => {
   console.log(`Server running at http://localhost:${PORT}`);
+  // v1.2 fix: 9.2.12 — warn loudly if RADAR_AUTH_TOKEN is set to the
+  // .env.production placeholder (catches forgotten deploys).
+  if (isPlaceholderToken(process.env.RADAR_AUTH_TOKEN) && process.env.RADAR_AUTH_TOKEN) {
+    console.warn('');
+    console.warn('╔══════════════════════════════════════════════════════════════╗');
+    console.warn('║  ⚠  RADAR_AUTH_TOKEN is still the .env.production placeholder  ║');
+    console.warn('║  All API requests will be rejected with 503 until you fix it.  ║');
+    console.warn('║  Run: openssl rand -hex 32  then update .env.production.       ║');
+    console.warn('╚══════════════════════════════════════════════════════════════╝');
+    console.warn('');
+  }
   // Launch browser in background with timeout — don't block server startup
   Promise.race([
     launchBrowser(),
@@ -146,7 +156,7 @@ async function shutdown() {
   if (shuttingDown) return;
   shuttingDown = true;
   console.log('Shutting down gracefully...');
-  server.close();
+  await new Promise(r => server.close(r)); // v1.2.QA: await close to drain in-flight HTTP responses
   wss.close(); // Stop accepting new WS connections + clear heartbeat timer
   if (pool) pool.shutdownAll();
   // Wait for all workers to exit (max 5s)

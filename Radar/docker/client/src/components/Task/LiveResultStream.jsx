@@ -17,7 +17,16 @@ export default function LiveResultStream({ results = [] }) {
     }
   }, [results.length]);
 
-  if (results.length === 0) return null;
+  if (results.length === 0) {
+    return (
+      <div className="live-stream live-stream--empty">
+        <div className="live-stream__header">
+          <span className="live-stream__dot live-stream__dot--idle" />
+          等待中 — 爬取到外部链接后将实时显示
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="live-stream">

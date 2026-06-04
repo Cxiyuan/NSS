@@ -1,5 +1,22 @@
 import { parentPort } from 'node:worker_threads';
 import { fetchAndParse, setAntiDetect } from './fetcher.js';
+import { fetchWithBrowser } from './browser.js';
+import { extractLinks } from './link-extractor.js';
+import { FilterEngine } from './filter.js';
+import { detect } from './detector.js';
+import { isSameDomain, getDomain, normalizeUrl } from '../utils/url.js';
+import { parseKeywords } from '../utils/keywords.js';
+import { AntiDetect } from './anti-detect.js';
+import { extractIcpFromHtml } from '../utils/icp-extractor.js';
+import { isBlockedHost } from '../utils/ssrf.js';
+
+// v1.2.QA: charset alias map — extracted once (was duplicated in detectCharset
+// and detectCharsetFromBody). Used for Content-Type header and <meta> tag values.
+const CHARSET_ALIASES = {
+  'gb2312': 'gbk', 'gbk': 'gbk', 'gb18030': 'gb18030',
+  'big5': 'big5', 'shift_jis': 'shift-jis', 'euc-kr': 'euc-kr',
+  'euc-jp': 'euc-jp', 'iso-8859-1': 'latin1',
+};
 
 // Detect charset from Content-Type header
 function detectCharset(contentType) {
@@ -7,9 +24,7 @@ function detectCharset(contentType) {
   const match = contentType.match(/charset\s*=\s*([^\s;]+)/i);
   if (!match) return 'utf-8';
   const charset = match[1].toLowerCase();
-  // Map common aliases to standard TextDecoder names
-  const aliases = { 'gb2312': 'gbk', 'gbk': 'gbk', 'gb18030': 'gb18030', 'big5': 'big5', 'shift_jis': 'shift-jis', 'euc-kr': 'euc-kr', 'euc-jp': 'euc-jp', 'iso-8859-1': 'latin1' };
-  return aliases[charset] || charset;
+  return CHARSET_ALIASES[charset] || charset;
 }
 
 // Detect charset from raw HTML body by scanning <meta charset> tags
@@ -19,14 +34,21 @@ function detectCharsetFromBody(bytes) {
   const metaMatch = sample.match(/<meta[^>]+charset\s*=\s*["']?([a-zA-Z0-9_-]+)["'\s>/]/i)
     || sample.match(/<meta[^>]+http-equiv\s*=\s*["']?Content-Type["']?[^>]+charset\s*=\s*["']?([a-zA-Z0-9_-]+)["'\s>]/i);
   if (metaMatch) {
-    const aliases = { 'gb2312': 'gbk', 'gbk': 'gbk', 'gb18030': 'gb18030', 'big5': 'big5', 'shift_jis': 'shift-jis', 'euc-kr': 'euc-kr', 'euc-jp': 'euc-jp', 'iso-8859-1': 'latin1' };
-    return aliases[metaMatch[1].toLowerCase()] || metaMatch[1].toLowerCase();
+    return CHARSET_ALIASES[metaMatch[1].toLowerCase()] || metaMatch[1].toLowerCase();
   }
   return null;
 }
 
 // Lightweight title fetch for external links — quick check with short timeout
 async function fetchTitle(url) {
+  // v1.2 fix: 9.2.2 — second SSRF guard, in case URL arrives from
+  // somewhere other than enqueue() (e.g. external link returned by
+  // search API). Defense in depth.
+  let host = '';
+  try { host = new URL(url).hostname; } catch { return { title: '', statusCode: 0 }; }
+  if (isBlockedHost(host)) {
+    return { title: '', statusCode: 0 };
+  }
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), 6000);
   try {
@@ -103,13 +125,6 @@ async function fetchTitles(results, concurrency = 3) {
   await Promise.allSettled(pending);
   return results;
 }
-import { fetchWithBrowser } from './browser.js';
-import { extractLinks } from './link-extractor.js';
-import { FilterEngine } from './filter.js';
-import { detect } from './detector.js';
-import { isSameDomain, getDomain, normalizeUrl } from '../utils/url.js';
-import { parseKeywords } from '../utils/keywords.js';
-import { AntiDetect } from './anti-detect.js';
 
 let paused = false;
 let cancelled = false;
@@ -165,6 +180,15 @@ async function run(taskConfig) {
   function enqueue(u, currentDepth, foundOn) {
     const normalized = normalizeUrl(u);
     if (!normalized) return false;
+    // v1.2 fix: 9.2.2 — block enqueueing private/loopback URLs discovered in
+    // crawled pages. Without this, a malicious page could trick the crawler
+    // into probing 127.0.0.1, 169.254.169.254, etc.
+    let host = '';
+    try { host = new URL(normalized).hostname; } catch { return false; }
+    if (isBlockedHost(host)) {
+      post('log', { level: 'warn', message: `SSRF guard: blocked enqueue ${normalized}` });
+      return false;
+    }
     if (visited.has(normalized)) return false;
     visited.add(normalized);
     queue.push({ url: normalized, depth: currentDepth, foundOn: foundOn || '' });
@@ -286,14 +310,36 @@ async function run(taskConfig) {
             pageTitle: title,
             statusCode: 0,
           };
-          // Add detection tags in background (non-blocking)
-          detect(link.url, html).then(tags => {
-            if (tags.length > 0) {
-              post('result_tags', { url: link.url, tags });
-            }
-          });
           newResults.push(extResult);
           postResult(extResult);
+          // Add detection tags in background (non-blocking).
+          // Pre-inject 'blacklink' tag if link-extractor flagged the <a> as hidden —
+          // a CSS-hidden link is by definition a blacklink (the very definition of
+          // a hidden link: visible to crawlers, invisible to humans).
+          const preTags = link.hidden ? ['blacklink:1:' + (link.hiddenReason || 'css-hide')] : [];
+          // P1-1: also run ICP check in parallel — try official API first, fall back
+          // to footer extraction if the API is down. Footer is purely passive
+          // (reads HTML only, never contacts beian.miit.gov.cn).
+          const checkIcpFallback = async () => {
+            let hostname;
+            try { hostname = new URL(link.url).hostname.replace(/^\[|\]$/g, ''); }
+            catch { return null; }
+            try {
+              const icp = await checkICP(hostname);
+              if (icp) return icp;
+            } catch { /* ICP API unavailable */ }
+            // API failed — try footer
+            if (html) {
+              const footerResult = extractIcpFromHtml(html);
+              return footerResult?.icp || null;
+            }
+            return null;
+          };
+          Promise.all([detect(link.url, html, preTags), checkIcpFallback()]).then(([tags, icp]) => {
+            if (tags.length > 0 || icp) {
+              post('result_tags', { url: link.url, tags, icp });
+            }
+          }).catch(() => { /* swallow — detection is best-effort */ });
         } else if (currentDepth < (depth || 3)) {
           // Same-domain links: enqueue for crawling depth only, never post as results
           // Result list shows only external links that passed the filter

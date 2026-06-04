@@ -58,4 +58,31 @@ export function initDB(db) {
     db.exec("ALTER TABLE results ADD COLUMN risk_tags TEXT DEFAULT ''");
     db.exec("ALTER TABLE results ADD COLUMN icp TEXT DEFAULT ''");
   }
+
+  // ── v1.2 P2-1: result_risks normalized table ───────────────────────
+  // One row per (result, category) pair. Enables SQL aggregation by
+  // category/level without parsing the comma-separated risk_tags string.
+  // Backward compatible: results.risk_tags / risk_level / icp are still
+  // written (for the existing UI) — result_risks is a derived view.
+  db.exec(`
+    CREATE TABLE IF NOT EXISTS result_risks (
+      id          INTEGER PRIMARY KEY AUTOINCREMENT,
+      result_id   INTEGER NOT NULL REFERENCES results(id) ON DELETE CASCADE,
+      task_id     TEXT    NOT NULL,
+      url         TEXT    NOT NULL,
+      category    TEXT    NOT NULL,
+      level       TEXT    NOT NULL CHECK(level IN ('clean','suspicious','illegal','blackhat')),
+      detail      TEXT    DEFAULT '',
+      icp         TEXT    DEFAULT '',
+      source      TEXT    DEFAULT 'worker' CHECK(source IN ('worker','footer','api','badge')),
+      confidence  REAL    DEFAULT 1.0,
+      detected_at TEXT    NOT NULL
+    );
+  `);
+  db.exec(`CREATE INDEX IF NOT EXISTS idx_risks_task ON result_risks(task_id);`);
+  db.exec(`CREATE INDEX IF NOT EXISTS idx_risks_category ON result_risks(category);`);
+  db.exec(`CREATE INDEX IF NOT EXISTS idx_risks_level ON result_risks(level);`);
+  // v1.2 P2-1: UNIQUE constraint prevents duplicate (result, category) rows
+  // when the worker re-emits tags for the same URL. Use INSERT OR IGNORE.
+  db.exec(`CREATE UNIQUE INDEX IF NOT EXISTS idx_risks_unique ON result_risks(result_id, category);`);
 }

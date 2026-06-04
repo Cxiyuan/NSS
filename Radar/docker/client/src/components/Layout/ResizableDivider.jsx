@@ -8,7 +8,6 @@ export default function ResizableDivider({ onResize, position = 'horizontal' }) 
     e.preventDefault();
     setDragging(true);
     const startX = e.clientX;
-    const startWidth = document.documentElement.style.getPropertyValue('--right-panel-width').trim() || '40%';
 
     function onMove(ev) {
       const parent = ref.current?.parentElement?.parentElement; // main-content__inner
