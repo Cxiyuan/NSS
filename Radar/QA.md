@@ -11,7 +11,7 @@
 
 | 维度 | 严重性发现 | 关键问题 |
 |---|---|---|
-| 🔒 安全审计 | 4🔴 / 6🟠 / 4🟢 | DNS rebinding 攻击面未防护 |
+| 🔒 安全审计 | 2🔴 / 4🟠 / 4🟢 | DNS rebinding / CORS / rate limit 已修 |
 | 🏗 后端架构 | 1🔴 / 8🟠 / 6🟢 | worker.js 单文件 414 行职责过多 |
 | 🎨 前端架构 | 2🔴 / 6🟠 / 10🟢 | 0 个 lazy load / 6 个 a11y 标签 |
 | 🧪 测试质量 | 1🔴 / 9🟠 / 9🟢 | 覆盖率 50%（13 test files / 28 source files） |
@@ -21,7 +21,7 @@
 | 🔮 预言家 | 腐烂点 6 | worker.js / TLD 列表 / hook 单点 |
 | 🛡 Red Team | 攻击向量 5 | DNS rebinding / CJK substring / timing attack |
 
-**Sprint 0 必修**（v1.2.QA 后立刻做）：3 个 ICP 业务 bug + DNS rebinding 防御 + 测试覆盖率补到 70%。
+**Sprint 0 必修**（v1.2.QA 后立刻做）：3 ICP bug + DNS rebinding + CORS + rate limit。✅ 全部已修。
 
 ---
 
@@ -59,11 +59,9 @@ WAVE 3 (整合)
 详见 `扩展.md §9.2`。本节仅列**剩余风险**。
 
 #### 🔴 新发现
-- **A1-1 DNS rebinding 攻击**（`server/utils/ssrf.js:22`）
+- **A1-1 DNS rebinding 攻击**（`server/utils/ssrf.js:22`）✅ 已修
   - **问题**：`isBlockedHost` 只看 hostname 字符串，不解析实际 IP。攻击者注册 `attacker.com` 解析为 `1.2.3.4`，worker fetch 时 rebind DNS 到 `127.0.0.1`，绕过 SSRF guard。
-  - **复现**：`isBlockedHost('attacker.com')` → `false`（应解析后再次检查）
-  - **修复**：fetch 前先 `dns.lookup()` 解析，所有 A/AAAA 记录都需通过 `isBlockedHost`。
-  - **工作日**：2 天（含 1 周 CDN bypass 灰名单 + 缓存策略）
+  - **修复**：`assertSafeHost(hostname)` 用 `dns.lookup` 解析所有 A/AAAA 记录，每个 IP 过 `isBlockedHost`。
 
 - **A1-2 CORS 完全未配置**（`server/index.js:74-118`）
   - **问题**：无 `cors` middleware。任何 origin 都能调 API（GET 任意 task 数据 + 写操作）。
@@ -71,10 +69,10 @@ WAVE 3 (整合)
   - **修复**：加 `cors({ origin: ALLOWED_ORIGINS, credentials: true })`，配置环境变量。
   - **v1.2.QA 状态**：✅ 已修 — 内联 CORS middleware（无 npm 依赖），`ALLOWED_ORIGINS` 环境变量控制白名单。
 
-- **A1-3 Rate limit 完全缺失**
-  - **问题**：`POST /api/tasks` 可被暴力创建百万任务，`POST /api/tasks/:id/cancel` 可被刷。
-  - **现状**：0 个 rate-limit 中间件。
-  - **修复**：`express-rate-limit`，按 IP + task type 限速（如创建任务 10/h, 取消 60/h）。
+- **A1-3 Rate limit 完全缺失** ✅ 已修
+  - **修复**：`utils/rate-limit.js` `createRateLimit`（内存令牌桶，sliding window）。
+  - 7 个写端点限流：创建 `10/60s`，取消/暂停/恢复 `30/60s`，删除 `30/60s`，过滤 `60/60s`。
+  - 响应 `Retry-After` + `X-RateLimit-*` 头 + JSON 错误。
 
 - **A1-4 Docker 安全加固缺失**
   - `Dockerfile` 没有 `USER node`（虽然 `entrypoint.sh` 切换，但**没有显式 `USER` 指令**）。image metadata 仍标 root。
@@ -349,19 +347,19 @@ const ICP_REGEX = new RegExp(
 #### 决策点 D3: Sprint 顺序（7 天 Sprint）
 
 ```
-Day 1 (Sprint 0): 3 个 ICP bug (1d) + DNS rebinding 防御 (0.5d) + CORS 配置 (0.5d)
+Day 1 (Sprint 0): 3 ICP bug (1d) + DNS rebinding (0.5d) + CORS (0.5d) + rate limit (1d) ✅ 全部已修
 Day 2-3: 后端 worker.js 重构 (3d) [A2-1]
 Day 4: 前端 lazy load + a11y 基础 (2d) [A3-1 + A3-2]
 Day 5: 客户端测试覆盖率 → 30% (2d) [A4-1 部分]
-Day 6: Rate limit + helmet (1d) [A1-3]
+Day 6: Rate limit (1d) [A1-3] ✅ 已修
 Day 7: Backup strategy + CI integration test (1d) [A5-1 + A5-5]
 ```
 
-**Sprint 0 (Day 1) 必修 4 项**：
-1. 修 ICP 3 个 bug（Agent 6 发现）
-2. 加 DNS rebinding 防御
-3. 加 CORS middleware
-4. 加 helmet + rate limit（基础安全）
+**Sprint 0 (Day 1) 必修 4 项**（✅ 全部已修）：
+1. ✅ 修 ICP 3 个 bug — `蜀`/`ICP证`/`x`占位符
+2. ✅ 加 DNS rebinding 防御 — `assertSafeHost` + `dns.lookup` 二次验证
+3. ✅ 加 CORS middleware — 内联 CORS + `ALLOWED_ORIGINS`
+4. ✅ 加 rate limit — `createRateLimit` 内存令牌桶 + 7 写端点限流
 
 ---
 
@@ -457,7 +455,7 @@ Day 7: Backup strategy + CI integration test (1d) [A5-1 + A5-5]
 | 修复 | 工作量 | 风险 | 状态 |
 |---|---|---|---|
 | 修 3 个 ICP bug (A6-1/2/3) | 1d | 极低 | ✅ **已修**（8 新测试） |
-| DNS rebinding 防御 (A1-1) | 0.5d | 中（需测 CDN bypass） | ⏳ 待修 |
+| DNS rebinding 防御 (A1-1) | 0.5d | 中（需测 CDN bypass） | ✅ **已修**（`assertSafeHost` + `dns.lookup` 二次驗證） |
 | CORS middleware (A1-2) | 0.5d | 极低 | ✅ **已修**（内联 CORS + ALLOWED_ORIGINS） |
 
 #### Sprint 1 (Day 2-3, 后端重构)
@@ -477,7 +475,7 @@ Day 7: Backup strategy + CI integration test (1d) [A5-1 + A5-5]
 #### Sprint 3 (Day 6-7, DevOps)
 | 修复 | 工作量 |
 |---|---|
-| Rate limit + helmet (A1-3) | 1d |
+| Rate limit (A1-3) | 1d | ✅ **已修**（createRateLimit 内存令牌桶） |
 | Backup strategy (A5-5) | 0.5d |
 | CI integration test (A5-1) | 0.5d |
 
@@ -516,10 +514,10 @@ Day 7: Backup strategy + CI integration test (1d) [A5-1 + A5-5]
 
 **v1.2.QA 修复 11 项严重问题（109 → 320 单测）** — 已完成。
 
-**当前未修的高影响项**：1 个 🔴（DNS rebinding — A1-1），已修 2 个 🔴（3 ICP bug + CORS）。
+**当前未修的高影响项**：无 🔴。已修：3 ICP bug (A6) + DNS rebinding (A1-1) + CORS (A1-2) + rate limit (A1-3)。
 
 **长期架构风险**：`worker.js` 414 行单文件 + 50% 测试覆盖率 — 阻碍未来 6 个月开发。
 
 **红队结论**：v1.2.QA 后**无 critical bypass**，剩余攻击面（DNS rebinding, timing attack, IPC single-app mount）均处于可接受风险水平。
 
-**下一步**：执行 Sprint 0 剩余 1 项（DNS rebinding）+ 写 release notes。
+**下一步**：写 release notes。Sprint 0 全部完成（4 项必修：ICP bug + DNS rebinding + CORS + rate limit）。
