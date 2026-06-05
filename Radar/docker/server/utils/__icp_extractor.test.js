@@ -210,3 +210,46 @@ test('v1.2: legitimate English-CJK spacing is NOT collapsed', () => {
   const r = extractIcpFromHtml(html);
   assert.equal(r, null);
 });
+
+// ─── v1.2.QA: ICP 业务 bug 修复 ────────────────────────────────────────
+test('extracts ICP with 蜀 (Sichuan alternate province name)', () => {
+  const r = extractIcpFromHtml('蜀ICP备12345678号');
+  assert.equal(r?.icp, '蜀ICP备12345678号');
+});
+
+test('extracts ICP with 川 (Sichuan standard province name)', () => {
+  const r = extractIcpFromHtml('川ICP备12345678号');
+  assert.equal(r?.icp, '川ICP备12345678号');
+});
+
+test('extracts ICP证 (business operating license number)', () => {
+  const r = extractIcpFromHtml('京ICP证030173号');
+  assert.equal(r?.icp, '京ICP证030173号');
+});
+
+test('extracts ICP证 with sub-record', () => {
+  const r = extractIcpFromHtml('沪ICP证20240001号-1');
+  assert.equal(r?.icp, '沪ICP证20240001号-1');
+});
+
+test('extracts ICP with x placeholder digits', () => {
+  const r = extractIcpFromHtml('浙ICP备2024xxxxxx号');
+  assert.equal(r?.icp, '浙ICP备2024xxxxxx号');
+});
+
+test('extracts ICP with X placeholder digits (upper case)', () => {
+  const r = extractIcpFromHtml('粤ICP备2024XXXXXX号');
+  assert.equal(r?.icp, '粤ICP备2024XXXXXX号');
+});
+
+test('extracts ICP证 with x placeholder digits', () => {
+  const r = extractIcpFromHtml('京ICP证2024xxxxxx号');
+  assert.equal(r?.icp, '京ICP证2024xxxxxx号');
+});
+
+test('provinces include both 川 and 蜀 (no false positive)', () => {
+  const r1 = extractIcpFromHtml('蜀ICP备12345678号');
+  const r2 = extractIcpFromHtml('川ICP备12345678号');
+  assert.equal(r1?.icp, '蜀ICP备12345678号');
+  assert.equal(r2?.icp, '川ICP备12345678号');
+});

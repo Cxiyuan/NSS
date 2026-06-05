@@ -13,16 +13,19 @@
 
 // Province names (max 3 chars per official list) — used as a sanity check
 // that the captured digits are not random "ICP123" noise.
-const PROVINCE_RE = '(?:京|津|冀|晋|蒙|辽|吉|黑|沪|苏|浙|皖|闽|赣|鲁|豫|鄂|湘|粤|桂|琼|渝|川|黔|滇|藏|陕|甘|青|宁|新|港|澳|台)';
+const PROVINCE_RE = '(?:京|津|冀|晋|蒙|辽|吉|黑|沪|苏|浙|皖|闽|赣|鲁|豫|鄂|湘|粤|桂|琼|渝|川|蜀|黔|滇|藏|陕|甘|青|宁|新|港|澳|台)';
 
-// 工信部备案号: <province>ICP<备><digits>号 optionally with sub-record "-<n>"
+// 工信部备案号: <province>ICP<备|证><digits>号 optionally with sub-record "-<n>"
 // Examples:
 //   京ICP备12345678号
 //   沪ICP备 20240001 号
 //   粤ICP备20240001号-1
 //   浙ICP备2024xxxxxx号-2
+//   京ICP证030173号 (增值电信业务经营许可证，与 ICP 备同等法律效力)
+// v1.2.QA: 接受 ICP证 (经营许可号), x/X 占位符, 蜀(四川)
+// ([備备证]) captures the type char so output preserves it (not hardcoded 备)
 const ICP_RE = new RegExp(
-  `(${PROVINCE_RE})ICP\\s*[備备]\\s*(\\d{4,12})\\s*(?:号(?:[\\s\\-_/]*(\\d{1,4}))?)?`,
+  `(${PROVINCE_RE})ICP\\s*([備备证])\\s*([\\dxX]{4,12})\\s*(?:号(?:[\\s\\-_/]*(\\d{1,4}))?)?`,
   'g'
 );
 
@@ -63,11 +66,12 @@ export function extractIcpFromHtml(html) {
   const icpMatch = ICP_RE.exec(text);
   let icp = null;
   if (icpMatch) {
-    const [, province, number, sub] = icpMatch;
-    // Normalize: "京ICP备12345678号" / "京ICP备12345678号-1"
+    const [, province, type, number, sub] = icpMatch;
+    // Normalize type: 備(繁)→备(简), preserve证 as-is
+    const icpType = type === '備' ? '备' : type;
     icp = sub
-      ? `${province}ICP备${number}号-${sub}`
-      : `${province}ICP备${number}号`;
+      ? `${province}ICP${icpType}${number}号-${sub}`
+      : `${province}ICP${icpType}${number}号`;
   }
 
   const gongAnMatch = GONGAN_RE.exec(text);

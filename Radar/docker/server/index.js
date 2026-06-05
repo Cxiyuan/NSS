@@ -45,6 +45,22 @@ let pool = null;
 const app = express();
 app.use(express.json());
 
+// v1.2.QA: inline CORS middleware (no npm install needed).
+// Allows same-origin and configured origins. In production, set ALLOWED_ORIGINS
+// env var to a comma-separated list (default: same-origin only).
+const ALLOWED_ORIGINS = (process.env.ALLOWED_ORIGINS || '').split(',').filter(Boolean);
+app.use((req, res, next) => {
+  const origin = req.headers.origin;
+  if (origin && (ALLOWED_ORIGINS.length === 0 || ALLOWED_ORIGINS.includes(origin))) {
+    res.setHeader('Access-Control-Allow-Origin', origin || '*');
+    res.setHeader('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
+    res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization');
+    res.setHeader('Access-Control-Allow-Credentials', 'true');
+  }
+  if (req.method === 'OPTIONS') return res.status(204).end();
+  next();
+});
+
 // v1.2 fix: 9.2.12 — explicitly reject the placeholder token from
 // .env.production. Without this, an admin who forgot to change the default
 // would silently deploy an open-to-the-world instance.
