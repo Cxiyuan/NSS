@@ -102,9 +102,8 @@ export function useTaskMonitor(taskId) {
       try {
         const data = JSON.parse(event.data);
         handleWSMessage(data);
-      } catch (parseErr) {
-        console.warn('WS message parse error:', parseErr.message, 'raw:', event.data?.slice(0, 200));
-      };
+      } catch (parseErr) { console.warn('WS message parse error:', parseErr.message, 'raw:', event.data?.slice(0, 200)); }
+    };
 
     ws.onclose = () => {
       wsRef.current = null;
