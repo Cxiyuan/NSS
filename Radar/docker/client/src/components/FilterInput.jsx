@@ -62,11 +62,14 @@ export default function FilterInput({ filters = { domains: [], types: [] }, onCh
           </div>
         </div>
       ) : (
-        <div className="filter-type__grid">
+        <div className="filter-type__grid" role="group" aria-label="按链接类型过滤">
           {Object.entries(LINK_TYPE_LABELS).map(([type, label]) => (
             <label key={type} className="filter-type__item">
-              <input type="checkbox" checked={selectedTypes.includes(type)}
-                onChange={() => toggleType(type)} />
+              <input
+                type="checkbox"
+                checked={selectedTypes.includes(type)}
+                onChange={() => toggleType(type)}
+                aria-label={`过滤类型 ${label}`} />
               <span>{label}</span>
             </label>
           ))}
@@ -92,7 +95,11 @@ export default function FilterInput({ filters = { domains: [], types: [] }, onCh
           {selectedTypes.map(t => (
             <span key={t} className="filter-input__tag">
               {LINK_TYPE_LABELS[t]} ({t})
-              <button type="button" onClick={() => toggleType(t)} className="filter-input__tag-remove">&times;</button>
+              <button
+                type="button"
+                onClick={() => toggleType(t)}
+                aria-label={`移除过滤类型 ${LINK_TYPE_LABELS[t]}`}
+                className="filter-input__tag-remove">&times;</button>
             </span>
           ))}
         </div>

@@ -9,132 +9,26 @@ import { parseKeywords } from '../utils/keywords.js';
 import { AntiDetect } from './anti-detect.js';
 import { extractIcpFromHtml } from '../utils/icp-extractor.js';
 import { isBlockedHost } from '../utils/ssrf.js';
+// v1.2.QA Sprint 1: extracted modules (single-responsibility refactor)
+import { CrawlQueue } from './queue.js';
+import { fetchTitles } from './title-fetcher.js';
 
-// v1.2.QA: charset alias map — extracted once (was duplicated in detectCharset
-// and detectCharsetFromBody). Used for Content-Type header and <meta> tag values.
-const CHARSET_ALIASES = {
-  'gb2312': 'gbk', 'gbk': 'gbk', 'gb18030': 'gb18030',
-  'big5': 'big5', 'shift_jis': 'shift-jis', 'euc-kr': 'euc-kr',
-  'euc-jp': 'euc-jp', 'iso-8859-1': 'latin1',
-};
-
-// Detect charset from Content-Type header
-function detectCharset(contentType) {
-  if (!contentType) return 'utf-8';
-  const match = contentType.match(/charset\s*=\s*([^\s;]+)/i);
-  if (!match) return 'utf-8';
-  const charset = match[1].toLowerCase();
-  return CHARSET_ALIASES[charset] || charset;
-}
-
-// Detect charset from raw HTML body by scanning <meta charset> tags
-function detectCharsetFromBody(bytes) {
-  // Try decoding as utf-8 first to find meta charset tag
-  const sample = new TextDecoder('utf-8', { fatal: false }).decode(bytes.slice(0, 4096));
-  const metaMatch = sample.match(/<meta[^>]+charset\s*=\s*["']?([a-zA-Z0-9_-]+)["'\s>/]/i)
-    || sample.match(/<meta[^>]+http-equiv\s*=\s*["']?Content-Type["']?[^>]+charset\s*=\s*["']?([a-zA-Z0-9_-]+)["'\s>]/i);
-  if (metaMatch) {
-    return CHARSET_ALIASES[metaMatch[1].toLowerCase()] || metaMatch[1].toLowerCase();
-  }
-  return null;
-}
-
-// Lightweight title fetch for external links — quick check with short timeout
-async function fetchTitle(url) {
-  // v1.2 fix: 9.2.2 — second SSRF guard, in case URL arrives from
-  // somewhere other than enqueue() (e.g. external link returned by
-  // search API). Defense in depth.
-  let host = '';
-  try { host = new URL(url).hostname; } catch { return { title: '', statusCode: 0 }; }
-  if (isBlockedHost(host)) {
-    return { title: '', statusCode: 0 };
-  }
-  const controller = new AbortController();
-  const timer = setTimeout(() => controller.abort(), 6000);
-  try {
-    const res = await fetch(url, {
-      signal: controller.signal,
-      headers: {
-        'User-Agent': 'Mozilla/5.0 (compatible; RadarCrawler/1.0)',
-        'Accept': 'text/html,application/xhtml+xml',
-      },
-      redirect: 'follow',
-    });
-    clearTimeout(timer);
-    const statusCode = res.status;
-    const contentType = res.headers.get('content-type') || '';
-    let encoding = detectCharset(contentType);
-    // Read first 64KB to extract <title>
-    const reader = res.body.getReader();
-    const { value, done } = await reader.read();
-    reader.cancel();
-    if (done && !value) return { title: '', statusCode };
-
-    // Try decoding; fallback chain: header charset → meta tag → utf-8
-    let text = tryDecode(value, encoding);
-    // If header had no charset and result has replacement chars, try meta tag
-    if (!contentType.match(/charset/i) && text.includes('�')) {
-      const metaCharset = detectCharsetFromBody(value);
-      if (metaCharset && metaCharset !== encoding) {
-        text = tryDecode(value, metaCharset);
-      }
-    }
-    // If still garbled, try common Chinese encodings
-    if (text.includes('�')) {
-      for (const enc of ['gbk', 'gb18030']) {
-        if (enc !== encoding) {
-          const retry = tryDecode(value, enc);
-          if (!retry.includes('�')) { text = retry; encoding = enc; break; }
-        }
-      }
-    }
-    // Extract title with flexible regex (handles newlines, extra whitespace)
-    const match = text.match(/<title[^>]*>([\s\S]*?)<\/title>/i);
-    const title = match ? match[1].replace(/\s+/g, ' ').trim() : '';
-    return { title, statusCode };
-  } catch (err) {
-    clearTimeout(timer);
-    const code = err.name === 'AbortError' ? 408 : 0;
-    return { title: '', statusCode: code };
-  }
-}
-
-function tryDecode(bytes, encoding) {
-  try {
-    return new TextDecoder(encoding, { fatal: false }).decode(bytes);
-  } catch {
-    return new TextDecoder('utf-8', { fatal: false }).decode(bytes);
-  }
-}
-
-// Parallel title fetcher with concurrency limit
-async function fetchTitles(results, concurrency = 3) {
-  const pending = new Set();
-  for (const r of results) {
-    const p = fetchTitle(r.url).then(info => {
-      r.pageTitle = info.title;
-      r.statusCode = info.statusCode;
-      return r;
-    });
-    pending.add(p);
-    p.finally(() => pending.delete(p));
-    if (pending.size >= concurrency) {
-      await Promise.race(pending);
-    }
-  }
-  await Promise.allSettled(pending);
-  return results;
-}
+// v1.2.QA Sprint 1: charset helpers, fetchTitle, fetchTitles extracted
+// to ./title-fetcher.js. See that file for documentation.
 
 let paused = false;
 let cancelled = false;
+let crawlQueue = null;  // exposed for cancel() coordination
 let currentFilter = null;
 let currentTaskId = null;
 
 parentPort.on('message', (msg) => {
   if (msg.type === 'pause') paused = true;
   else if (msg.type === 'resume') paused = false;
-  else if (msg.type === 'cancel') cancelled = true;
+  else if (msg.type === 'cancel') {
+    cancelled = true;
+    if (crawlQueue) crawlQueue.cancel();  // v1.2.QA Sprint 1: stop draining immediately
+  }
   else if (msg.type === 'add_filter' && msg.pattern && currentFilter) {
     currentFilter.addFilter(msg.pattern);
     parentPort.postMessage({ type: 'log', taskId: currentTaskId, level: 'info', message: `Dynamic filter added: ${msg.pattern}` });
@@ -156,13 +50,22 @@ async function run(taskConfig) {
   const antiDetect = new AntiDetect(adConfig || {});
   setAntiDetect(antiDetect);
 
-  const visited = new Set();
-  const queue = [];
+  // v1.2.QA Sprint 1: CrawlQueue extracted (queue.js). Layer-1 SSRF
+  // (hostname) check stays inline because it's cheap; Layer-2 DNS check
+  // happens at fetch time in fetcher.js / title-fetcher.js.
+  // Exposed to the parentPort handler above so cancel() can stop draining.
+  crawlQueue = new CrawlQueue();
   let crawled = 0;
   let filteredCount = 0;
   let resultsPosted = 0;
   let maxDepth = 0;
-  const pendingTitleFetches = [];
+  // v1.2.QA Sprint 4 A2-7: use a Set + .finally() to drop settled promises
+  // from the tracking collection. Previously this was an Array, and
+  // settled promises stayed in the array forever. For long-running tasks
+  // (5h+), the array would grow unbounded, holding references to closed
+  // HTTP responses. The Set+finally pattern keeps memory bounded to the
+  // current in-flight count (max concurrency = 3, so max 3 entries).
+  const pendingTitleFetches = new Set();
 
   function post(type, data) {
     if (parentPort) parentPort.postMessage({ type, taskId, ...data });
@@ -189,10 +92,7 @@ async function run(taskConfig) {
       post('log', { level: 'warn', message: `SSRF guard: blocked enqueue ${normalized}` });
       return false;
     }
-    if (visited.has(normalized)) return false;
-    visited.add(normalized);
-    queue.push({ url: normalized, depth: currentDepth, foundOn: foundOn || '' });
-    return true;
+    return crawlQueue.enqueue(normalized, currentDepth, foundOn || '');
   }
 
   if (type === 'keyword_search') {
@@ -219,18 +119,15 @@ async function run(taskConfig) {
 
   post('status', { status: 'running' });
 
-  while (queue.length > 0 && !cancelled) {
+  while (crawlQueue.size > 0 && !cancelled) {
     if (paused) {
       post('status', { status: 'paused' });
       await sleep(500);
       continue;
     }
 
-    const batch = [];
-    const batchSize = Math.min(concurrency || 3, queue.length);
-    for (let i = 0; i < batchSize && queue.length > 0; i++) {
-      batch.push(queue.shift());
-    }
+    const batchSize = Math.min(concurrency || 3, crawlQueue.size);
+    const batch = crawlQueue.take(batchSize);
 
     // Per-URL delay is handled inside the map callback — no batch-level delay needed
     const batchDepth = Math.max(...batch.map(item => item.depth), 0);
@@ -374,30 +271,41 @@ async function run(taskConfig) {
 
       // Collect title fetches — will be awaited before task completion
       if (newResults.length > 0) {
-        const titlePromise = fetchTitles(newResults).then(updated => {
+        // v1.2.QA Sprint 1: fetchTitles from extracted title-fetcher module.
+        // Passes postWarn so SSRF-blocked fetches are logged.
+        const titlePromise = fetchTitles(newResults, {
+          concurrency: 3,
+          postWarn: (level, message) => post('log', { level, message }),
+        }).then(updated => {
           for (const r of updated) {
             if (r.pageTitle || r.statusCode) {
               post('result_title', { url: r.url, pageTitle: r.pageTitle, statusCode: r.statusCode });
             }
           }
         });
-        pendingTitleFetches.push(titlePromise);
+        // A2-7: track in-flight promises in a Set, drop on settle
+        pendingTitleFetches.add(titlePromise);
+        titlePromise.finally(() => pendingTitleFetches.delete(titlePromise));
       }
       return newResults;
     }));
 
     crawled += batch.length;
-    post('progress', { crawled, total: resultsPosted, depth: maxDepth, filtered: filteredCount, visited: visited.size });
+    post('progress', { crawled, total: resultsPosted, depth: maxDepth, filtered: filteredCount, visited: crawlQueue.visitedCount });
   }
 
-  // Wait for all in-flight title fetches to finish before declaring done
-  if (pendingTitleFetches.length > 0) {
-    await Promise.allSettled(pendingTitleFetches);
+  // Wait for all in-flight title fetches to finish before declaring done.
+  // A2-7: iterate over a snapshot — the Set may be mutated concurrently
+  // if a title fetch settles between when we capture the size and when
+  // we call allSettled. The finally() callbacks remove settled promises,
+  // so a snapshot captures only still-pending ones.
+  if (pendingTitleFetches.size > 0) {
+    await Promise.allSettled([...pendingTitleFetches]);
   }
 
   if (cancelled) {
     post('status', { status: 'cancelled' });
-  } else if (queue.length === 0) {
+  } else if (crawlQueue.size === 0) {
     // Double-check cancelled didn't fire just as the loop exited
     if (cancelled) {
       post('status', { status: 'cancelled' });

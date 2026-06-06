@@ -1,6 +1,7 @@
 import { Worker } from 'node:worker_threads';
 import { fileURLToPath } from 'node:url';
 import { dirname, join } from 'node:path';
+import { metrics } from '../utils/metrics.js';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 
@@ -24,6 +25,7 @@ export class WorkerPool {
 
     const worker = new Worker(join(__dirname, 'worker.js'));
     this.#workers.set(taskId, worker);
+    metrics.gauge('radar_worker_threads_active', this.#workers.size);
 
     worker.on('message', (msg) => {
       if (this.#onMessage) this.#onMessage(taskId, msg);
@@ -36,11 +38,13 @@ export class WorkerPool {
       }
       this.#workers.delete(taskId);
       this.#paused.delete(taskId);
+      metrics.gauge('radar_worker_threads_active', this.#workers.size);
     });
 
     worker.on('exit', (code) => {
       this.#workers.delete(taskId);
       this.#paused.delete(taskId);
+      metrics.gauge('radar_worker_threads_active', this.#workers.size);
     });
 
     worker.postMessage({ type: 'start', config });

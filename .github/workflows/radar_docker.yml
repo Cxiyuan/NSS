@@ -55,6 +55,36 @@ jobs:
       - name: 构建前端（语法检查）
         run: npm run build:client
 
+      # v1.2.QA Sprint 3 A5-1: lightweight integration check on every PR.
+      # This is FASTER than the full container-based integration-test job
+      # (which only runs on main push) because it doesn't pull a 2GB image.
+      # The 16 handler integration tests in __integration.test.js already
+      # exercise the worker→handler→DB→WS message flow end-to-end, and
+      # we add a synthetic node startup test to confirm the server
+      # module can be required without runtime errors.
+      - name: 后端集成 smoke test
+        run: |
+          # Quick check: does server/index.js syntactically load?
+          # We can't actually .listen() because better-sqlite3 needs
+          # native binding, but we can verify the module graph resolves.
+          node -e "
+            import('./server/index.js').then(() => {
+              console.log('✓ server/index.js loaded OK');
+              process.exit(0);
+            }).catch(err => {
+              // Native binding errors are expected (no better-sqlite3 in
+              // the test container yet at this point of the workflow).
+              // What we care about is SYNTAX + IMPORT errors.
+              if (err.code === 'ERR_MODULE_NOT_FOUND' && err.message.includes('better-sqlite3')) {
+                console.log('✓ server/index.js loaded OK (better-sqlite3 binding expected later)');
+                process.exit(0);
+              }
+              console.error('✗ server/index.js failed to load:', err.message);
+              process.exit(1);
+            });
+          " 2>&1 | tee /tmp/load-test.log
+          grep -q "✓" /tmp/load-test.log
+
       - name: 验证部署配置文件
         run: |
           test -f ../deploy/.env.production || { echo ".env.production missing"; exit 1; }
@@ -64,6 +94,16 @@ jobs:
           source ../deploy/.env.production
           [ -z "${SEARXNG_BASE_URL:-}" ] && { echo "SEARXNG_BASE_URL not set"; exit 1; }
           [ -z "${MEMORY_LIMIT:-}" ] && { echo "MEMORY_LIMIT not set"; exit 1; }
+          # v1.2.QA Sprint 3 A5-7: ensure RADAR_AUTH_TOKEN is NOT the placeholder
+          # (the placeholder is shipped in the repo for local dev but must be
+          # changed before any deploy). CI fails if the placeholder is present.
+          if echo "${RADAR_AUTH_TOKEN:-}" | grep -q "^CHANGE-ME-"; then
+            echo "✗ RADAR_AUTH_TOKEN is still the .env.production placeholder"
+            echo "  Generate a real token: openssl rand -hex 32"
+            echo "  Update deploy/.env.production before merging this PR"
+            exit 1
+          fi
+          echo "✓ RADAR_AUTH_TOKEN is a real token (not placeholder)"
           echo "✓ 环境变量定义完整"
 
   docker-build:

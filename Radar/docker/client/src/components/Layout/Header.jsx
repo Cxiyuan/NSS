@@ -20,33 +20,46 @@ export default function Header({ onNewTask }) {
   }, []);
 
   return (
-    <header className="header app-header">
+    <header className="header app-header" role="banner">
       {/* Hamburger — visible only on mobile */}
-      <button className="header__hamburger"
+      <button
+        className="header__hamburger"
+        aria-label={state.mobileSidebarOpen ? 'Close sidebar' : 'Open sidebar'}
+        aria-expanded={state.mobileSidebarOpen}
         onClick={() => dispatch({ type: 'SET_MOBILE_SIDEBAR', payload: !state.mobileSidebarOpen })}>
         ☰
       </button>
 
       {/* Logo + app name */}
-      <span className="header__logo"
-        onClick={() => { window.location.hash = '#'; }}>
+      <span
+        className="header__logo"
+        role="link"
+        tabIndex={0}
+        aria-label="Go to home"
+        onClick={() => { window.location.hash = '#'; }}
+        onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); window.location.hash = '#'; } }}>
         雷达
       </span>
 
       {/* Command palette trigger */}
       <div className="header__palette">
-        <button onClick={() => setPaletteOpen(true)} className="header__palette-btn">
-          <span>🔍</span>
+        <button
+          onClick={() => setPaletteOpen(true)}
+          className="header__palette-btn"
+          aria-label="Open command palette (Ctrl+K)"
+          aria-haspopup="dialog">
+          <span aria-hidden="true">🔍</span>
           <span>搜索任务或输入命令...</span>
-          <kbd className="header__kbd">Ctrl+K</kbd>
+          <kbd className="header__kbd" aria-hidden="true">Ctrl+K</kbd>
         </button>
       </div>
 
       {/* Right group */}
       <div className="header__actions">
-        <button onClick={() => { window.location.hash = '#/config'; }}
+        <button
+          onClick={() => { window.location.hash = '#/config'; }}
           className="header__gear"
-          title="配置">
+          aria-label="Open configuration">
           ⚙
         </button>
       </div>

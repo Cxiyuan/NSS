@@ -45,12 +45,34 @@ export default function CommandPaletteOverlay({ onClose }) {
   }
 
   return (
-    <div onClick={onClose} style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.3)', zIndex: 200, display: 'flex', justifyContent: 'center', paddingTop: '15vh' }}>
-      <div tabIndex={-1} onKeyDown={handleKeyDown} onClick={e => e.stopPropagation()} style={{ background: 'white', borderRadius: 12, boxShadow: '0 20px 60px rgba(0,0,0,0.15)', width: '100%', maxWidth: 520, display: 'flex', flexDirection: 'column', overflow: 'hidden', maxHeight: 400 }}>
-        <input ref={inputRef} value={query} onChange={e => setQuery(e.target.value)}
+    <div
+      onClick={onClose}
+      role="dialog"
+      aria-modal="true"
+      aria-label="Command palette"
+      style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.3)', zIndex: 200, display: 'flex', justifyContent: 'center', paddingTop: '15vh' }}>
+      <div
+        tabIndex={-1}
+        onKeyDown={handleKeyDown}
+        onClick={e => e.stopPropagation()}
+        role="combobox"
+        aria-expanded="true"
+        aria-haspopup="listbox"
+        aria-owns="command-palette-listbox"
+        style={{ background: 'white', borderRadius: 12, boxShadow: '0 20px 60px rgba(0,0,0,0.15)', width: '100%', maxWidth: 520, display: 'flex', flexDirection: 'column', overflow: 'hidden', maxHeight: 400 }}>
+        <label htmlFor="command-palette-input" hidden>搜索命令</label>
+        <input
+          id="command-palette-input"
+          ref={inputRef}
+          value={query}
+          onChange={e => setQuery(e.target.value)}
           placeholder="搜索命令..."
+          role="searchbox"
+          aria-label="搜索命令"
+          aria-autocomplete="list"
+          aria-controls="command-palette-listbox"
           style={{ padding: '14px 16px', border: 'none', fontSize: 15, outline: 'none', width: '100%', boxSizing: 'border-box' }} />
-        <div style={{ maxHeight: 300, overflow: 'auto', borderTop: '1px solid var(--color-border)' }}>
+        <div id="command-palette-listbox" role="listbox" aria-label="命令列表" style={{ maxHeight: 300, overflow: 'auto', borderTop: '1px solid var(--color-border)' }}>
           {filtered.map((action, i) => (
             <div key={action.id} onClick={action.action}
               style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '10px 16px', cursor: 'pointer', fontSize: 14, transition: 'background 0.1s', background: i === selectedIndex ? '#e2e8f0' : 'transparent' }}

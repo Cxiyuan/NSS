@@ -19,6 +19,8 @@ import { launchBrowser } from './crawler/browser.js';
 import { createConfigRoutes, getConfig } from './routes/config.js';
 import { closeBrowser } from './crawler/browser.js';
 import { recoverZombieTasks } from './utils/zombie-recovery.js';
+import { createRateLimit } from './utils/rate-limit.js';
+import { metrics } from './utils/metrics.js';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const PORT = process.env.PORT || 3000;
@@ -89,6 +91,16 @@ function requireAuth(req, res, next) {
   next();
 }
 app.use('/api', requireAuth);
+// v1.2.QA A1-3: rate limit on expensive write endpoints (task creation, cancel, delete).
+// GET endpoints are not limited (read-heavy UI polling).
+// In-memory only — does not share across replicas (acceptable for v1.2).
+app.post('/api/tasks',                createRateLimit({ windowMs: 60_000, max: 10 }));
+app.post('/api/tasks/:id/cancel',    createRateLimit({ windowMs: 60_000, max: 30 }));
+app.post('/api/tasks/:id/pause',     createRateLimit({ windowMs: 60_000, max: 30 }));
+app.post('/api/tasks/:id/resume',    createRateLimit({ windowMs: 60_000, max: 30 }));
+app.delete('/api/tasks/:id',         createRateLimit({ windowMs: 60_000, max: 30 }));
+app.post('/api/tasks/:id/filters',   createRateLimit({ windowMs: 60_000, max: 60 }));
+app.delete('/api/tasks/:id/filters', createRateLimit({ windowMs: 60_000, max: 60 }));
 
 // ─── 健康检查端点（不经鉴权） ────────────
 app.get('/healthz', (req, res) => {
@@ -97,6 +109,13 @@ app.get('/healthz', (req, res) => {
 app.get('/readyz', (req, res) => {
   const ready = db?.open;
   res.status(ready ? 200 : 503).json({ status: ready ? 'ok' : 'not ready' });
+});
+
+// v1.2.QA Sprint 4: Prometheus metrics endpoint (no auth — assume internal
+// scrape by Prometheus with network policy in production).
+app.get('/metrics', (req, res) => {
+  res.set('Content-Type', 'text/plain; version=0.0.4; charset=utf-8');
+  res.send(metrics.render());
 });
 
 app.use('/api/config', createConfigRoutes(dataDir));

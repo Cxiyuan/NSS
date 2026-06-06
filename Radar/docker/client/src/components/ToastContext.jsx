@@ -47,12 +47,24 @@ export function ToastProvider({ children }) {
   return (
     <ToastContext.Provider value={addToast}>
       {children}
-      <div style={containerStyle}>
+      {/* v1.2.QA Sprint 2 A3-2: ARIA live region. role="alert" + aria-live
+          "assertive" tells screen readers to interrupt and announce each
+          toast immediately (errors/info need urgent attention; success is
+          less so — we set assertive for error, polite for the rest). */}
+      <div
+        style={containerStyle}
+        role="region"
+        aria-label="Notifications"
+      >
         {toasts.map((t) => {
           const typeMeta = TOAST_TYPES[t.type] || TOAST_TYPES.info;
+          const isUrgent = t.type === 'error';
           return (
             <div
               key={t.id}
+              role={isUrgent ? 'alert' : 'status'}
+              aria-live={isUrgent ? 'assertive' : 'polite'}
+              aria-atomic="true"
               role="alert"
               style={{
                 ...toastStyle,

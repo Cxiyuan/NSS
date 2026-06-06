@@ -312,3 +312,34 @@ a:hover { text-decoration: underline; }
 .dc-card__header { font-size: 13px; font-weight: 600; margin-bottom: 12px; color: var(--color-text-muted); }
 .dc-body { min-height: 200px; }
 .dc-empty { text-align: center; padding: 40px 0; color: var(--color-text-muted); font-size: 13px; }
+
+/* === v1.2.QA Sprint 2 A3-2: skip-to-content link ===
+   Hidden until focused (Tab key), then becomes visible at top-left.
+   Keyboard users can bypass the sidebar/header and jump straight to <main>. */
+.skip-to-content {
+  position: absolute;
+  top: -100px;
+  left: 8px;
+  z-index: 10000;
+  padding: 10px 16px;
+  background: var(--color-primary, #2563eb);
+  color: white;
+  text-decoration: none;
+  border-radius: 4px;
+  font-weight: 600;
+  font-size: 14px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+  transition: top 0.2s ease;
+}
+.skip-to-content:focus,
+.skip-to-content:focus-visible {
+  top: 8px;
+  outline: 2px solid var(--color-focus, #fbbf24);
+  outline-offset: 2px;
+}
+
+/* Remove the default focus outline on the main landmark when reached via
+   skip-link — the visible focus on the link itself is enough indication. */
+#main-content:focus {
+  outline: none;
+}

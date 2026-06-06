@@ -21,6 +21,34 @@ services:
       timeout: 3s
       retries: 3
 
+  # v1.2.QA Sprint 3 A5-4: optional SearXNG sidecar. If you have your own
+  # SearXNG instance reachable from this network, set SEARXNG_BASE_URL in
+  # .env.production to its URL (e.g. http://searxng:4000 if running in
+  # this same network, or http://host.docker.internal:4000 on macOS/Windows).
+  # If you don't need keyword search, leave SEARXNG_BASE_URL unset and the
+  # server will silently fall back to no-search mode.
+  searxng:
+    image: searxng/searxng:latest
+    container_name: radar-searxng
+    restart: unless-stopped
+    networks:
+      - radar_net
+    # SearXNG listens on 8080 by default; remap to 4000 for consistency
+    ports:
+      - "${SEARXNG_HOST_PORT:-4000}:8080"
+    # SearXNG needs a writeable /etc/searxng for runtime config; mount a tmpfs
+    tmpfs:
+      - /etc/searxng:size=10M,uid=1000
+    healthcheck:
+      # SearXNG's / endpoint returns 200 even when not configured, so
+      # use a more specific probe. If it returns 503 (limiter not ready)
+      # we still mark it healthy because the server can serve requests.
+      test: ["CMD", "wget", "--spider", "-q", "http://127.0.0.1:8080/"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 30s
+
   radar:
     image: ghcr.io/cxiyuan/radar-web-crawler:latest
     container_name: radar
@@ -28,6 +56,8 @@ services:
     depends_on:
       redis:
         condition: service_healthy
+      searxng:
+        condition: service_started  # don't wait for health — SearXNG is optional
 
     ports:
       - "${HOST_PORT:-3000}:3000"
@@ -37,8 +67,11 @@ services:
       - DB_PATH=/data/crawler.db
       - PUPPETEER_EXECUTABLE_PATH=/usr/bin/chromium-browser
       - REDIS_URL=redis://redis:6379
-      # SearXNG 自建搜索引擎地址（关键词搜索默认引擎，免 API Key）
-      - SEARXNG_BASE_URL=${SEARXNG_BASE_URL:-http://host.docker.internal:4000}
+      # v1.2.QA Sprint 3 A5-2: default to in-network searxng service.
+      # Previously defaulted to host.docker.internal which doesn't resolve
+      # on Linux compose. Users can still override via SEARXNG_BASE_URL
+      # in .env (e.g. http://searxng.mydomain.com).
+      - SEARXNG_BASE_URL=${SEARXNG_BASE_URL:-http://searxng:8080}
       # ICP 备案查询（自建 ICP_Query 容器，可选）
       - ICP_QUERY_URL=http://icp-query:16181
       # 代理（可选，用于反检测）
@@ -55,6 +88,12 @@ services:
       retries: 3
       start_period: 20s
 
+    # v1.2.QA Sprint 3 A5-3: use BOTH compose v2 (`mem_limit:`) and Swarm
+    # (`deploy.resources.limits`) for cross-deployment compatibility.
+    # `mem_limit` works with `docker compose up` (most common case);
+    # `deploy.resources` is for `docker stack deploy` (Swarm mode).
+    mem_limit: ${MEMORY_LIMIT:-2G}
+    mem_reservation: 512M
     deploy:
       resources:
         limits:
@@ -78,6 +117,18 @@ services:
     image: yiminger/ymicp:latest
     container_name: radar-icp
     restart: unless-stopped
+    # v1.2.QA Sprint 3 A5-4: add healthcheck for icp-query container.
+    # Without it, the radar service starts up trying to query a possibly
+    # unhealthy ICP service, and the first ICP check fails.
+    healthcheck:
+      test: ["CMD-SHELL", "wget --spider -q http://127.0.0.1:16181/ || exit 1"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 30s
+    # v1.2.QA Sprint 3 A5-3: explicit memory cap (was missing, so the
+    # ymicp container could OOM-kill the host).
+    mem_limit: 512M
     networks:
       - radar_net
 

@@ -55,3 +55,52 @@ export function isBlockedHost(host) {
   if (/^::ffff:/i.test(h)) return true;
   return false;
 }
+
+// v1.2.QA A1-1: DNS rebinding defense.
+//
+// `isBlockedHost` only inspects the hostname string, but an attacker can
+// register `attacker.com` resolving to a public IP, then in the time
+// between worker enqueue and actual fetch, flip the DNS to 127.0.0.1.
+// We solve this by RESOLVING the hostname and re-checking every returned
+// A/AAAA record. ALL records must pass `isBlockedHost`.
+//
+// API:
+//   assertSafeHost(hostname, lookup?) -> Promise<{safe: bool, reason?: string, ips?: string[]}>
+//
+// The optional `lookup` injection is for testing (defaults to `dns.lookup`).
+// On error (e.g. ENOTFOUND), the host is treated as unsafe (fail-closed).
+//
+// Performance: 1 extra DNS query per fetch. For multi-fetch workloads, callers
+// should cache results by hostname (the worker already does — see `enqueue`
+// in worker.js, where the result of this check can be cached alongside
+// `visited`). Caching strategy left to caller; this function is stateless.
+import { lookup as dnsLookup } from 'node:dns/promises';
+
+export async function assertSafeHost(hostname, lookup = dnsLookup) {
+  if (!hostname) return { safe: false, reason: 'empty hostname' };
+  const h = hostname.replace(/^\[|\]$/g, '').toLowerCase();
+  // Layer 1: cheap hostname check first (catches localhost etc. without DNS query)
+  if (isBlockedHost(h)) {
+    return { safe: false, reason: `hostname blocked: ${h}` };
+  }
+  // Layer 2: resolve all A/AAAA records and check each IP
+  // `all: true` returns array; `verbatim: true` skips IPv4-mapped IPv6 normalization
+  // (so ::ffff:1.2.3.4 stays ::ffff:1.2.3.4, which our isBlockedHost catches)
+  let ips;
+  try {
+    const records = await lookup(h, { all: true, verbatim: true });
+    ips = records.map((r) => r.address);
+  } catch (err) {
+    // ENOTFOUND / EAI_AGAIN / timeout — fail-closed
+    return { safe: false, reason: `dns resolution failed: ${err.code || err.message}` };
+  }
+  if (ips.length === 0) {
+    return { safe: false, reason: 'no DNS records' };
+  }
+  for (const ip of ips) {
+    if (isBlockedHost(ip)) {
+      return { safe: false, reason: `resolved IP blocked: ${ip}`, ips };
+    }
+  }
+  return { safe: true, ips };
+}

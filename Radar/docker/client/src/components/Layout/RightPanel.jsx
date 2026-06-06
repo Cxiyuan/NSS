@@ -55,9 +55,15 @@ function PanelHeader({ content, onClose, pinned, onTogglePin }) {
       <span className="panel-header__title">
         {content.data?.url || '详情'}
       </span>
-      <button onClick={onTogglePin} title="固定面板"
+      <button
+        onClick={onTogglePin}
+        title="固定面板"
+        aria-label={pinned ? '取消固定面板' : '固定面板'}
+        aria-pressed={pinned}
         className={`panel-header__btn${pinned ? ' panel-header__btn--active' : ''}`}>📌</button>
-      <button onClick={onClose}
+      <button
+        onClick={onClose}
+        aria-label="关闭面板"
         className="panel-header__btn">×</button>
     </div>
   );

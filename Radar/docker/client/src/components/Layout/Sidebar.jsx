@@ -77,11 +77,14 @@ export default function Sidebar({ tasks, error, activeTaskId, onSelectTask, onNe
 
       {/* ---- Search Filter ---- */}
       <div className="sidebar__search">
+        <label htmlFor="sidebar-search" hidden>搜索任务</label>
         <input
+          id="sidebar-search"
           type="text"
           placeholder="搜索任务..."
           value={searchQuery}
           onChange={handleSearchChange}
+          aria-label="搜索任务"
         />
       </div>
 

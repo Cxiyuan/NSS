@@ -88,8 +88,9 @@ export default function ConfigPage() {
             </p>
 
             <div className="config-field">
-              <label className="config-field__label">
+              <label className="config-field__label" htmlFor="config-proxy-enabled">
                 <input
+                  id="config-proxy-enabled"
                   type="checkbox"
                   checked={config.proxy.enabled}
                   onChange={e => handleFieldChange(c => ({
@@ -103,18 +104,21 @@ export default function ConfigPage() {
 
             {config.proxy.enabled && (
               <div className="config-field">
-                <label>代理地址</label>
+                <label htmlFor="config-proxy-url">代理地址</label>
                 <input
+                  id="config-proxy-url"
                   type="text"
                   value={config.proxy.url}
                   onChange={handleProxyUrlChange}
                   placeholder="http://用户名:密码@代理IP:端口"
                   className={proxyError ? 'config-field__input--error' : ''}
+                  aria-invalid={!!proxyError}
+                  aria-describedby={proxyError ? 'config-proxy-url-error config-proxy-url-hint' : 'config-proxy-url-hint'}
                 />
                 {proxyError && (
-                  <span className="config-field__error">{proxyError}</span>
+                  <span id="config-proxy-url-error" className="config-field__error">{proxyError}</span>
                 )}
-                <span className="config-field__hint">
+                <span id="config-proxy-url-hint" className="config-field__hint">
                   支持 HTTP/SOCKS5，格式: protocol://user:pass@host:port
                 </span>
               </div>
@@ -129,8 +133,9 @@ export default function ConfigPage() {
             </p>
 
             <div className="config-field">
-              <label className="config-field__label">
+              <label className="config-field__label" htmlFor="config-ua-rotation">
                 <input
+                  id="config-ua-rotation"
                   type="checkbox"
                   checked={config.antiDetect.uaRotation}
                   onChange={e => handleFieldChange(c => ({
@@ -140,14 +145,15 @@ export default function ConfigPage() {
                 />
                 UA 轮换
               </label>
-              <span className="config-field__hint">
+              <span id="config-ua-rotation-hint" className="config-field__hint">
                 每次请求随机切换 20+ 个真实浏览器 User-Agent
               </span>
             </div>
 
             <div className="config-field">
-              <label className="config-field__label">
+              <label className="config-field__label" htmlFor="config-browser-fallback">
                 <input
+                  id="config-browser-fallback"
                   type="checkbox"
                   checked={config.antiDetect.browserFallback}
                   onChange={e => handleFieldChange(c => ({
@@ -157,14 +163,14 @@ export default function ConfigPage() {
                 />
                 Puppeteer 浏览器回退
               </label>
-              <span className="config-field__hint">
+              <span id="config-browser-fallback-hint" className="config-field__hint">
                 HTTP 请求返回 403 时自动切换真实浏览器渲染
               </span>
             </div>
 
             <div className="config-field">
-              <label>请求延迟范围（毫秒）</label>
-              <div className="config-field__row">
+              <span id="config-request-delay-label" className="config-field__label">请求延迟范围（毫秒）</span>
+              <div className="config-field__row" role="group" aria-labelledby="config-request-delay-label">
                 <input
                   type="number"
                   min={0}
@@ -177,8 +183,9 @@ export default function ConfigPage() {
                       requestDelay: { ...c.antiDetect.requestDelay, min: Number(e.target.value) },
                     },
                   }))}
+                  aria-label="最小延迟毫秒"
                 />
-                <span>—</span>
+                <span aria-hidden="true">—</span>
                 <input
                   type="number"
                   min={0}
@@ -191,8 +198,9 @@ export default function ConfigPage() {
                       requestDelay: { ...c.antiDetect.requestDelay, max: Number(e.target.value) },
                     },
                   }))}
+                  aria-label="最大延迟毫秒"
                 />
-                <span>ms</span>
+                <span aria-hidden="true">ms</span>
               </div>
               <span className="config-field__hint">
                 每次请求随机延迟 [min, max] 范围，含 ±20% 抖动。建议 800-2500ms
@@ -200,8 +208,9 @@ export default function ConfigPage() {
             </div>
 
             <div className="config-field">
-              <label>最大重试次数</label>
+              <label htmlFor="config-max-retries">最大重试次数</label>
               <input
+                id="config-max-retries"
                 type="number"
                 min={0}
                 max={10}

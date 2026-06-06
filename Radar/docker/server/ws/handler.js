@@ -1,4 +1,5 @@
 import { WebSocketServer } from 'ws';
+import { metrics } from '../utils/metrics.js';
 
 const HEARTBEAT_INTERVAL = 30000; // 30s
 
@@ -21,11 +22,13 @@ export function createWSServer(server) {
     const url = new URL(req.url, 'http://localhost');
     const taskId = url.searchParams.get('taskId');
 
-    ws.on('error', () => {});
+    ws.on('error', (err) => console.warn('WS error:', err.message));
 
     // Heartbeat: mark alive on any message or pong
     ws.isAlive = true;
     ws.on('pong', () => { ws.isAlive = true; });
+
+    metrics.gauge('radar_ws_connection_count', wss.clients.size);
 
     if (taskId) {
       if (!subscribers.has(taskId)) {
@@ -34,6 +37,7 @@ export function createWSServer(server) {
       subscribers.get(taskId).add(ws);
 
       ws.on('close', () => {
+        metrics.gauge('radar_ws_connection_count', wss.clients.size);
         const subs = subscribers.get(taskId);
         if (subs) {
           subs.delete(ws);

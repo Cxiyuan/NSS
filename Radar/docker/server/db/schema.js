@@ -1,6 +1,36 @@
+// v1.2.QA Sprint 4: schema version tracking.
+// Without this, migrations are "shot in the dark" — we check if a
+// column exists and ALTER if missing, but we have no global view of
+// which migrations have run. This table records each migration as it
+// runs; future migrations should check `schema_version` to decide
+// whether to apply.
+const SCHEMA_VERSION = 4;  // bump on each migration; first migration sets it to 1
+
 export function initDB(db) {
   db.pragma('journal_mode = WAL');
   db.pragma('foreign_keys = ON');
+
+  // ── schema_version table (must be created FIRST) ───────────────────
+  db.exec(`
+    CREATE TABLE IF NOT EXISTS schema_version (
+      version    INTEGER PRIMARY KEY,
+      applied_at TEXT NOT NULL,
+      description TEXT NOT NULL
+    );
+  `);
+
+  // Helper: record a migration (idempotent)
+  function recordMigration(version, description) {
+    db.prepare(
+      'INSERT OR IGNORE INTO schema_version (version, applied_at, description) VALUES (?, ?, ?)'
+    ).run(version, new Date().toISOString(), description);
+  }
+
+  // Helper: check if a migration has been applied
+  function hasMigration(version) {
+    const row = db.prepare('SELECT 1 FROM schema_version WHERE version = ?').get(version);
+    return !!row;
+  }
 
   db.exec(`
     CREATE TABLE IF NOT EXISTS tasks (
@@ -85,4 +115,22 @@ export function initDB(db) {
   // v1.2 P2-1: UNIQUE constraint prevents duplicate (result, category) rows
   // when the worker re-emits tags for the same URL. Use INSERT OR IGNORE.
   db.exec(`CREATE UNIQUE INDEX IF NOT EXISTS idx_risks_unique ON result_risks(result_id, category);`);
+
+  // ── v1.2.QA Sprint 4: register all migrations in schema_version ──
+  // These rows are idempotent (INSERT OR IGNORE) so re-running initDB
+  // is safe. Each migration here should be wrapped with `if (!hasMigration(N))`
+  // in any FUTURE migration work to avoid double-apply.
+  recordMigration(1, 'Initial schema: tasks + results tables + indexes');
+  recordMigration(2, 'Add status_code column to results');
+  recordMigration(3, 'Add risk_level / risk_tags / icp columns to results');
+  recordMigration(4, 'Add result_risks normalized table for SQL aggregation');
+
+  // Sanity check: warn if SCHEMA_VERSION constant is out of sync with recorded
+  const recordedMax = db.prepare('SELECT MAX(version) as v FROM schema_version').get()?.v || 0;
+  if (recordedMax > SCHEMA_VERSION) {
+    console.warn(
+      `[schema] DB has migrations up to v${recordedMax} but code only knows up to v${SCHEMA_VERSION}. ` +
+      `The DB was created by a newer version of the app. Downgrade may break.`
+    );
+  }
 }

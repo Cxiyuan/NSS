@@ -92,6 +92,7 @@ export default function TaskItem({ task, isActive, onSelect, onRetry, onDelete }
               onRetry(task);
             }}
             title="重试"
+            aria-label={`重试任务 ${task.id}`}
           >
             &#x21bb;
           </button>
@@ -104,6 +105,7 @@ export default function TaskItem({ task, isActive, onSelect, onRetry, onDelete }
               onDelete(task.id);
             }}
             title="删除"
+            aria-label={`删除任务 ${task.id}`}
           >
             &#x2715;
           </button>

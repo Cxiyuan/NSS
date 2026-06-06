@@ -1,5 +1,6 @@
 import * as cheerio from 'cheerio';
 import { AntiDetect } from './anti-detect.js';
+import { assertSafeHost } from '../utils/ssrf.js';
 
 let antiDetect = null;
 
@@ -9,6 +10,16 @@ export function setAntiDetect(instance) {
 
 export async function fetchAndParse(url, referer = '') {
   const ad = antiDetect || new AntiDetect();
+  // v1.2.QA A1-1: DNS rebinding defense — resolve hostname and check IP
+  // BEFORE the actual fetch. Throws on unsafe host (fail-closed).
+  let hostname = '';
+  try { hostname = new URL(url).hostname; } catch { /* handled below */ }
+  if (hostname) {
+    const safe = await assertSafeHost(hostname);
+    if (!safe.safe) {
+      throw new Error(`SSRF guard: ${safe.reason}`);
+    }
+  }
   const headers = ad.buildHeaders(referer);
   const result = await ad.withRetry(async (attempt) => {
     const signal = AbortSignal.timeout(15000);

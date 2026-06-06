@@ -48,18 +48,20 @@ export default function UnifiedTaskForm({ onStart }) {
       {/* Mode-specific fields */}
       {mode === 'url_crawl' ? (
         <div className="task-form__field">
-          <label className="task-form__label">目标站点</label>
-          <input type="text" value={url} onChange={e => setUrl(e.target.value)}
+          <label className="task-form__label" htmlFor="task-form-url">目标站点</label>
+          <input id="task-form-url" type="text" value={url} onChange={e => setUrl(e.target.value)}
             placeholder="https://example.com"
-            className="task-form__input" required />
+            className="task-form__input" required
+            aria-required="true" />
         </div>
       ) : (
         <>
           <div className="task-form__field">
-            <label className="task-form__label">关键词</label>
-            <input type="text" value={keywords} onChange={e => setKeywords(e.target.value)}
+            <label className="task-form__label" htmlFor="task-form-keywords">关键词</label>
+            <input id="task-form-keywords" type="text" value={keywords} onChange={e => setKeywords(e.target.value)}
               placeholder="输入搜索关键词，引号包裹精确短语"
-              className="task-form__input" required />
+              className="task-form__input" required
+              aria-required="true" />
           </div>
         </>
       )}
@@ -67,14 +69,18 @@ export default function UnifiedTaskForm({ onStart }) {
       {/* Shared fields */}
       <div className="task-form__row">
         <div className="task-form__field">
-          <label className="task-form__label">探测深度</label>
-          <input type="number" min={1} max={10} value={depth} onChange={e => setDepth(e.target.value)}
-            className="task-form__input" />
+          <label className="task-form__label" htmlFor="task-form-depth">探测深度</label>
+          <input id="task-form-depth" type="number" min={1} max={10} value={depth} onChange={e => setDepth(e.target.value)}
+            className="task-form__input"
+            aria-describedby="task-form-depth-hint" />
+          <span id="task-form-depth-hint" hidden>范围 1-10，越大越深</span>
         </div>
         <div className="task-form__field">
-          <label className="task-form__label">并发数</label>
-          <input type="number" min={1} max={20} value={concurrency} onChange={e => setConcurrency(e.target.value)}
-            className="task-form__input" />
+          <label className="task-form__label" htmlFor="task-form-concurrency">并发数</label>
+          <input id="task-form-concurrency" type="number" min={1} max={20} value={concurrency} onChange={e => setConcurrency(e.target.value)}
+            className="task-form__input"
+            aria-describedby="task-form-concurrency-hint" />
+          <span id="task-form-concurrency-hint" hidden>范围 1-20，越大越快但更耗资源</span>
         </div>
       </div>
 
