@@ -191,11 +191,12 @@ async function run(taskConfig) {
         const isExt = !isSameDomain(link.url, type === 'keyword_search' ? crawlUrl : url);
 
         if (isExt) {
-          // Apply filter to external links — skip if it matches a filter pattern
+          // v1.2.QA: ALL external links are recorded + detected. Filtering
+          // no longer skips links — it only logs. Users want every external
+          // link to appear in results with detection tags (porn/gambling/
+          // blackhat/ICP), not silent omission.
           if (filter.isFiltered(link.url, link.linkType)) {
             filteredCount++;
-            post('log', { level: 'info', message: `Filtered external: ${link.url}` });
-            continue;
           }
           // External links: always record, never enqueue
           const extResult = {
