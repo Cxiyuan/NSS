@@ -27,7 +27,6 @@ export const ILLEGAL_PATTERNS = {
     'porn',        // EN
     'xxx',         // EN
     'hentai',      // EN (Japanese loanword)
-    'av',          // EN (Japanese loanword)
     'adult',       // EN
   ],
 

@@ -123,7 +123,7 @@ test('P1-1: icp-only message (no tags) persists ICP to DB', async () => {
     icp: '京ICP备12345678号',
   });
   const row = db.prepare('SELECT risk_level, risk_tags, icp FROM results WHERE url = ?').get('https://acme.cn');
-  assert.equal(row.risk_level, 'suspicious');  // default for icp-only
+  assert.equal(row.risk_level, 'clean');  // v1.2.QA: ICP-only = clean (no risk tags)
   assert.equal(row.icp, '京ICP备12345678号');
   assert.equal(row.risk_tags, '');
 });
@@ -260,15 +260,15 @@ test('v1.2: getResults with icp filter returns only matching rows', () => {
   queries.updateResultRisk('t1', 'https://b.cn', 'suspicious', 'porn:1', '沪ICP备20240001号');
   // c.cn has no ICP
 
-  const jing = queries.getResults('t1', { icp: '京' });
+  const jing = queries.getResults('t1', { icp: '京', showAll: true });
   assert.equal(jing.total, 1);
   assert.equal(jing.results[0].url, 'https://a.cn');
 
-  const hu = queries.getResults('t1', { icp: '沪' });
+  const hu = queries.getResults('t1', { icp: '沪', showAll: true });
   assert.equal(hu.total, 1);
   assert.equal(hu.results[0].url, 'https://b.cn');
 
-  const noIcp = queries.getResults('t1', { icp: '' });
+  const noIcp = queries.getResults('t1', { icp: '', showAll: true });
   assert.equal(noIcp.total, 1);
   assert.equal(noIcp.results[0].url, 'https://c.cn');
 });

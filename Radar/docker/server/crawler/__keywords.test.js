@@ -9,13 +9,13 @@ test('ILLEGAL_PATTERNS has 4 categories', () => {
   assert.deepEqual(Object.keys(ILLEGAL_PATTERNS).sort(), ['blackhat', 'drugs', 'gambling', 'porn']);
 });
 
-test('total keyword count is 50 (v1.2 target)', () => {
-  assert.equal(KEYWORD_STATS.total, 50);
+test('total keyword count is 49 (v1.2 removed over-broad av)', () => {
+  assert.equal(KEYWORD_STATS.total, 49);
 });
 
-test('each category has 12-14 keywords (balanced)', () => {
+test('each category has 11-14 keywords (balanced)', () => {
   for (const [cat, count] of Object.entries(KEYWORD_STATS.perCategory)) {
-    assert.ok(count >= 12 && count <= 14, `${cat} has ${count} keywords, want 12-14`);
+    assert.ok(count >= 11 && count <= 14, `${cat} has ${count} keywords, want 11-14`);
   }
 });
 
@@ -222,7 +222,11 @@ for (const [cat, kws] of Object.entries(v12_NEW)) {
 
 // ─── v1.1 keywords are preserved (no regression) ──────────────────────
 const v11_KEYWORDS = {
-  porn:    ['成人', '色情', 'av', 'porn', 'xxx', 'hentai', '黄色', '情色', 'adult'],
+  porn:    ['成人', '色情', 'porn', 'xxx', 'hentai', '黄色', '情色', 'adult'],
+  // Note: 'av' was removed in v1.2.QA — it caused false positives on every
+  // website with favicon.ico (fa**v**icon contains "av"). A 2-char keyword
+  // is too short to be reliable; consider re-adding only when paired with
+  // other signals (co-occurrence filter in v1.3).
   gambling: ['赌博', '赌场', '百家乐', '轮盘', '老虎机', 'casino', 'poker', 'betting', 'lottery'],
   drugs:   ['毒品', '冰毒', '大麻', '海洛因', '麻黄碱', 'weed', 'cannabis', 'mdma', 'lsd'],
   blackhat: ['刷粉', '刷单', '刷赞', '刷票', '代刷', '外挂', '私服', '菠菜', '博彩'],

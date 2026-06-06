@@ -44,7 +44,9 @@ export function createWorkerMessageHandler({ queries, redis, getBroadcast }) {
       // export saw empty risk).
       const icp = typeof msg.icp === 'string' ? msg.icp : '';
       if (msg.tags.length === 0 && !icp) return;
-      const riskLevel = msg.riskLevel || 'suspicious';
+      // v1.2.QA: ICP-only results (no risk tags) should not be flagged as suspicious.
+      // Only apply riskLevel when there are actual detection tags.
+      const riskLevel = msg.tags.length > 0 ? (msg.riskLevel || 'suspicious') : 'clean';
       queries.updateResultRisk(taskId, msg.url, riskLevel, msg.tags.join(','), icp);
       wsBroadcast(taskId, msg);
       return;
