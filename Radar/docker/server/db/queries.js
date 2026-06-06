@@ -155,7 +155,7 @@ export function createQueries(db) {
       ).all(taskId, level);
     },
 
-    getResults(taskId, { domain, icp, riskLevel, page = 1, limit = 50 } = {}) {
+    getResults(taskId, { domain, icp, riskLevel, showAll, page = 1, limit = 50 } = {}) {
       let where = 'WHERE task_id = ?';
       const params = [taskId];
 
@@ -173,6 +173,12 @@ export function createQueries(db) {
           where += ' AND icp LIKE ?';
           params.push(`%${icp}%`);
         }
+      }
+
+      // v1.2.QA: default to showing only flagged results (risk or missing ICP).
+      // Pass showAll=true to see every external link.
+      if (!showAll) {
+        where += " AND (risk_level IS NOT NULL AND risk_level != 'clean' OR risk_tags != '' OR icp IS NULL OR icp = '')";
       }
 
       // v1.2: risk level filter (clean/suspicious/illegal/blackhat)

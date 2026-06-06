@@ -8,21 +8,15 @@ export function createResultRoutes(queries, getTask) {
     const p = Math.max(1, Math.min(10000, Number(req.query.page) || 1));
     const l = Math.max(1, Math.min(200, Number(req.query.limit) || 50));
 
-    // Check if task is still running — read from Redis if so
-    const task = getTask ? getTask(req.params.id) : null;
-    const isRunning = task && ['running', 'paused', 'pending'].includes(task.status);
-
-    if (isRunning && redis.connected) {
-      const data = await redis.getResults(req.params.id, { page: p, limit: l });
-      if (data) return res.json(data);
-    }
-
-    // Fallback: read from SQLite
+    // v1.2.QA: always read from SQLite — Redis results don't have risk fields
+    // (risk_level/risk_tags/icp are only written to SQLite by updateResultRisk).
+    // Reading from Redis during a running task would show clean results without
+    // detection tags, defeating the purpose of real-time risk display.
     const data = queries.getResults(req.params.id, {
       domain: req.query.domain,
-      // v1.2: pass through ICP + risk filters when explicitly set
       icp: req.query.icp !== undefined ? req.query.icp : null,
       riskLevel: req.query.riskLevel || null,
+      showAll: req.query.showAll === '1' || req.query.showAll === 'true',
       page: p,
       limit: l,
     });
