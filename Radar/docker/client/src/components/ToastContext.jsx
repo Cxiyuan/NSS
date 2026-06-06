@@ -65,7 +65,6 @@ export function ToastProvider({ children }) {
               role={isUrgent ? 'alert' : 'status'}
               aria-live={isUrgent ? 'assertive' : 'polite'}
               aria-atomic="true"
-              role="alert"
               style={{
                 ...toastStyle,
                 backgroundColor: typeMeta.bg,
